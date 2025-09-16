@@ -2,6 +2,9 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 async function getEmpresaProjects() {
   // Filtrar directamente por owner_role para evitar depender de la tabla users
   const { data: projects, error } = await supabase

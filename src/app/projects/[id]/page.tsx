@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { PropertyGallery } from "@/components/PropertyGallery";
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 async function getProject(id: string) {
   const { data, error } = await supabase
     .from("projects")

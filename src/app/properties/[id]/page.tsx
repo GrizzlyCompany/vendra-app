@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Home, Castle, Ruler, Bath, Bed, Phone, Mail, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 async function getProperty(id: string) {
   const { data, error } = await supabase
     .from("properties")

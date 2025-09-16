@@ -1,16 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Validar que las variables de entorno estén definidas
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Get environment variables with fallbacks
+const getSupabaseUrl = () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url && typeof window !== 'undefined') {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL no está definido en las variables de entorno");
+  }
+  return url || 'https://placeholder.supabase.co'; // Fallback for build time
+};
 
-if (!supabaseUrl) {
-  throw new Error("NEXT_PUBLIC_SUPABASE_URL no está definido en las variables de entorno");
-}
+const getSupabaseAnonKey = () => {
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!key && typeof window !== 'undefined') {
+    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY no está definido en las variables de entorno");
+  }
+  return key || 'placeholder-key'; // Fallback for build time
+};
 
-if (!supabaseAnonKey) {
-  throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY no está definido en las variables de entorno");
-}
+const supabaseUrl = getSupabaseUrl();
+const supabaseAnonKey = getSupabaseAnonKey();
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
