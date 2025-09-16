@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useEffect, useRef, useState } from "react";
-import { safeNumber, safeString } from "@/lib/safe";
+import { safeNumber } from "@/lib/safe";
 
 // Performance monitoring interface
 interface PerformanceMetrics {
@@ -13,16 +13,6 @@ interface PerformanceMetrics {
 
 // Enhanced performance hook with monitoring
 export function usePerformanceMonitor(componentName = 'Component'): PerformanceMetrics {
-  // Skip performance monitoring during SSR/build
-  if (typeof window === 'undefined') {
-    return {
-      renderTime: 0,
-      lastUpdate: 0,
-      renderCount: 0,
-      averageRenderTime: 0
-    };
-  }
-
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
     renderTime: 0,
     lastUpdate: Date.now(),
@@ -33,11 +23,17 @@ export function usePerformanceMonitor(componentName = 'Component'): PerformanceM
   const renderStartTime = useRef<number>(0);
   const totalRenderTime = useRef<number>(0);
   
+  // Skip performance monitoring during SSR/build
+  const isClient = typeof window !== 'undefined';
+  
   useEffect(() => {
+    if (!isClient) return;
     renderStartTime.current = performance.now();
   });
   
   useEffect(() => {
+    if (!isClient) return;
+    
     const renderTime = performance.now() - renderStartTime.current;
     totalRenderTime.current += renderTime;
     
@@ -55,7 +51,7 @@ export function usePerformanceMonitor(componentName = 'Component'): PerformanceM
     if (process.env.NODE_ENV === 'development' && renderTime > 16) {
       console.warn(`Slow render detected in ${componentName}: ${renderTime.toFixed(2)}ms`);
     }
-  }, [componentName]);
+  }, [componentName, isClient]);
   
   return metrics;
 }
