@@ -37,21 +37,22 @@ export class PermissionError extends AppError {
   }
 }
 
-export function handleSupabaseError(error: any): AppError {
-  if (error?.code === 'PGRST116') {
+export function handleSupabaseError(error: unknown): AppError {
+  const err = error as Record<string, unknown> | null;
+  if (err?.code === 'PGRST116') {
     return new NotFoundError('Recurso no encontrado');
   }
   
-  if (error?.code === '42501') {
+  if (err?.code === '42501') {
     return new PermissionError('No tienes permisos para realizar esta acción');
   }
   
-  if (error?.message?.includes('JWT')) {
+  if (typeof err?.message === 'string' && err.message.includes('JWT')) {
     return new AuthError('Sesión expirada. Por favor, inicia sesión nuevamente');
   }
   
   return new AppError(
-    error?.message || 'Ha ocurrido un error inesperado',
+    (typeof err?.message === 'string' ? err.message : null) || 'Ha ocurrido un error inesperado',
     'UNKNOWN_ERROR'
   );
 }

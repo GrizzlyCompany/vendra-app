@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { handleSupabaseError } from "@/lib/errors";
 
-export function useUserAvatar(userId: string | null) {
+export function useUserAvatar(user: User | null) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!userId) {
+    if (!user) {
       setAvatarUrl(null);
       return;
     }
@@ -19,12 +20,21 @@ export function useUserAvatar(userId: string | null) {
     setLoading(true);
     setError(null);
 
+    // First check user_metadata
+    const metaAvatar = (user.user_metadata as any)?.avatar_url;
+    if (metaAvatar) {
+      setAvatarUrl(metaAvatar);
+      setLoading(false);
+      return;
+    }
+
+    // Fallback to profiles table
     const fetchAvatar = async () => {
       try {
         const { data, error } = await supabase
           .from("profiles")
           .select("avatar_url")
-          .eq("id", userId)
+          .eq("id", user.id)
           .single();
 
         if (!mounted) return;
@@ -53,8 +63,7 @@ export function useUserAvatar(userId: string | null) {
     return () => {
       mounted = false;
     };
-  }, [userId]);
+  }, [user]);
 
   return { avatarUrl, loading, error };
 }
-

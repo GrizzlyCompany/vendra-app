@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LogIn, LogOut, UserPlus, Home, User, Building2, MessageSquare } from "lucide-react";
+import { LogIn, LogOut, UserPlus, Home, User, Building2, MessageSquare, Bell } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserAvatar } from "@/hooks/useUserAvatar";
 import { useToastContext } from "@/components/ToastProvider";
@@ -15,9 +15,10 @@ import { NavbarSkeleton } from "@/components/ui/skeleton";
 
 export function Navbar() {
   const { user, loading, signOut } = useAuth();
-  const { avatarUrl } = useUserAvatar(user?.id || null);
+  const { avatarUrl } = useUserAvatar(user);
   const { error: showError } = useToastContext();
   const router = useRouter();
+  const pathname = usePathname();
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -41,7 +42,7 @@ export function Navbar() {
     try {
       await signOut();
       showError("Sesión cerrada correctamente");
-    } catch (err) {
+    } catch {
       showError("Error al cerrar sesión");
     }
   };
@@ -53,7 +54,7 @@ export function Navbar() {
   };
 
   return (
-    <header className="hidden md:block sticky top-0 z-40 bg-background/80 backdrop-blur relative shadow-[0_2px_0_0_hsl(var(--border)/0.22),0_10px_20px_-18px_hsl(var(--border)/0.22)] dark:shadow-[0_2px_0_0_hsl(var(--border)/0.34),0_10px_20px_-18px_hsl(var(--border)/0.34)] mobile-horizontal-safe">
+    <header className={`${pathname === '/main' ? '' : 'hidden md:block'} sticky top-0 z-40 bg-background/80 backdrop-blur relative shadow-[0_2px_0_0_hsl(var(--border)/0.22),0_10px_20px_-18px_hsl(var(--border)/0.22)] dark:shadow-[0_2px_0_0_hsl(var(--border)/0.34),0_10px_20px_-18px_hsl(var(--border)/0.34)] mobile-horizontal-safe`}>
       <div className="container mx-auto flex items-center justify-between gap-3 px-3 sm:px-4 py-3 sm:py-4">
         <Link href="/" className="flex items-center gap-2 text-primary" aria-label="Ir al inicio">
           <Image
@@ -167,26 +168,25 @@ export function Navbar() {
           </nav>
         )}
 
-        {/* Mobile: simple search + links */}
-        <div className="md:hidden flex items-center gap-2 flex-1 max-w-md">
-          <form onSubmit={onSearch} className="flex items-center gap-2 rounded-full border bg-background px-2 py-1 flex-1 min-w-[160px]" role="search">
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar"
-              className="h-9 flex-1 min-w-[100px] border-0 focus-visible:ring-0 text-sm"
-              aria-label="Buscar"
-            />
-            <Button type="submit" size="sm" className="h-9 rounded-full px-3 flex-shrink-0" aria-label="Buscar">Ir</Button>
-          </form>
+        {/* Mobile: profile avatar or login */}
+        <div className="md:hidden flex items-center gap-2">
           {!user ? (
             <Button asChild className="bg-primary text-primary-foreground rounded-full px-3 flex-shrink-0 min-h-[44px]">
               <Link href="/login">Entrar</Link>
             </Button>
           ) : (
-            <Button onClick={handleSignOut} variant="outline" className="px-3 flex-shrink-0 min-h-[44px]">
-              <LogOut className="size-4" />
-            </Button>
+            <>
+              <Button variant="ghost" size="sm" className="h-10 w-10 p-0">
+                <Bell className="size-5" />
+              </Button>
+              <Link href="/profile" className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-transparent hover:bg-muted/40">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <User className="size-5 text-muted-foreground" />
+                )}
+              </Link>
+            </>
           )}
         </div>
       </div>

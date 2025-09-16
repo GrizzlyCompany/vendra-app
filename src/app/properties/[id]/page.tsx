@@ -25,6 +25,11 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
 
   const currencyCode: string = property.currency ?? "USD";
   const price = new Intl.NumberFormat("en-US", { style: "currency", currency: currencyCode, maximumFractionDigits: 0 }).format(property.price);
+
+  // Function to convert string to title case
+  const toTitleCase = (str: string): string => {
+    return str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+  };
   
   // Owner info now fetched client-side in OwnerCard to avoid RLS/SSR issues
   
@@ -108,23 +113,25 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
             {/* Price Card */}
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-3">
+                {property.type && (
+                  <div className="mb-2">
+                    <Badge className="bg-primary/10 text-primary hover:bg-primary/20 px-2 py-1 text-xs font-medium">
+                      {property.type}
+                    </Badge>
+                  </div>
+                )}
                 <div className="space-y-2">
-                  <h2 className="font-serif text-lg lg:text-xl font-bold text-foreground leading-tight">{property.title}</h2>
+                  <h2 className="font-serif text-xl lg:text-2xl font-bold text-foreground leading-tight">{toTitleCase(property.title)}</h2>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <MapPin className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
                     <span className="line-clamp-2">{property.location}</span>
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row lg:flex-col justify-between items-start pt-4 gap-3">
+                <div className="pt-4">
                   <div className="flex-1">
                     <CardTitle className="text-xl lg:text-2xl font-bold text-foreground">{price}</CardTitle>
                     <CardDescription className="mt-1">Precio de venta</CardDescription>
                   </div>
-                  {property.type && (
-                    <Badge className="bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 text-sm font-medium flex-shrink-0">
-                      {property.type}
-                    </Badge>
-                  )}
                 </div>
               </CardHeader>
               <CardContent>

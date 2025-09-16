@@ -14,7 +14,7 @@ export type Project = z.infer<typeof ProjectSchema>;
 export type PropertyFormData = z.infer<typeof PropertyFormSchema>;
 export type SearchFilters = z.infer<typeof SearchFiltersSchema>;
 
-// Legacy types for backward compatibility
+// User roles
 export type UserRole = 'comprador' | 'vendedor_agente' | 'empresa_constructora';
 
 // Dashboard types
@@ -53,32 +53,6 @@ export interface ApiResponse<T> {
   data: T | null;
   error: string | null;
   loading: boolean;
-}
-
-// Form types
-export interface PropertyFormDataLegacy {
-  title: string;
-  description: string;
-  price: number;
-  location: string;
-  type: string;
-  currency?: string;
-  address?: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  area?: number;
-  features?: string[];
-}
-
-// Search types
-export interface SearchFiltersLegacy {
-  query?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  location?: string;
-  type?: string;
-  bedrooms?: number;
-  bathrooms?: number;
 }
 
 // Message types
@@ -137,4 +111,3 @@ export interface SellerApplication {
   created_at: string;
   updated_at: string;
 }
-

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToastContext } from "@/components/ToastProvider";
@@ -24,7 +24,7 @@ export function useProperties() {
     retryCount: 0
   });
 
-  const fetchProperties = async (isRetry = false) => {
+  const fetchProperties = useCallback(async (isRetry = false) => {
     if (!user) return;
 
     setState(prev => ({ 
@@ -68,7 +68,7 @@ export function useProperties() {
       }));
       showError("Error al cargar propiedades", error.message);
     }
-  };
+  }, [user, showSuccess, showError]);
 
   const createProperty = async (propertyData: Omit<Property, "id" | "owner_id" | "inserted_at">) => {
     if (!user) throw new Error("Usuario no autenticado");
@@ -143,7 +143,6 @@ export function useProperties() {
   const deleteProperty = async (id: string) => {
     // Optimistic removal
     const originalProperties = state.properties;
-    const propertyToDelete = state.properties.find(p => p.id === id);
     setState(prev => ({
       ...prev,
       properties: prev.properties.filter(p => p.id !== id)
@@ -174,7 +173,7 @@ export function useProperties() {
 
   useEffect(() => {
     fetchProperties();
-  }, [user]);
+  }, [fetchProperties]);
 
   return {
     ...state,

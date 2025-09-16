@@ -62,7 +62,7 @@ export function AddPropertySection() {
       const u = data.session?.user ?? null;
       setUid(u?.id ?? null);
       // intentar leer role del user_metadata y/o de la tabla users
-      const metaRole = (u?.user_metadata as any)?.role as string | undefined;
+      const metaRole = (u?.user_metadata as Record<string, unknown>)?.role as string | undefined;
       if (metaRole) setOwnerRole(metaRole);
       const uidLocal = u?.id ?? null;
       if (uidLocal) {
@@ -115,8 +115,8 @@ export function AddPropertySection() {
     setSaving(true);
     try {
       // 1) Subir archivos a Storage y recolectar URLs públicas
-      let imageUrls: string[] = [];
-      let planUrls: string[] = [];
+      const imageUrls: string[] = [];
+      const planUrls: string[] = [];
 
       if (imagesFiles && imagesFiles.length > 0) {
         setUploading(true);
@@ -190,8 +190,8 @@ export function AddPropertySection() {
       setSuccess("Proyecto publicado correctamente.");
       // Opcional: reset del formulario
       // setForm({ ...estadoInicial })
-    } catch (err: any) {
-      setError(err.message ?? "Error al publicar el proyecto.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al publicar el proyecto.");
     } finally {
       setSaving(false);
     }

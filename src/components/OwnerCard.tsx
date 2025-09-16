@@ -36,8 +36,8 @@ export function OwnerCard({ ownerId }: { ownerId: string | null | undefined }) {
             .eq("id", ownerId)
             .single();
         };
-        let data: any = null;
-        let error: any = null;
+        let data: Record<string, unknown> | null = null;
+        let error: unknown = null;
         const tables = ["public_profiles", "profiles", "users"]; // prefer public view first
         for (const t of tables) {
           const res = await tryFetch(t);
@@ -52,11 +52,11 @@ export function OwnerCard({ ownerId }: { ownerId: string | null | undefined }) {
           if (active) setOwner(null);
         } else if (active) {
           setOwner({
-            id: data.id,
-            name: data.name ?? null,
-            email: data.email ?? null,
-            avatar_url: data.avatar_url ?? null,
-            role: (data as any).role ?? null,
+            id: data.id as string,
+            name: (data.name as string) ?? null,
+            email: (data.email as string) ?? null,
+            avatar_url: (data.avatar_url as string) ?? null,
+            role: (data as Record<string, unknown>).role as string ?? null,
           });
         }
       } finally {

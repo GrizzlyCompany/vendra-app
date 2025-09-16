@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Home, PlusCircle, BarChart3, User2, LogOut, Menu, X } from "lucide-react";
+import { Home, PlusCircle, BarChart3, User2, LogOut, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
@@ -21,7 +21,7 @@ export function Sidebar({ section, onChange }: { section: DashboardSection; onCh
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const NavItem = ({ id, label, icon: Icon }: { id: DashboardSection; label: string; icon: any }) => (
+  const NavItem = ({ id, label, icon: Icon }: { id: DashboardSection; label: string; icon: React.ComponentType<{ className?: string }> }) => (
     <button
       type="button"
       onClick={() => {

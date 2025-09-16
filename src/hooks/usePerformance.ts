@@ -13,6 +13,16 @@ interface PerformanceMetrics {
 
 // Enhanced performance hook with monitoring
 export function usePerformanceMonitor(componentName = 'Component'): PerformanceMetrics {
+  // Skip performance monitoring during SSR/build
+  if (typeof window === 'undefined') {
+    return {
+      renderTime: 0,
+      lastUpdate: 0,
+      renderCount: 0,
+      averageRenderTime: 0
+    };
+  }
+
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
     renderTime: 0,
     lastUpdate: Date.now(),
@@ -51,12 +61,12 @@ export function usePerformanceMonitor(componentName = 'Component'): PerformanceM
 }
 
 // Hook para memoizar funciones costosas con debugging
-export function useMemoizedCallback<T extends (...args: any[]) => any>(
+export function useMemoizedCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   deps: React.DependencyList,
   debugName?: string
 ): T {
-  return useCallback(((...args: any[]) => {
+  return useCallback(((...args: unknown[]) => {
     const start = performance.now();
     const result = callback(...args);
     const duration = performance.now() - start;
@@ -66,7 +76,7 @@ export function useMemoizedCallback<T extends (...args: any[]) => any>(
     }
     
     return result;
-  }) as T, deps);
+  }) as T, [callback, debugName, ...deps]);
 }
 
 // Hook para memoizar valores computados costosos con profiling
@@ -85,11 +95,11 @@ export function useMemoizedValue<T>(
     }
     
     return result;
-  }, deps);
+  }, [factory, debugName, ...deps]);
 }
 
 // Enhanced debounce with performance tracking
-export function useDebouncedCallback<T extends (...args: any[]) => any>(
+export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number,
   debugName?: string
@@ -134,7 +144,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
 }
 
 // Enhanced throttling with performance metrics
-export function useThrottledCallback<T extends (...args: any[]) => any>(
+export function useThrottledCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number,
   debugName?: string

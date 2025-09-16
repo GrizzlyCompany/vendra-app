@@ -20,21 +20,26 @@ const ptSans = PT_Sans({
   style: ["normal", "italic"],
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover" as const,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "hsl(135 29% 30%)" },
+    { media: "(prefers-color-scheme: dark)", color: "hsl(135 29% 30%)" }
+  ]
+};
+
 export const metadata: Metadata = {
   title: "Vendra — Conecta compradores y vendedores de propiedades",
   description:
     "Vendra conecta compradores y vendedores de propiedades. Publica, descubre y gestiona inmuebles en un solo lugar.",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: "cover"
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
   },
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "hsl(135 29% 30%)" },
-    { media: "(prefers-color-scheme: dark)", color: "hsl(135 29% 30%)" }
-  ],
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

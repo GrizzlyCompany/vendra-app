@@ -8,8 +8,8 @@ interface RetryOptions {
   maxDelay?: number;
   backoffFactor?: number;
   jitter?: boolean;
-  onRetry?: (attempt: number, error: any) => void;
-  shouldRetry?: (error: any) => boolean;
+  onRetry?: (attempt: number, error: unknown) => void;
+  shouldRetry?: (error: unknown) => boolean;
 }
 
 export class CircuitBreaker {
@@ -67,10 +67,13 @@ export async function withRetry<T>(
     backoffFactor = 2,
     jitter = true,
     onRetry,
-    shouldRetry = (error) => !error?.code?.includes('401') && !error?.code?.includes('403')
+    shouldRetry = (error) => {
+      const err = error as Record<string, unknown> | null;
+      return !err?.code?.toString().includes('401') && !err?.code?.toString().includes('403');
+    }
   } = options;
 
-  let lastError: any;
+  let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -116,12 +119,14 @@ export const withSupabaseRetry = <T>(
       maxAttempts: 3,
       baseDelay: 1000,
       onRetry: (attempt, error) => {
-        console.warn(`${context} failed (attempt ${attempt}):`, error?.message);
+        const err = error as Record<string, unknown> | null;
+        console.warn(`${context} failed (attempt ${attempt}):`, err?.message);
       },
       shouldRetry: (error) => {
         // Retry on network errors, timeouts, but not auth or permission errors
-        const code = error?.code || error?.status;
-        return !['401', '403', '42501', 'PGRST301'].includes(code);
+        const err = error as Record<string, unknown> | null;
+        const code = err?.code || err?.status;
+        return !['401', '403', '42501', 'PGRST301'].includes(String(code));
       }
     })
   );

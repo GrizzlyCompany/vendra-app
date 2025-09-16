@@ -27,7 +27,7 @@ export default function SellerApplyPage() {
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
 
-  const [roleChoice, setRoleChoice] = useState<"agente_inmobiliario" | "vendedor_particular">("vendedor_particular");
+  const [roleChoice, setRoleChoice] = useState<"agente_inmobiliario" | "vendedor_particular" | "empresa_constructora">("vendedor_particular");
 
   const [companyName, setCompanyName] = useState("");
   const [companyTaxId, setCompanyTaxId] = useState("");
@@ -54,14 +54,14 @@ export default function SellerApplyPage() {
       if (!uid) return;
       const metaEmail = session.session?.user?.email ?? "";
       setEmail((e) => e || metaEmail);
-      const name = (session.session?.user?.user_metadata as any)?.name ?? "";
+      const name = (session.session?.user?.user_metadata as Record<string, unknown>)?.name as string ?? "";
       setFullName((n) => n || name);
 
       const { data: existing } = await supabase
         .from("seller_applications")
         .select("*")
         .eq("user_id", uid)
-        .in("status", ["draft", "submitted", "needs_more_info"] as any)
+        .in("status", ["draft", "submitted", "needs_more_info"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -76,7 +76,7 @@ export default function SellerApplyPage() {
         setPhone(existing.phone ?? "");
         setEmail(existing.email ?? metaEmail);
         setAddress(existing.address ?? "");
-        setRoleChoice((existing.role_choice ?? "vendedor_particular") as any);
+        setRoleChoice((existing.role_choice ?? "vendedor_particular") as "vendedor_particular" | "agente_inmobiliario" | "empresa_constructora");
         setCompanyName(existing.company_name ?? "");
         setCompanyTaxId(existing.company_tax_id ?? "");
         setLicenseNumber(existing.license_number ?? "");
@@ -114,8 +114,8 @@ export default function SellerApplyPage() {
     try {
       const url = await uploadToBucket(f);
       setter(url);
-    } catch (err: any) {
-      setError(err?.message ?? "Error subiendo archivo");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error subiendo archivo");
     } finally {
       setLoading(false);
     }
@@ -129,7 +129,7 @@ export default function SellerApplyPage() {
       const { data: session } = await supabase.auth.getSession();
       const uid = session.session?.user?.id;
       if (!uid) throw new Error("No autenticado");
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         user_id: uid,
         full_name: fullName,
         id_document_type: idType,
@@ -157,8 +157,8 @@ export default function SellerApplyPage() {
       if (error) throw error;
       setAppId(data.id);
       setSuccess("Borrador guardado");
-    } catch (err: any) {
-      setError(err?.message ?? "Error guardando borrador");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error guardando borrador");
     } finally {
       setLoading(false);
     }
@@ -173,7 +173,7 @@ export default function SellerApplyPage() {
       const { data: session } = await supabase.auth.getSession();
       const uid = session.session?.user?.id;
       if (!uid) throw new Error("No autenticado");
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         user_id: uid,
         full_name: fullName,
         id_document_type: idType,
@@ -211,15 +211,15 @@ export default function SellerApplyPage() {
             .from("seller_applications")
             .select("id")
             .eq("user_id", uid2)
-            .in("status", ["submitted", "approved"] as any)
+            .in("status", ["submitted", "approved"])
             .maybeSingle();
           if (check) break;
           await new Promise(r => setTimeout(r, 150));
         }
       } catch {}
       router.push("/properties/new");
-    } catch (err: any) {
-      setError(err?.message ?? "Error enviando solicitud");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error enviando solicitud");
     } finally {
       setLoading(false);
     }

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase/client";
 
 export function EditProjectSection({ projectId }: { projectId: string }) {
@@ -69,7 +68,7 @@ export function EditProjectSection({ projectId }: { projectId: string }) {
       if (!active) return;
       const u = sess.session?.user ?? null;
       setUid(u?.id ?? null);
-      const metaRole = (u?.user_metadata as any)?.role as string | undefined;
+      const metaRole = (u?.user_metadata as Record<string, unknown>)?.role as string | undefined;
       if (metaRole) setOwnerRole(metaRole);
       const uidLocal = u?.id ?? null;
       if (uidLocal) {

@@ -6,9 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { safeString, safeJsonStringify } from "@/lib/safe";
 
+/**
+ * Props for the ErrorBoundary component
+ */
 interface Props {
+  /** Child components to wrap with error boundary */
   children: ReactNode;
+  /** Custom fallback UI to display when error occurs */
   fallback?: ReactNode;
+  /** Optional callback fired when an error is caught */
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
@@ -20,26 +26,52 @@ interface State {
   retryCount: number;
 }
 
+/**
+ * ErrorBoundary component that catches JavaScript errors anywhere in the child component tree,
+ * logs those errors, and displays a fallback UI instead of the component tree that crashed.
+ *
+ * Features:
+ * - Automatic error logging with detailed context
+ * - Retry mechanism with exponential backoff
+ * - Development error details display
+ * - Production-ready error reporting hooks
+ * - Unique error IDs for tracking
+ */
 export class ErrorBoundary extends Component<Props, State> {
   private retryTimeouts: NodeJS.Timeout[] = [];
-  
+
+  /**
+   * Constructor initializes the error boundary state
+   * @param props - Component props
+   */
   constructor(props: Props) {
     super(props);
-    this.state = { 
-      hasError: false, 
+    this.state = {
+      hasError: false,
       errorId: '',
       retryCount: 0
     };
   }
 
+  /**
+   * Static method to update state when an error occurs
+   * @param error - The error that was thrown
+   * @returns Partial state update with error information
+   */
   static getDerivedStateFromError(error: Error): Partial<State> {
-    return { 
-      hasError: true, 
+    return {
+      hasError: true,
       error,
       errorId: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
   }
 
+  /**
+   * Lifecycle method called when a child component throws an error
+   * Collects comprehensive error information and triggers error reporting
+   * @param error - The error that was thrown
+   * @param errorInfo - Additional information about the error including component stack
+   */
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const errorDetails = {
       message: safeString(error.message, 'Unknown error'),
@@ -50,20 +82,25 @@ export class ErrorBoundary extends Component<Props, State> {
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
       url: typeof window !== 'undefined' ? window.location.href : 'Unknown'
     };
-    
+
     console.error("ErrorBoundary caught an error:", errorDetails);
-    
+
     // Call optional error handler
     this.props.onError?.(error, errorInfo);
-    
+
     // Log to external service in production
     if (process.env.NODE_ENV === 'production') {
       this.logErrorToService(errorDetails);
     }
-    
+
     this.setState({ errorInfo });
   }
-  
+
+  /**
+   * Logs error details to external error tracking service
+   * @param errorDetails - Comprehensive error information object
+   * @private
+   */
   private async logErrorToService(errorDetails: any) {
     try {
       // In a real app, this would send to your error tracking service
@@ -74,30 +111,37 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   }
 
+  /**
+   * Handles retry attempts after an error occurs
+   * Implements exponential backoff and prevents infinite retry loops
+   */
   handleRetry = () => {
     const newRetryCount = this.state.retryCount + 1;
-    
+
     // Prevent infinite retry loops
     if (newRetryCount > 5) {
       console.error('Maximum retry attempts reached');
       return;
     }
-    
+
     // Add progressive delay for retries
     const delay = Math.min(1000 * Math.pow(2, newRetryCount - 1), 5000);
-    
+
     const timeout = setTimeout(() => {
-      this.setState({ 
-        hasError: false, 
-        error: undefined, 
+      this.setState({
+        hasError: false,
+        error: undefined,
         errorInfo: undefined,
-        retryCount: newRetryCount 
+        retryCount: newRetryCount
       });
     }, delay);
-    
+
     this.retryTimeouts.push(timeout);
   };
-  
+
+  /**
+   * Cleanup method to clear any pending retry timeouts
+   */
   componentWillUnmount() {
     // Clean up retry timeouts
     this.retryTimeouts.forEach(timeout => clearTimeout(timeout));
@@ -174,4 +218,3 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-
