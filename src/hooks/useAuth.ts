@@ -25,48 +25,41 @@ export function useAuth() {
   useEffect(() => {
     let mounted = true;
 
-    // Obtener sesión inicial con validación
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (!mounted) return;
-      
-      if (error) {
+    // Add timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (mounted) {
         setState(prev => ({
           ...prev,
           loading: false,
-          error: handleSupabaseError(error).message,
+          error: 'Authentication timeout - please refresh the page'
         }));
-        return;
       }
+    }, 10000); // 10 second timeout
 
-      // Validate session user data
-      const user = session?.user;
-      if (user && isObject(user)) {
-        const validationResult = validateUser(user);
-        if (!validationResult.success) {
-          console.warn('Invalid user data from session:', validationResult.error);
-        }
-      }
-
-      setState(prev => ({
-        ...prev,
-        user: user ?? null,
-        session,
-        loading: false,
-        error: null,
-      }));
-    });
-
-    // Escuchar cambios de autenticación con validación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    // Obtener sesión inicial con validación
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
         if (!mounted) return;
+        
+        clearTimeout(loadingTimeout);
+        
+        if (error) {
+          setState(prev => ({
+            ...prev,
+            loading: false,
+            error: handleSupabaseError(error).message,
+          }));
+          return;
+        }
 
-        // Validate session data
+        // Validate session user data
         const user = session?.user;
         if (user && isObject(user)) {
           const validationResult = validateUser(user);
           if (!validationResult.success) {
-            console.warn('Invalid user data from auth state change:', validationResult.error);
+            console.warn('Invalid user data from session:', validationResult.error);
           }
         }
 
@@ -77,12 +70,55 @@ export function useAuth() {
           loading: false,
           error: null,
         }));
+      } catch (err) {
+        if (!mounted) return;
+        clearTimeout(loadingTimeout);
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          error: `Authentication failed: ${err instanceof Error ? err.message : 'Unknown error'}`
+        }));
       }
-    );
+    };
+
+    initializeAuth();
+
+    // Escuchar cambios de autenticación con validación
+    let subscription: any = null;
+    try {
+      const { data } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (!mounted) return;
+
+          // Validate session data
+          const user = session?.user;
+          if (user && isObject(user)) {
+            const validationResult = validateUser(user);
+            if (!validationResult.success) {
+              console.warn('Invalid user data from auth state change:', validationResult.error);
+            }
+          }
+
+          setState(prev => ({
+            ...prev,
+            user: user ?? null,
+            session,
+            loading: false,
+            error: null,
+          }));
+        }
+      );
+      subscription = data.subscription;
+    } catch (err) {
+      console.warn('Failed to set up auth state listener:', err);
+    }
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      clearTimeout(loadingTimeout);
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 

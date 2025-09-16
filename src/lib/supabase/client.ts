@@ -1,24 +1,52 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Get environment variables with fallbacks
-const getSupabaseUrl = () => {
+// Debug function to log environment variable status
+const debugEnvironment = () => {
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    console.log('🔍 Supabase Environment Check:', {
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing',
+      key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing'
+    });
+  }
+};
+
+// Get environment variables with better error handling
+const getSupabaseConfig = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!url && typeof window !== 'undefined') {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL no está definido en las variables de entorno");
-  }
-  return url || 'https://placeholder.supabase.co'; // Fallback for build time
-};
-
-const getSupabaseAnonKey = () => {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!key && typeof window !== 'undefined') {
-    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY no está definido en las variables de entorno");
+  
+  // Debug in development
+  debugEnvironment();
+  
+  // For build time, return placeholders
+  if (typeof window === 'undefined') {
+    return {
+      url: url || 'https://placeholder.supabase.co',
+      key: key || 'placeholder-key'
+    };
   }
-  return key || 'placeholder-key'; // Fallback for build time
+  
+  // For runtime, check if variables exist
+  if (!url || !key) {
+    console.error('❌ Supabase configuration missing:', {
+      url: url ? '✅ Set' : '❌ Missing NEXT_PUBLIC_SUPABASE_URL',
+      key: key ? '✅ Set' : '❌ Missing NEXT_PUBLIC_SUPABASE_ANON_KEY'
+    });
+    
+    // Provide a more helpful error for users
+    throw new Error(
+      `Supabase configuration missing. Please check that environment variables are set correctly:\n` +
+      `- NEXT_PUBLIC_SUPABASE_URL: ${url ? '✅' : '❌'}\n` +
+      `- NEXT_PUBLIC_SUPABASE_ANON_KEY: ${key ? '✅' : '❌'}`
+    );
+  }
+  
+  return { url, key };
 };
 
-const supabaseUrl = getSupabaseUrl();
-const supabaseAnonKey = getSupabaseAnonKey();
+const { url: supabaseUrl, key: supabaseAnonKey } = getSupabaseConfig();
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
