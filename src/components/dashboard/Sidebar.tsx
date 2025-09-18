@@ -1,19 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Home, PlusCircle, BarChart3, User2, LogOut, Menu, X } from "lucide-react";
+import { Home, PlusCircle, BarChart3, User2, LogOut, Menu, X, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
-export type DashboardSection = "mis" | "agregar" | "estadisticas" | "perfil";
+export type DashboardSection = "mis" | "agregar" | "estadisticas" | "perfil" | "mensajes";
 
 const menuItems = [
   { id: "mis" as const, label: "Mis Propiedades", icon: Home },
   { id: "agregar" as const, label: "Agregar Propiedad", icon: PlusCircle },
   { id: "estadisticas" as const, label: "Estadísticas", icon: BarChart3 },
+  { id: "mensajes" as const, label: "Mensajes", icon: MessageCircle },
   { id: "perfil" as const, label: "Perfil", icon: User2 },
 ];
 

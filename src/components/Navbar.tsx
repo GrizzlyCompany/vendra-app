@@ -33,9 +33,11 @@ export function Navbar() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [menuOpen]);
 
-  // Loading state
-  if (loading) {
-    return <NavbarSkeleton />;
+  // Hide navbar on login and signup pages
+  const hideOnAuthPages = pathname === '/login' || pathname === '/signup';
+  
+  if (hideOnAuthPages) {
+    return null;
   }
 
   const handleSignOut = async () => {
@@ -89,17 +91,17 @@ export function Navbar() {
 
         {!user ? (
           <nav className="hidden md:flex items-center gap-2">
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" className="font-sans font-normal text-gray-600">
               <Link href="/projects">
                 <Building2 className="size-4" /> Proyectos
               </Link>
             </Button>
-            <Button asChild variant="ghost" className="text-primary">
+            <Button asChild variant="ghost" className="text-primary font-serif">
               <Link href="/login">
                 <LogIn className="size-4" /> Iniciar Sesión
               </Link>
             </Button>
-            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
+            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-serif">
               <Link href="/signup">
                 <UserPlus className="size-4" /> Registrarse
               </Link>
@@ -107,17 +109,17 @@ export function Navbar() {
           </nav>
         ) : (
           <nav className="hidden md:flex items-center gap-2">
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" className="font-sans font-normal text-gray-600">
               <Link href="/projects">
                 <Building2 className="size-4" /> Proyectos
               </Link>
             </Button>
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" className="font-sans font-normal text-gray-600">
               <Link href="/main">
                 <Home className="size-4" /> Main
               </Link>
             </Button>
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" className="font-sans font-normal text-gray-600">
               <Link href="/messages">
                 <MessageSquare className="size-4" /> Chat
               </Link>

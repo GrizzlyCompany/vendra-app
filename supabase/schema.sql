@@ -256,6 +256,16 @@ BEGIN
   ) THEN
     ALTER TABLE public.properties ADD COLUMN features text[] DEFAULT '{}';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='properties' AND column_name='status'
+  ) THEN
+    ALTER TABLE public.properties ADD COLUMN status text DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'sold', 'rented'));
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='properties' AND column_name='is_published'
+  ) THEN
+    ALTER TABLE public.properties ADD COLUMN is_published boolean DEFAULT true;
+  END IF;
 END $$;
 
 -- 4) Seller verification applications (KYC) ---------------------------------
@@ -863,3 +873,129 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_messages_sender ON public.messages (sender_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_recipient ON public.messages (recipient_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_pair ON public.messages (sender_id, recipient_id, created_at DESC);
+
+-- 9) Property Views Tracking (for statistics) -----------------------------
+-- Add views_count column to properties table
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema='public' AND table_name='properties' AND column_name='views_count'
+  ) THEN
+    ALTER TABLE public.properties ADD COLUMN views_count integer DEFAULT 0;
+  END IF;
+END $$;
+
+-- Create property_views table for detailed tracking
+CREATE TABLE IF NOT EXISTS public.property_views (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id uuid NOT NULL REFERENCES public.properties(id) ON DELETE CASCADE,
+  viewer_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  viewer_ip text,
+  user_agent text,
+  referrer text,
+  session_id text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE public.property_views ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies for property_views
+DO $$
+BEGIN
+  -- Property owners can see views of their properties
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='property_views' AND policyname='property_views_owner_read'
+  ) THEN
+    CREATE POLICY "property_views_owner_read" ON public.property_views 
+      FOR SELECT USING (
+        EXISTS (
+          SELECT 1 FROM public.properties p 
+          WHERE p.id = property_id AND p.owner_id = auth.uid()
+        )
+      );
+  END IF;
+
+  -- Anyone can insert views (for tracking)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='property_views' AND policyname='property_views_insert_public'
+  ) THEN
+    CREATE POLICY "property_views_insert_public" ON public.property_views 
+      FOR INSERT WITH CHECK (true);
+  END IF;
+END $$;
+
+-- Indexes for property_views performance
+CREATE INDEX IF NOT EXISTS idx_property_views_property_id ON public.property_views (property_id);
+CREATE INDEX IF NOT EXISTS idx_property_views_viewer_id ON public.property_views (viewer_id);
+CREATE INDEX IF NOT EXISTS idx_property_views_created_at ON public.property_views (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_property_views_property_date ON public.property_views (property_id, created_at DESC);
+
+-- Function to increment view count
+CREATE OR REPLACE FUNCTION public.increment_property_views(property_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE public.properties 
+  SET views_count = COALESCE(views_count, 0) + 1 
+  WHERE id = property_id;
+END;
+$$;
+
+-- Function to get property statistics for dashboard
+CREATE OR REPLACE FUNCTION public.get_property_stats(owner_id uuid)
+RETURNS TABLE (
+  active_properties bigint,
+  total_views bigint,
+  views_this_month bigint,
+  unique_viewers bigint
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    (SELECT COUNT(*) FROM public.properties WHERE owner_id = $1) as active_properties,
+    (SELECT COALESCE(SUM(views_count), 0) FROM public.properties WHERE owner_id = $1) as total_views,
+    (SELECT COUNT(*) FROM public.property_views pv 
+     JOIN public.properties p ON p.id = pv.property_id 
+     WHERE p.owner_id = $1 
+     AND pv.created_at >= date_trunc('month', now())) as views_this_month,
+    (SELECT COUNT(DISTINCT viewer_id) FROM public.property_views pv 
+     JOIN public.properties p ON p.id = pv.property_id 
+     WHERE p.owner_id = $1 
+     AND viewer_id IS NOT NULL) as unique_viewers;
+END;
+$$;
+
+-- Function to get monthly view trends
+CREATE OR REPLACE FUNCTION public.get_monthly_view_trends(owner_id uuid, months_back integer DEFAULT 6)
+RETURNS TABLE (
+  month_year text,
+  views_count bigint
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    TO_CHAR(date_trunc('month', pv.created_at), 'Mon YYYY') as month_year,
+    COUNT(*) as views_count
+  FROM public.property_views pv
+  JOIN public.properties p ON p.id = pv.property_id
+  WHERE p.owner_id = $1
+    AND pv.created_at >= date_trunc('month', now()) - INTERVAL '1 month' * months_back
+  GROUP BY date_trunc('month', pv.created_at)
+  ORDER BY date_trunc('month', pv.created_at) DESC;
+END;
+$$;
+
+-- Grant necessary permissions
+GRANT EXECUTE ON FUNCTION public.increment_property_views(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_property_stats(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_monthly_view_trends(uuid, integer) TO authenticated;

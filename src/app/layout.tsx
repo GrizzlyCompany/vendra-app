@@ -6,6 +6,7 @@ import AuthenticatedBottomNav from "@/components/AuthenticatedBottomNav";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/ToastProvider";
 import { SupabaseStatus } from "@/components/debug/SupabaseStatus";
+import { ClientLayout } from "@/components/ClientLayout";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -70,7 +71,9 @@ export default function RootLayout({
           <ToastProvider>
             <div className="app-container">
               <Navbar />
-              {children}
+              <ClientLayout>
+                {children}
+              </ClientLayout>
             </div>
             {/* Bottom nav visible solo para usuarios autenticados (y ya responsiva con md:hidden) */}
             <AuthenticatedBottomNav />

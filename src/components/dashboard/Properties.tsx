@@ -110,6 +110,37 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
     };
   }, [user, authLoading, showError]);
 
+  const handleDelete = async (item: DashboardItem) => {
+    try {
+      let result;
+      
+      if (item.source === "property") {
+        result = await supabase
+          .from("properties")
+          .delete()
+          .eq("id", item.id)
+          .eq("owner_id", user?.id);
+      } else {
+        result = await supabase
+          .from("projects")
+          .delete()
+          .eq("id", item.id)
+          .eq("owner_id", user?.id);
+      }
+
+      if (result.error) {
+        throw handleSupabaseError(result.error);
+      }
+
+      // Update the state to remove the deleted item
+      setItems(prevItems => prevItems.filter(i => i.id !== item.id));
+      showSuccess("Eliminado", `${item.source === "property" ? "Propiedad" : "Proyecto"} eliminado correctamente`);
+    } catch (err) {
+      const error = handleSupabaseError(err);
+      showError("Error al eliminar", error.message);
+    }
+  };
+
   if (authLoading || loading) {
     return <DashboardSkeleton />;
   }
@@ -163,7 +194,12 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
                       <Edit className="mr-2 size-4" /> Editar
                     </Link>
                   </Button>
-                  <Button variant="destructive" className="rounded-lg" size="sm">
+                  <Button 
+                    variant="destructive" 
+                    className="rounded-lg" 
+                    size="sm"
+                    onClick={() => handleDelete(p)}
+                  >
                     <Trash2 className="mr-2 size-4" /> Eliminar
                   </Button>
                 </div>

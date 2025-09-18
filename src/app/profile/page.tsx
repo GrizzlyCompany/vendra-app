@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { PropertyCard } from "@/components/PropertyCard";
+import { useFavorites } from "@/hooks/useFavorites";
 import type { Property } from "@/types";
 import { Star, Settings, Heart, CheckCircle, Building, LogOut } from "lucide-react";
 import Link from "next/link";
@@ -51,6 +52,16 @@ export default function ProfilePage() {
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [ratingCount, setRatingCount] = useState<number>(0);
   const [recentRatings, setRecentRatings] = useState<Array<{ rating: number; comment: string | null; created_at: string }>>([]);
+  const { favorites: savedProperties, loading: loadingSaved, removeFromFavorites } = useFavorites();
+
+  // Handle removing property from saved list
+  const handleRemoveFromSaved = async (propertyId: string) => {
+    try {
+      await removeFromFavorites(propertyId);
+    } catch (error) {
+      console.error('Error removing property from saved:', error);
+    }
+  };
 
   const loadBanners = async () => {
     try {
@@ -938,7 +949,26 @@ export default function ProfilePage() {
                 <CardTitle className="text-lg sm:text-xl">Propiedades Guardadas</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="rounded-md border bg-muted/30 p-4 sm:p-6 text-sm text-muted-foreground">No tienes propiedades guardadas.</div>
+                {loadingSaved ? (
+                  <div className="rounded-md border bg-muted/30 p-4 sm:p-6 text-sm text-muted-foreground">Cargando propiedades guardadas...</div>
+                ) : savedProperties.length === 0 ? (
+                  <div className="rounded-md border bg-muted/30 p-4 sm:p-6 text-sm text-muted-foreground">No tienes propiedades guardadas.</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    {savedProperties.map((property) => (
+                      <div key={property.id} className="relative">
+                        <PropertyCard property={property} />
+                        <button
+                          onClick={() => handleRemoveFromSaved(property.id)}
+                          className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors"
+                          title="Quitar de guardadas"
+                        >
+                          <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

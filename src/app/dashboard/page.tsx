@@ -94,6 +94,7 @@ export default function DashboardPage() {
               {section === "mis" && "Mis Propiedades"}
               {section === "agregar" && "Agregar Propiedad"}
               {section === "estadisticas" && "Estadísticas"}
+              {section === "mensajes" && "Mensajes"}
               {section === "perfil" && "Perfil"}
             </h1>
           </div>
@@ -102,6 +103,7 @@ export default function DashboardPage() {
           {section === "mis" && <PropertiesSection onAdd={() => setSection("agregar")} />}
           {section === "agregar" && <DynamicAddPropertySection />}
           {section === "estadisticas" && <DynamicStatsSection />}
+          {section === "mensajes" && <DynamicMessagesSection />}
           {section === "perfil" && <DynamicProfileSection />}
         </main>
       </div>
@@ -117,6 +119,11 @@ const DynamicAddPropertySection = dynamic(
 const DynamicStatsSection = dynamic(
   () => import("@/components/dashboard/Stats").then(m => m.StatsSection),
   { loading: () => <div className="text-muted-foreground">Cargando estadísticas…</div> }
+);
+
+const DynamicMessagesSection = dynamic(
+  () => import("@/components/dashboard/Messages").then(m => m.MessagesSection),
+  { loading: () => <div className="text-muted-foreground">Cargando mensajes…</div> }
 );
 
 const DynamicProfileSection = dynamic(

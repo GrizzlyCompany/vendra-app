@@ -9,6 +9,7 @@ import { Property } from "@/types";
 import { memo, useCallback } from "react";
 import { usePerformanceMonitor } from "@/hooks/usePerformance";
 import { safeString } from "@/lib/safe";
+import { MorphCard } from "@/components/transitions/MorphCard";
 
 /**
  * Hook for optimizing image URLs, particularly for Unsplash images
@@ -122,74 +123,124 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
   const isConfirmPending = state === 'confirm-pending';
 
   return (
-    <Card className={`group overflow-hidden rounded-2xl shadow-lg border transition-transform transition-shadow duration-200 hover:shadow-xl hover:-translate-y-0.5 ${className}`}>
-      <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        {/* Price badge */}
-        <div className="absolute left-3 top-3 z-10 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow">
-          {formatPriceUSD(property.price)}
+    <MorphCard
+      targetUrl={`/properties/${property.id}`}
+      className="group"
+      enableMorph={!onDelete && !showEdit}
+    >
+      <Card
+        className={`overflow-hidden rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 ${className}`}
+        role="article"
+        aria-labelledby={`property-title-${property.id}`}
+        aria-describedby={`property-description-${property.id}`}
+      >
+        <div className="relative aspect-video w-full overflow-hidden bg-muted">
+          {/* Price badge with better accessibility */}
+          <div
+            className="absolute left-3 top-3 z-10 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow"
+            aria-label={`Precio: ${formatPriceUSD(property.price)}`}
+          >
+            {formatPriceUSD(property.price)}
+          </div>
+
+          <Image
+            src={optimizedImage}
+            alt={safeString(property.title, 'Imagen de propiedad')}
+            fill
+            className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={false}
+            loading="lazy"
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkbHB0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyatSEfLz7j0VywfDN1Mw5HlkI5MxOqD0Uvy3H9qEyXTJ4J4I8qNOCRFBJNOKpWHLaFAkKEARqJiP8AWJ8qAi/7CL2EaPjCOk0ILWPdKCR9mOMnkW7jBkJsz5+/a/uCz2GZE4b5aO5DRsUxU68eKjqvDUUJRZA3YMdtqd1ePe0DnRZBPQl7b1nQBKaSpLRBzB1yqGcP9nxp6FLQoEfR6F8qJNlTPj//2Q=="
+          />
         </div>
-        <Image
-          src={optimizedImage}
-          alt={safeString(property.title, 'Property image')}
-          fill
-          className="object-cover transition-transform duration-300 ease-out group-hover:scale-105"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          priority={false}
-          loading="lazy"
-          placeholder="blur"
-          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkbHB0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyatSEfLz7j0VywfDN1Mw5HlkI5MxOqD0Uvy3H9qEyXTJ4J4I8qNOCRFBJNOKpWHLaFAkKEARqJiP8AWJ8qAi/7CL2EaPjCOk0ILWPdKCR9mOMnkW7jBkJsz5+/a/uCz2GZE4b5aO5DRsUxU68eKjqvDUUJRZA3YMdtqd1ePe0DnRZBPQl7b1nQBKaSpLRBzB1yqGcP9nxp6FLQoEfR6F8qJNlTPj//2Q=="
-        />
-      </div>
-      <CardHeader className="pb-3">
-        {property.type && (
-          <div className="mb-2">
-            <span className="inline-flex items-center rounded-md bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">
-              {property.type}
+
+        <CardHeader className="pb-3">
+          {property.type && (
+            <div className="mb-2">
+              <span
+                className="inline-flex items-center rounded-md bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary"
+                role="status"
+                aria-label={`Tipo de propiedad: ${property.type}`}
+              >
+                {property.type}
+              </span>
+            </div>
+          )}
+
+          <CardTitle
+            id={`property-title-${property.id}`}
+            className="font-serif text-xl text-foreground leading-tight group-hover:text-lime-500 transition-colors duration-200"
+          >
+            {property.title}
+          </CardTitle>
+
+          <div
+            className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1"
+            id={`property-description-${property.id}`}
+          >
+            <MapPin
+              className="h-4 w-4 text-emerald-600 flex-shrink-0"
+              aria-hidden="true"
+            />
+            <span className="truncate" aria-label={`Ubicación: ${safeString(property.location, 'Ubicación no especificada')}`}>
+              {safeString(property.location, 'Ubicación no especificada')}
             </span>
           </div>
-        )}
-        <CardTitle className="font-serif text-xl text-foreground leading-tight group-hover:text-lime-500 transition-colors duration-200">
-          {property.title}
-        </CardTitle>
-        <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-          <MapPin className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-          <span className="truncate">{safeString(property.location, 'Location not specified')}</span>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="mt-4 flex flex-col sm:flex-row gap-2">
-          <Button asChild className="w-full sm:flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]">
-            <Link href={`/properties/${property.id}`}>Ver detalles</Link>
-          </Button>
-          {showEdit && (
-            <Button asChild variant="outline" className="w-full sm:w-auto min-h-[44px] sm:w-12 sm:h-12 sm:p-0" title="Editar propiedad">
-              <Link href={`/properties/${property.id}/edit`}>
-                <Edit className="h-4 w-4" />
-                <span className="sm:hidden ml-2">Editar</span>
+        </CardHeader>
+
+        <CardContent className="pt-0">
+          <div className="mt-4 flex flex-col sm:flex-row gap-2">
+            <Button
+              asChild
+              className="w-full sm:flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px] focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              aria-describedby={`property-title-${property.id} property-description-${property.id}`}
+            >
+              <Link href={`/properties/${property.id}`}>
+                Ver detalles
+                <span className="sr-only">de {property.title}</span>
               </Link>
             </Button>
-          )}
-          {onDelete && (
-            <Button
-              type="button"
-              variant="destructive"
-              className="w-full sm:w-auto min-h-[44px] sm:w-12 sm:h-12 sm:p-0"
-              onClick={(e) => {
-                if (isDeleting) return;
-                handleDelete(e);
-              }}
-              disabled={isDeleting}
-              title={isDeleting ? "Eliminando propiedad" : isConfirmPending ? "Confirmar eliminación" : "Eliminar propiedad"}
-              aria-label={isDeleting ? "Eliminando propiedad" : isConfirmPending ? "Confirmar eliminación" : "Eliminar propiedad"}
-            >
-              <Trash2 className="h-4 w-4" /> 
-              <span className="sm:hidden ml-2">
-                {isDeleting ? "Eliminando…" : (isConfirmPending ? "Confirmar" : "Eliminar")}
-              </span>
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+
+            {showEdit && (
+              <Button
+                asChild
+                variant="outline"
+                className="w-full sm:w-auto min-h-[44px] sm:w-12 sm:h-12 sm:p-0 focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                title="Editar propiedad"
+                aria-label={`Editar propiedad: ${property.title}`}
+              >
+                <Link href={`/properties/${property.id}/edit`}>
+                  <Edit className="h-4 w-4" aria-hidden="true" />
+                  <span className="sm:hidden ml-2">Editar</span>
+                </Link>
+              </Button>
+            )}
+
+            {onDelete && (
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full sm:w-auto min-h-[44px] sm:w-12 sm:h-12 sm:p-0 focus:ring-2 focus:ring-destructive focus:ring-offset-2"
+                onClick={(e) => {
+                  if (isDeleting) return;
+                  handleDelete(e);
+                }}
+                disabled={isDeleting}
+                title={isDeleting ? "Eliminando propiedad" : isConfirmPending ? "Confirmar eliminación" : "Eliminar propiedad"}
+                aria-label={`${isDeleting ? "Eliminando" : isConfirmPending ? "Confirmar eliminación de" : "Eliminar"} propiedad: ${property.title}`}
+                aria-describedby={`property-title-${property.id}`}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                <span className="sm:hidden ml-2">
+                  {isDeleting ? "Eliminando…" : (isConfirmPending ? "Confirmar" : "Eliminar")}
+                </span>
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </MorphCard>
   );
 });

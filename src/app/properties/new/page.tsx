@@ -233,6 +233,8 @@ export default function NewPropertyPage() {
           area: Number.isFinite(areaNum) ? areaNum : null,
           features: featuresArr.length ? featuresArr : null,
           owner_id: uid,
+          status: 'active',
+          is_published: true,
         });
 
       if (insertError) {

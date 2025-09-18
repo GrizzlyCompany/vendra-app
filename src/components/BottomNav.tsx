@@ -99,7 +99,7 @@ export function BottomNav() {
                 )}
               >
                 <Icon className={cn("h-5 w-5", active ? "text-primary" : "")} />
-                <span className="leading-none">{label}</span>
+                <span className="leading-none font-serif">{label}</span>
               </Link>
             </li>
           );
