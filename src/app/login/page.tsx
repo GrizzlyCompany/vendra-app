@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToastContext } from "@/components/ToastProvider";
 import { handleSupabaseError } from "@/lib/errors";
-import { UserPlus, ArrowLeft } from "lucide-react";
+import { UserPlus, ArrowLeft, Mail } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +20,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -40,6 +43,33 @@ export default function LoginPage() {
       showError("Error al iniciar sesión", error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onRecoverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryLoading(true);
+    try {
+      // Send password reset email
+      const { error } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+      
+      showSuccess(
+        "Correo de recuperación enviado", 
+        "Revisa tu bandeja de entrada para restablecer tu contraseña"
+      );
+      
+      // Reset form and return to login
+      setRecoveryEmail("");
+      setIsRecoveryMode(false);
+    } catch (err: any) {
+      const error = handleSupabaseError(err);
+      showError("Error al enviar correo", error.message);
+    } finally {
+      setRecoveryLoading(false);
     }
   };
 
@@ -93,58 +123,107 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-      <Card className="w-full max-w-sm border-0 shadow-xl rounded-t-none rounded-b-2xl bg-background">
-        <CardHeader className="text-center pb-2 pt-4">
-          <CardTitle className="font-serif text-lg sm:text-xl text-foreground">Iniciar sesión</CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">Accede a tu cuenta para continuar</p>
-        </CardHeader>
-        <CardContent className="px-6 pb-4">
-          <form onSubmit={onSubmit} className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">Correo electrónico</label>
-              <Input 
-                type="email" 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
-                required 
-                placeholder="tu@correo.com"
-                className="h-9 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">Contraseña</label>
-              <Input 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                required 
-                placeholder="••••••••"
-                className="h-9 text-sm"
-              />
-            </div>
-            <Button 
-              type="submit" 
-              disabled={loading} 
-              className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-sm mt-4"
-            >
-              {loading ? "Ingresando..." : "Iniciar sesión"}
-            </Button>
-          </form>
-          
-          {/* Sign up link */}
-          <div className="mt-3 text-center">
-            <p className="text-xs text-muted-foreground">
-              ¿No tienes una cuenta?{" "}
-              <Button asChild variant="link" className="p-0 h-auto font-medium text-primary text-xs">
-                <Link href="/signup" className="inline-flex items-center gap-1">
-                  <UserPlus className="w-3 h-3" />
-                  Crear cuenta
-                </Link>
-              </Button>
+        <Card className="w-full max-w-sm border-0 shadow-xl rounded-t-none rounded-b-2xl bg-background">
+          <CardHeader className="text-center pb-2 pt-4">
+            <CardTitle className="font-serif text-lg sm:text-xl text-foreground">
+              {isRecoveryMode ? "Recuperar contraseña" : "Iniciar sesión"}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              {isRecoveryMode 
+                ? "Ingresa tu correo para recibir instrucciones de recuperación" 
+                : "Accede a tu cuenta para continuar"}
             </p>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="px-6 pb-4">
+            {isRecoveryMode ? (
+              <form onSubmit={onRecoverySubmit} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Correo electrónico</label>
+                  <Input 
+                    type="email" 
+                    value={recoveryEmail} 
+                    onChange={(e) => setRecoveryEmail(e.target.value)} 
+                    required 
+                    placeholder="tu@correo.com"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  disabled={recoveryLoading} 
+                  className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-sm mt-4"
+                >
+                  {recoveryLoading ? "Enviando..." : "Enviar instrucciones"}
+                </Button>
+                <div className="mt-3 text-center">
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto font-medium text-primary text-xs"
+                    onClick={() => setIsRecoveryMode(false)}
+                  >
+                    Volver al inicio de sesión
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={onSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Correo electrónico</label>
+                  <Input 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    required 
+                    placeholder="tu@correo.com"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Contraseña</label>
+                  <Input 
+                    type="password" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    required 
+                    placeholder="••••••••"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-sm mt-4"
+                >
+                  {loading ? "Ingresando..." : "Iniciar sesión"}
+                </Button>
+                
+                {/* Forgot password link */}
+                <div className="mt-2 text-center">
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto font-medium text-primary text-xs"
+                    onClick={() => setIsRecoveryMode(true)}
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Button>
+                </div>
+              </form>
+            )}
+            
+            {/* Sign up link */}
+            <div className="mt-3 text-center">
+              <p className="text-xs text-muted-foreground">
+                ¿No tienes una cuenta?{" "}
+                <Button asChild variant="link" className="p-0 h-auto font-medium text-primary text-xs">
+                  <Link href="/signup" className="inline-flex items-center gap-1">
+                    <UserPlus className="w-3 h-3" />
+                    Crear cuenta
+                  </Link>
+                </Button>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Right Half - Image Overlay */}

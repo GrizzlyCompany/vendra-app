@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  // Enable static export for Capacitor
+  output: 'export',
+  trailingSlash: true,
   // Ensure file tracing resolves from this project root
   outputFileTracingRoot: path.join(__dirname),
   // Ignore ESLint errors during production builds to unblock compilation
@@ -9,6 +12,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    unoptimized: true, // Required for static export
     remotePatterns: [
       {
         protocol: "https",
