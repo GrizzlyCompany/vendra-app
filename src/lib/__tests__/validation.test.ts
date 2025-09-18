@@ -78,6 +78,16 @@ describe('Schema Validation', () => {
       expect(result.success).toBe(true);
     });
 
+    it('should validate partial user data', () => {
+      const partialUser = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        email: 'test@example.com'
+      };
+
+      const result = UserSchema.safeParse(partialUser);
+      expect(result.success).toBe(true);
+    });
+
     it('should reject invalid user data', () => {
       const invalidUser = {
         id: 'invalid-uuid',

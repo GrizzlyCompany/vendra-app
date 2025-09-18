@@ -23,17 +23,17 @@ export const PropertySchema = z.object({
 export const UserSchema = z.object({
   id: z.string().uuid('Invalid user ID'),
   email: z.string().email('Invalid email address'),
-  name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long'),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long').nullable().optional(),
   bio: z.string().max(500, 'Bio is too long').nullable().optional(),
   role: z.enum(['comprador', 'vendedor_agente', 'empresa_constructora'], {
     message: 'Invalid user role'
-  }),
+  }).nullable().optional(),
   avatar_url: z.string().url('Invalid avatar URL').nullable().optional(),
-  subscription_active: z.boolean().default(false),
+  subscription_active: z.boolean().default(false).nullable().optional(),
   rating: z.number().min(0).max(5).nullable().optional(),
   reviews_count: z.number().int().min(0).nullable().optional(),
-  inserted_at: z.string().datetime(),
-  updated_at: z.string().datetime().optional(),
+  inserted_at: z.string().datetime().nullable().optional(),
+  updated_at: z.string().datetime().nullable().optional(),
 });
 
 export const ProjectSchema = z.object({
