@@ -68,6 +68,23 @@ export function BottomNav() {
     { href: "/projects", label: "Proyectos", Icon: Briefcase },
     { href: getProfileHref(), label: "Perfil", Icon: User },
   ];
+
+  // Function to determine if a nav item is active
+  const isNavItemActive = (itemHref: string, itemLabel: string) => {
+    // Special handling for profile/dashboard
+    if (itemLabel === "Perfil") {
+      // For empresa_constructora users, active when on /dashboard
+      if (userRole === "empresa_constructora") {
+        return pathname === "/dashboard" || pathname?.startsWith("/dashboard/");
+      }
+      // For regular users, active when on /profile
+      return pathname === "/profile" || pathname?.startsWith("/profile/");
+    }
+    
+    // For other items, exact match or starts with the href
+    return pathname === itemHref || pathname?.startsWith(itemHref + "/");
+  };
+
   return (
     <nav
       aria-label="Navegación inferior"
@@ -80,12 +97,7 @@ export function BottomNav() {
     >
       <ul className="mx-auto flex max-w-screen-sm items-stretch justify-between gap-1 px-2 py-2.5">
         {items.map(({ href, label, Icon }) => {
-          // Check if current path matches this item
-          // For profile button, check both /profile and /dashboard paths
-          const isProfileItem = label === "Perfil";
-          const active = isProfileItem 
-            ? (pathname === "/profile" || pathname === "/dashboard")
-            : pathname === href;
+          const active = isNavItemActive(href, label);
           
           return (
             <li key={`${href}-${label}`} className="flex-1">
@@ -100,6 +112,9 @@ export function BottomNav() {
               >
                 <Icon className={cn("h-5 w-5", active ? "text-primary" : "")} />
                 <span className="leading-none font-serif">{label}</span>
+                {active && (
+                  <div className="w-1 h-1 bg-primary rounded-full mt-0.5" />
+                )}
               </Link>
             </li>
           );
