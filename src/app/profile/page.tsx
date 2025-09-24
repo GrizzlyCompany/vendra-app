@@ -9,10 +9,11 @@ import { Avatar } from "@/components/ui/avatar";
 import { PropertyCard } from "@/components/PropertyCard";
 import { useFavorites } from "@/hooks/useFavorites";
 import type { Property } from "@/types";
-import { Star, Settings, Heart, CheckCircle, Building, LogOut } from "lucide-react";
+import { Star, Settings, Heart, CheckCircle, Building, LogOut, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
 // BottomNav now rendered globally when authenticated
 
 type ProfileRow = {
@@ -613,6 +614,31 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-background px-2 sm:px-4 py-6 sm:py-10 mobile-bottom-safe mobile-horizontal-safe">
+      {/* Mobile Header with "Perfil" and back button - visible only on mobile/tablet */}
+      <DetailBackButton className="lg:hidden mb-4 sticky top-0 bg-background z-10">
+        <div className="flex items-center justify-between w-full">
+          {/* Back Button */}
+          <Button 
+            asChild 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-8 h-8 border border-border/30 hover:border-border/50 transition-all duration-200"
+          >
+            <Link href="/">
+              <ChevronLeft className="w-4 h-4" />
+            </Link>
+          </Button>
+          
+          {/* Center Title */}
+          <h1 className="text-base font-medium text-foreground truncate mx-2">
+            Perfil
+          </h1>
+          
+          {/* Spacer for alignment */}
+          <div className="w-8 h-8" />
+        </div>
+      </DetailBackButton>
+
       <div className="w-full max-w-full sm:max-w-[85%] lg:max-w-[70%] mx-auto px-2 sm:px-4 lg:px-6 space-y-6 sm:space-y-8">
         {/* Profile header styled like provided UI */}
         <Card className="overflow-hidden shadow-lg rounded-2xl">

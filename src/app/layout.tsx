@@ -7,6 +7,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/ToastProvider";
 import { SupabaseStatus } from "@/components/debug/SupabaseStatus";
 import { ClientLayout } from "@/components/ClientLayout";
+import { SplashScreenWrapper } from "@/components/SplashScreenWrapper";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -67,6 +68,7 @@ export default function RootLayout({
       <body
         className={`${ptSans.variable} ${playfair.variable} antialiased`}
       >
+        <SplashScreenWrapper />
         <ErrorBoundary>
           <ToastProvider>
             <div className="app-container">

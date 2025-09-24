@@ -91,17 +91,12 @@ export function Navbar() {
 
         {!user ? (
           <nav className="hidden md:flex items-center gap-2">
-            <Button asChild variant="ghost" className="font-sans font-normal text-gray-600">
-              <Link href="/projects">
-                <Building2 className="size-4" /> Proyectos
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" className="text-primary font-serif">
+            <Button asChild variant="ghost" className="text-primary">
               <Link href="/login">
                 <LogIn className="size-4" /> Iniciar Sesión
               </Link>
             </Button>
-            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-serif">
+            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
               <Link href="/signup">
                 <UserPlus className="size-4" /> Registrarse
               </Link>

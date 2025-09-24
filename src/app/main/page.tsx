@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { MapPin, Home, DollarSign, Search, X } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 function MainContent() {
   const searchParams = useSearchParams();
@@ -112,7 +114,24 @@ function MainContent() {
   }, [locationSel, priceMin, priceMax, typeSel, refresh, q]);
 
   return (
-    <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-10 mobile-bottom-safe">
+    <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
+      {/* Header with logo and VENDRA text centered - visible only on mobile/tablet */}
+      <header className="lg:hidden mb-6 py-4 sticky top-0 bg-background z-10 pt-4">
+        <div className="container mx-auto flex justify-center items-center">
+          <Link href="/" className="flex items-center gap-2 text-primary" aria-label="Ir al inicio">
+            <Image
+              src="https://vvuvuibcmvqxtvdadwne.supabase.co/storage/v1/object/public/logo/logo3.png"
+              alt="Logotipo de Vendra"
+              width={128}
+              height={48}
+              className="h-11 sm:h-16 w-auto"
+              priority
+            />
+            <span className="whitespace-nowrap text-2xl sm:text-3xl font-serif font-extrabold tracking-wide">VENDRA</span>
+          </Link>
+        </div>
+      </header>
+
       <div className="container mx-auto">
         {/* Hero + Filters */}
         <Card className="mb-8 rounded-2xl shadow-lg overflow-visible bg-background border-0 relative before:content-[''] before:absolute before:inset-y-2 before:left-0.5 before:w-px before:bg-gradient-to-b before:from-transparent before:via-[hsl(var(--border))]/20 before:to-transparent after:content-[''] after:absolute after:inset-y-2 after:right-0.5 after:w-px after:bg-gradient-to-b after:from-transparent after:via-[hsl(var(--border))]/20 after:to-transparent">

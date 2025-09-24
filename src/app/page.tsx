@@ -268,7 +268,7 @@ const Footer = () => (
 export default function VendraLandingPage() {
   return (
     <div className="bg-white text-[#333333]">
-      <RedirectIfAuthenticated to="/dashboard" />
+      <RedirectIfAuthenticated to="/main" />
       <MobileHeader />
       <main>
         <HeroSection />

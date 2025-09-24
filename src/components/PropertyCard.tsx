@@ -152,7 +152,7 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
             priority={false}
             loading="lazy"
             placeholder="blur"
-            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkbHB0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyatSEfLz7j0VywfDN1Mw5HlkI5MxOqD0Uvy3H9qEyXTJ4J4I8qNOCRFBJNOKpWHLaFAkKEARqJiP8AWJ8qAi/7CL2EaPjCOk0ILWPdKCR9mOMnkW7jBkJsz5+/a/uCz2GZE4b5aO5DRsUxU68eKjqvDUUJRZA3YMdtqd1ePe0DnRZBPQl7b1nQBKaSpLRBzB1yqGcP9nxp6FLQoEfR6F8qJNlTPj//2Q=="
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkbHB0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyatSEfLz7j0VywfDN1Mw5HlkI5MxOqD0Uvy3H9qEyXTJ4J4I8qNOCRFBJNOKpWHLaFAkKEARqJiP8AWJ8qAi/7CL2EaPjCOk0ILWPdKCR9mOMnkW7jBkJsz5+/a/uCz2GZE4b5aO5DRsUxU68eKjqvDUUJRZA3YMdtqd1ePe0DnRZBPQl7b1nQBKaSpLRBzB1yqGcP9nxp6FLQoEfR6F8qJNlTPj//2Q=="
           />
         </div>
 
@@ -171,7 +171,7 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
 
           <CardTitle
             id={`property-title-${property.id}`}
-            className="font-serif text-xl text-foreground leading-tight group-hover:text-lime-500 transition-colors duration-200"
+            className="font-sans text-xl text-foreground leading-tight group-hover:text-lime-500 transition-colors duration-200"
           >
             {property.title}
           </CardTitle>

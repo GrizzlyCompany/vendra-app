@@ -65,7 +65,8 @@ export function BottomNav() {
     { href: "/main", label: "Inicio", Icon: Home },
     { href: "/search", label: "Buscar", Icon: Search },
     { href: "/properties/new", label: "Publicar", Icon: PlusSquare },
-    { href: "/projects", label: "Proyectos", Icon: Briefcase },
+    // Only show Proyectos for logged-in users
+    ...(user ? [{ href: "/projects", label: "Proyectos", Icon: Briefcase }] : []),
     { href: getProfileHref(), label: "Perfil", Icon: User },
   ];
 
@@ -111,7 +112,7 @@ export function BottomNav() {
                 )}
               >
                 <Icon className={cn("h-5 w-5", active ? "text-primary" : "")} />
-                <span className="leading-none font-serif">{label}</span>
+                <span className="leading-none font-sans">{label}</span>
                 {active && (
                   <div className="w-1 h-1 bg-primary rounded-full mt-0.5" />
                 )}

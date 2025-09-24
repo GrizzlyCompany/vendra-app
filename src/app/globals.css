@@ -191,3 +191,12 @@
     padding-right: 2rem;
   }
 }
+
+/* Splash Screen Styles */
+.splash-screen {
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.1) 100%);
+}
+
+.splash-screen.dark {
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.2) 100%);
+}
