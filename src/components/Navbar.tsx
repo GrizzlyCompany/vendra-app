@@ -153,6 +153,13 @@ export function Navbar() {
                   >
                     Preferencias
                   </Link>
+                  <Link
+                    href="/reports"
+                    className="block w-full rounded-sm px-3 py-2 hover:bg-muted/60"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Reportes
+                  </Link>
                   <button
                     onClick={() => { setMenuOpen(false); handleSignOut(); }}
                     className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left hover:bg-muted/60"
