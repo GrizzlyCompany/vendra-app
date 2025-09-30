@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Share2, Copy, MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,14 @@ interface ShareMenuProps {
 
 export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
   const { success: showSuccess, error: showError, info: showInfo } = useToastContext();
+  const [isClient, setIsClient] = useState(false);
+  const [canShare, setCanShare] = useState(false);
+
+  // Initialize client-side only values after mount
+  useEffect(() => {
+    setIsClient(true);
+    setCanShare('share' in navigator);
+  }, []);
 
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
   const shareTitle = property.title;
@@ -151,8 +159,8 @@ export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
                 </div>
               </Button>
 
-              {/* Native Share (mobile only) */}
-              {typeof window !== 'undefined' && 'share' in navigator && (
+              {/* Native Share (mobile only) - only render on client */}
+              {isClient && canShare && (
                 <Button
                   onClick={handleNativeShare}
                   variant="outline"

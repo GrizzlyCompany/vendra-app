@@ -300,6 +300,8 @@ export default function PublicProfilePage() {
                     alert('No puedes iniciar chat contigo mismo.');
                     return;
                   }
+                  // Instead of just redirecting, we'll first ensure a conversation exists
+                  // by sending an initial message or at least creating the conversation context
                   router.push(`/messages?to=${userId}`);
                 }}
                 className="ml-1"

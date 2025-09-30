@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
-
-
+/* csslint ignore:start */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -42,6 +41,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
+/* csslint ignore:end */
 
 :root {
   --radius: 0.625rem;

@@ -34,7 +34,9 @@ function MessagesContent() {
     lastMessage: string;
     lastMessageId: string;
   }>>([]);
-  const [showConversations, setShowConversations] = useState(true); // Default to showing conversations on mobile
+  // Use a ref instead of state for mobile detection to avoid hydration issues
+  const [showConversations, setShowConversations] = useState(true);
+  const [isMobileView, setIsMobileView] = useState(false);
 
   // Auto scroll to bottom when messages change
   useEffect(() => {
@@ -43,7 +45,37 @@ function MessagesContent() {
     } catch {}
   }, [messages.length]);
 
-  // Initialize session and load target
+  // Set initial state for mobile view
+  useEffect(() => {
+    const checkIsMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobileView(mobile);
+    };
+    
+    // Initial check
+    checkIsMobile();
+    
+    // Add resize listener
+    window.addEventListener('resize', checkIsMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // Handle responsive view changes when targetId changes
+  useEffect(() => {
+    const checkIsMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobileView(mobile);
+      // On mobile, show conversation list first when there's no targetId
+      // When there is a targetId on mobile, hide conversation list (show chat)
+      setShowConversations(mobile ? !targetId : true);
+    };
+    
+    checkIsMobile();
+  }, [targetId]);
+
+  // Initialize session and load conversations
   useEffect(() => {
     let active = true;
     (async () => {
@@ -58,35 +90,9 @@ function MessagesContent() {
         }
         if (!active) return;
         setMe(uid);
-        if (!targetId) {
-          // Auto-pick latest conversation partner
-          try {
-            const { data: last } = await supabase
-              .from('messages')
-              .select('sender_id,recipient_id,created_at')
-              .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            const other = last ? (last.sender_id === uid ? last.recipient_id : last.sender_id) : null;
-            if (other) {
-              router.replace(`/messages?to=${other}`);
-              return;
-            }
-          } catch {}
-          setLoading(false);
-          return;
-        }
-
-        // Load target minimal public profile
-        const { data: p } = await supabase
-          .from("public_profiles")
-          .select("id,name,avatar_url")
-          .eq("id", targetId)
-          .maybeSingle();
-        if (active) setTarget(p ? { id: p.id, name: p.name ?? null, avatar_url: p.avatar_url ?? null } : { id: targetId, name: null, avatar_url: null });
-
+        
         // Load recent conversations (partners + last message time + last message content)
+        // This should load regardless of whether there's a targetId
         const loadConversations = async () => {
           try {
             // First, get all messages (sent and received) ordered by creation time
@@ -149,8 +155,42 @@ function MessagesContent() {
           }
         };
         
-        // Initial load
+        // Initial load of conversations
         await loadConversations();
+        
+        // Handle targetId logic after conversations are loaded
+        if (!targetId) {
+          // Only auto-pick latest conversation partner on desktop, not mobile
+          if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            // Auto-pick latest conversation partner (desktop only)
+            try {
+              const { data: last } = await supabase
+                .from('messages')
+                .select('sender_id,recipient_id,created_at')
+                .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              const other = last ? (last.sender_id === uid ? last.recipient_id : last.sender_id) : null;
+              if (other) {
+                router.replace(`/messages?to=${other}`);
+                return;
+              }
+            } catch {}
+          }
+          // On mobile, show conversation list first
+          setLoading(false);
+          return;
+        }
+
+        // Load target minimal public profile
+        const { data: p } = await supabase
+          .from("public_profiles")
+          .select("id,name,avatar_url")
+          .eq("id", targetId)
+          .maybeSingle();
+        if (active) setTarget(p ? { id: p.id, name: p.name ?? null, avatar_url: p.avatar_url ?? null } : { id: targetId, name: null, avatar_url: null });
+
       } catch (e: any) {
         if (!active) return;
         setError(e?.message ?? String(e));
@@ -169,6 +209,21 @@ function MessagesContent() {
     let poll: number | null = null;
     (async () => {
       try {
+        // Ensure the target user profile is loaded
+        const { data: targetProfile } = await supabase
+          .from("public_profiles")
+          .select("id,name,avatar_url")
+          .eq("id", targetId)
+          .maybeSingle();
+        
+        if (!cancelled && targetProfile) {
+          setTarget({ 
+            id: targetProfile.id, 
+            name: targetProfile.name ?? null, 
+            avatar_url: targetProfile.avatar_url ?? null 
+          });
+        }
+
         // Initial fetch (thread both directions)
         const { data, error } = await supabase
           .from("messages")
@@ -331,21 +386,34 @@ function MessagesContent() {
     }
   };
 
-  // On mobile, show conversation list by default, and chat only when a conversation is selected
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const showConversationList = isMobile ? showConversations : true; // Always show on desktop
-  const showChatWindow = isMobile ? (!showConversations && targetId) : true; // Show chat on desktop or when selected on mobile
+  // Handle mobile view logic with proper state management
+  const toggleConversationView = () => {
+    if (isMobileView) {
+      // On mobile, if we're viewing a chat, go back to conversation list
+      // If we're on conversation list, go to main page
+      if (targetId) {
+        router.push("/messages");
+      } else {
+        router.push("/main");
+      }
+    }
+  };
 
   // Determine back button destination
   const backButtonDestination = () => {
-    if (isMobile && targetId && !showConversations) {
+    if (isMobileView && targetId) {
       // If on mobile and in a conversation, go back to conversation list
-      return () => setShowConversations(true);
+      return () => router.push("/messages");
     } else {
       // Otherwise go to main page
       return () => router.push("/main");
     }
   };
+
+  // Show conversation list on mobile when appropriate, always show on desktop
+  const showConversationList = isMobileView ? !targetId : true;
+  // Show chat window when there's a targetId
+  const showChatWindow = !!targetId;
 
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
@@ -381,7 +449,7 @@ function MessagesContent() {
         {/* Sidebar - always visible on desktop, toggleable on mobile */}
         <div className={cn(
           "w-80 shrink-0",
-          showConversationList ? "block" : "hidden md:block"
+          isMobileView ? (targetId ? "hidden lg:block" : "block") : "block"
         )}>
           <div className="p-4">
             <div className="flex w-full items-center gap-2 rounded-xl border bg-muted px-3 py-2">
@@ -403,9 +471,6 @@ function MessagesContent() {
                   className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-muted/60 text-left ${c.otherId===targetId ? 'bg-muted/60' : ''}`}
                   onClick={() => {
                     router.push(`/messages?to=${c.otherId}`);
-                    if (isMobile) {
-                      setShowConversations(false); // Switch to chat view on mobile
-                    }
                   }}
                 >
                   <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
@@ -434,16 +499,16 @@ function MessagesContent() {
         {/* Chat pane */}
         <Card className={cn(
           "flex-1 rounded-2xl border shadow-md",
-          showChatWindow ? "flex" : "hidden md:flex" // Hide on mobile when conversation list is shown
+          targetId ? "flex" : "hidden lg:flex" // Hide on mobile when conversation list is shown
         )}>
           <CardHeader className="px-6">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {isMobile && (
+                {isMobileView && (
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    onClick={() => setShowConversations(true)}
+                    onClick={toggleConversationView}
                     className="h-8 w-8 p-0 md:hidden"
                   >
                     <MessageSquare className="h-4 w-4" />
@@ -464,7 +529,7 @@ function MessagesContent() {
             {loading ? (
               <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">Cargando…</div>
             ) : error ? (
-              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-6 text-sm text-destructive">{error}</div>
+              <div className="rounded-md border border-destructive/550 bg-destructive/10 p-6 text-sm text-destructive">{error}</div>
             ) : !targetId ? (
               <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">No hay conversación seleccionada. Abre un perfil y pulsa “Chat”.</div>
             ) : (

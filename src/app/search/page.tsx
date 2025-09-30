@@ -361,7 +361,7 @@ function SearchContent() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {agents.map((a) => (
-                      <Card key={a.id} className="p-4 hover:shadow-md transition-shadow">
+                      <Card key={a.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push(`/profile/${a.id}`)}>
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                             <User className="size-5 text-primary" />
