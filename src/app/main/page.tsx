@@ -9,15 +9,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { MapPin, Home, DollarSign, Search, X } from "lucide-react";
+import { MapPin, Home, DollarSign, Search, X, MessageSquare } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 function MainContent() {
   const searchParams = useSearchParams();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { unreadCount } = useUnreadMessages();
 
   // All locations for select
   const [allLocations, setAllLocations] = useState<string[]>([]);
@@ -128,6 +130,14 @@ function MainContent() {
               priority
             />
             <span className="whitespace-nowrap text-2xl sm:text-3xl font-serif font-extrabold tracking-wide">VENDRA</span>
+          </Link>
+          <Link href="/messages" className="ml-auto mr-4 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors relative">
+            <MessageSquare className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </Link>
         </div>
       </header>

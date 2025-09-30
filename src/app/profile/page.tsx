@@ -624,7 +624,7 @@ export default function ProfilePage() {
             size="icon" 
             className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-8 h-8 border border-border/30 hover:border-border/50 transition-all duration-200"
           >
-            <Link href="/">
+            <Link href="/main">
               <ChevronLeft className="w-4 h-4" />
             </Link>
           </Button>

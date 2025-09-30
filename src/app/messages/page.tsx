@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -8,6 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import { Search, MessageSquare, X, ChevronLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
 
 // 1:1 chat page. Open with /messages?to=<userId>
 function MessagesContent() {
@@ -24,7 +26,15 @@ function MessagesContent() {
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
   const [search, setSearch] = useState("");
-  const [conversations, setConversations] = useState<Array<{ otherId: string; name: string | null; avatar_url: string | null; lastAt: string }>>([]);
+  const [conversations, setConversations] = useState<Array<{ 
+    otherId: string; 
+    name: string | null; 
+    avatar_url: string | null; 
+    lastAt: string;
+    lastMessage: string;
+    lastMessageId: string;
+  }>>([]);
+  const [showConversations, setShowConversations] = useState(true); // Default to showing conversations on mobile
 
   // Auto scroll to bottom when messages change
   useEffect(() => {
@@ -76,35 +86,71 @@ function MessagesContent() {
           .maybeSingle();
         if (active) setTarget(p ? { id: p.id, name: p.name ?? null, avatar_url: p.avatar_url ?? null } : { id: targetId, name: null, avatar_url: null });
 
-        // Load recent conversations (partners + last message time)
-        try {
-          const { data: recentMsgs } = await supabase
-            .from('messages')
-            .select('sender_id,recipient_id,created_at')
-            .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
-            .order('created_at', { ascending: false })
-            .limit(100);
-          const seen = new Set<string>();
-          const partners: Array<{ otherId: string; lastAt: string }> = [];
-          (recentMsgs ?? []).forEach((m: any) => {
-            const other = m.sender_id === uid ? m.recipient_id : m.sender_id;
-            if (!seen.has(other)) {
-              seen.add(other);
-              partners.push({ otherId: other, lastAt: m.created_at });
+        // Load recent conversations (partners + last message time + last message content)
+        const loadConversations = async () => {
+          try {
+            // First, get all messages (sent and received) ordered by creation time
+            const { data: allMessages } = await supabase
+              .from('messages')
+              .select('id, sender_id, recipient_id, content, created_at')
+              .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
+              .order('created_at', { ascending: false });
+            
+            // Group messages by conversation partner and get the latest message for each
+            const conversationsMap: Record<string, { 
+              otherId: string; 
+              lastAt: string; 
+              lastMessage: string;
+              lastMessageId: string;
+            }> = {};
+            
+            (allMessages ?? []).forEach((message: any) => {
+              const otherId = message.sender_id === uid ? message.recipient_id : message.sender_id;
+              // Only keep the most recent message for each conversation
+              if (!conversationsMap[otherId]) {
+                conversationsMap[otherId] = {
+                  otherId,
+                  lastAt: message.created_at,
+                  lastMessage: message.content,
+                  lastMessageId: message.id
+                };
+              }
+            });
+            
+            // Convert to array
+            const conversationsList = Object.values(conversationsMap);
+            
+            if (conversationsList.length > 0) {
+              const { data: profs } = await supabase
+                .from('public_profiles')
+                .select('id,name,avatar_url')
+                .in('id', conversationsList.map(c => c.otherId));
+                
+              const profileMap: Record<string, { name: string|null; avatar_url: string|null }> = {};
+              (profs ?? []).forEach((pp: any) => { 
+                profileMap[pp.id] = { name: pp.name ?? null, avatar_url: pp.avatar_url ?? null }; 
+              });
+              
+              if (active) {
+                setConversations(conversationsList.map(c => ({
+                  otherId: c.otherId,
+                  lastAt: c.lastAt,
+                  lastMessage: c.lastMessage,
+                  lastMessageId: c.lastMessageId,
+                  name: profileMap[c.otherId]?.name ?? null,
+                  avatar_url: profileMap[c.otherId]?.avatar_url ?? null
+                })));
+              }
+            } else {
+              if (active) setConversations([]);
             }
-          });
-          if (partners.length > 0) {
-            const { data: profs } = await supabase
-              .from('public_profiles')
-              .select('id,name,avatar_url')
-              .in('id', partners.map(p => p.otherId));
-            const map: Record<string, { name: string|null; avatar_url: string|null }> = {};
-            (profs ?? []).forEach((pp: any) => { map[pp.id] = { name: pp.name ?? null, avatar_url: pp.avatar_url ?? null }; });
-            setConversations(partners.map(p => ({ otherId: p.otherId, lastAt: p.lastAt, name: map[p.otherId]?.name ?? null, avatar_url: map[p.otherId]?.avatar_url ?? null })));
-          } else {
-            setConversations([]);
+          } catch (error) {
+            console.error('Error loading conversations:', error);
           }
-        } catch {}
+        };
+        
+        // Initial load
+        await loadConversations();
       } catch (e: any) {
         if (!active) return;
         setError(e?.message ?? String(e));
@@ -193,6 +239,80 @@ function MessagesContent() {
     };
   }, [me, targetId]);
 
+  // Set up real-time subscription for new messages
+  useEffect(() => {
+    if (!me) return;
+    
+    const channel = supabase
+      .channel('messages-conversations')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          // When a new message is inserted, update the conversations list
+          const newMessage = payload.new as any;
+          const isParticipant = newMessage.sender_id === me || newMessage.recipient_id === me;
+          
+          if (isParticipant) {
+            // Update conversations list with the new message
+            setConversations(prev => {
+              const otherId = newMessage.sender_id === me ? newMessage.recipient_id : newMessage.sender_id;
+              const existingConversation = prev.find(c => c.otherId === otherId);
+              
+              if (existingConversation) {
+                // Update existing conversation with new message
+                return prev.map(c => 
+                  c.otherId === otherId 
+                    ? { ...c, lastAt: newMessage.created_at, lastMessage: newMessage.content, lastMessageId: newMessage.id }
+                    : c
+                ).sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+              } else {
+                // Add new conversation
+                return [
+                  {
+                    otherId,
+                    lastAt: newMessage.created_at,
+                    lastMessage: newMessage.content,
+                    lastMessageId: newMessage.id,
+                    name: null,
+                    avatar_url: null
+                  },
+                  ...prev
+                ];
+              }
+            });
+            
+            // If this is a new conversation partner, fetch their profile
+            const otherId = newMessage.sender_id === me ? newMessage.recipient_id : newMessage.sender_id;
+            
+            // Fetch profile for new conversation partner
+            supabase
+              .from('public_profiles')
+              .select('name, avatar_url')
+              .eq('id', otherId)
+              .single()
+              .then(({ data, error }) => {
+                if (!error && data) {
+                  setConversations(prev => 
+                    prev.map(c => 
+                      c.otherId === otherId 
+                        ? { ...c, name: data.name ?? null, avatar_url: data.avatar_url ?? null }
+                        : c
+                    )
+                  );
+                }
+              });
+          }
+        }
+      )
+      .subscribe();
+    
+    // Cleanup function
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [me, supabase]);
+
   const canSend = useMemo(() => me && targetId && text.trim().length > 0, [me, targetId, text]);
 
   const onSend = async () => {
@@ -211,14 +331,61 @@ function MessagesContent() {
     }
   };
 
+  // On mobile, show conversation list by default, and chat only when a conversation is selected
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const showConversationList = isMobile ? showConversations : true; // Always show on desktop
+  const showChatWindow = isMobile ? (!showConversations && targetId) : true; // Show chat on desktop or when selected on mobile
+
+  // Determine back button destination
+  const backButtonDestination = () => {
+    if (isMobile && targetId && !showConversations) {
+      // If on mobile and in a conversation, go back to conversation list
+      return () => setShowConversations(true);
+    } else {
+      // Otherwise go to main page
+      return () => router.push("/main");
+    }
+  };
+
   return (
-    <main className="container mx-auto max-w-6xl px-4 py-6">
+    <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
+      {/* Mobile Header - visible only on mobile/tablet */}
+      <DetailBackButton className="lg:hidden mb-4">
+        <div className="flex items-center justify-between w-full">
+          {/* Back Button */}
+          <Button 
+            onClick={backButtonDestination()}
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-8 h-8 border border-border/30 hover:border-border/50 transition-all duration-200"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          
+          {/* Center Title */}
+          <h1 className="text-base font-medium text-foreground truncate mx-2">
+            Chat
+          </h1>
+          
+          {/* Spacer for alignment */}
+          <div className="w-8 h-8" />
+        </div>
+      </DetailBackButton>
+      
+      {/* Desktop: Show original content without changes */}
+      <div className="hidden lg:block">
+        {/* This empty div ensures desktop version remains unchanged */}
+      </div>
+
       <div className="flex gap-4">
-        {/* Sidebar */}
-        <div className="w-80 shrink-0">
-          <div className="px-2 py-2">
+        {/* Sidebar - always visible on desktop, toggleable on mobile */}
+        <div className={cn(
+          "w-80 shrink-0",
+          showConversationList ? "block" : "hidden md:block"
+        )}>
+          <div className="p-4">
             <div className="flex w-full items-center gap-2 rounded-xl border bg-muted px-3 py-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+              <Search className="text-emerald-600" />
               <input
                 className="h-9 flex-1 bg-transparent outline-none text-sm"
                 placeholder="Buscar"
@@ -227,14 +394,19 @@ function MessagesContent() {
               />
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 px-2">
             {conversations
               .filter(c => !search || (c.name ?? '').toLowerCase().includes(search.toLowerCase()))
               .map((c) => (
                 <button
                   key={c.otherId}
                   className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-muted/60 text-left ${c.otherId===targetId ? 'bg-muted/60' : ''}`}
-                  onClick={()=>router.push(`/messages?to=${c.otherId}`)}
+                  onClick={() => {
+                    router.push(`/messages?to=${c.otherId}`);
+                    if (isMobile) {
+                      setShowConversations(false); // Switch to chat view on mobile
+                    }
+                  }}
                 >
                   <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -242,7 +414,14 @@ function MessagesContent() {
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-foreground truncate">{c.name ?? 'Usuario'}</div>
-                    <div className="text-xs text-muted-foreground">{new Date(c.lastAt).toLocaleString()}</div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-muted-foreground truncate max-w-[70%]" title={c.lastMessage}>
+                        {c.lastMessage ? (c.lastMessage.length > 30 ? c.lastMessage.substring(0, 30) + '...' : c.lastMessage) : 'No messages yet'}
+                      </div>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                        {new Date(c.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
                   </div>
                 </button>
             ))}
@@ -253,10 +432,25 @@ function MessagesContent() {
         </div>
 
         {/* Chat pane */}
-        <Card className="flex-1 rounded-2xl border shadow-md">
+        <Card className={cn(
+          "flex-1 rounded-2xl border shadow-md",
+          showChatWindow ? "flex" : "hidden md:flex" // Hide on mobile when conversation list is shown
+        )}>
           <CardHeader className="px-6">
             <CardTitle className="flex items-center justify-between">
-              <span>Mensajes</span>
+              <div className="flex items-center gap-2">
+                {isMobile && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setShowConversations(true)}
+                    className="h-8 w-8 p-0 md:hidden"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                )}
+                <span>Mensajes</span>
+              </div>
               {targetId ? (
                 <span className="text-sm text-muted-foreground">
                   Conversación con {target?.name ?? 'Usuario'} · <Link href={`/profile/${targetId}`} className="underline">ver perfil</Link>

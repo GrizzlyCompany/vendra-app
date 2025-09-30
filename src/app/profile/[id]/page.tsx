@@ -11,7 +11,8 @@ import { PropertyCard } from "@/components/PropertyCard";
 import type { Property } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, Building, MessageSquare } from "lucide-react";
+import { Star, Building, MessageSquare, ChevronLeft } from "lucide-react";
+import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
 
 // Public profile page for arbitrary user by id
 // This is distinct from src/app/profile/page.tsx which shows the session user's own profile
@@ -212,7 +213,31 @@ export default function PublicProfilePage() {
   if (!userId) return null;
 
   return (
-    <main className="container mx-auto max-w-6xl px-3 sm:px-4 lg:px-6 py-4 sm:py-6 mobile-bottom-safe mobile-horizontal-safe">
+    <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe mobile-horizontal-safe">
+      {/* Mobile Header with "Perfil" and back button - visible only on mobile/tablet */}
+      <DetailBackButton className="lg:hidden mb-4">
+        <div className="flex items-center justify-between w-full">
+          {/* Back Button */}
+          <Button 
+            asChild 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-8 h-8 border border-border/30 hover:border-border/50 transition-all duration-200"
+          >
+            <Link href="/main">
+              <ChevronLeft className="w-4 h-4" />
+            </Link>
+          </Button>
+          
+          {/* Center Title */}
+          <h1 className="text-base font-medium text-foreground truncate mx-2">
+            Perfil
+          </h1>
+          
+          {/* Spacer for alignment */}
+          <div className="w-8 h-8" />
+        </div>
+      </DetailBackButton>
 
       <Card className="bg-card text-card-foreground flex flex-col gap-6 border py-6 overflow-hidden shadow-lg rounded-2xl">
         <CardHeader className="@container/card-header p-0 grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6">
@@ -287,8 +312,8 @@ export default function PublicProfilePage() {
           {/* Bio section */}
           {profile?.bio && (
             <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t">
-              <h3 className="text-sm font-medium text-foreground mb-2">Sobre Mi</h3>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{profile.bio}</p>
+              <h3 className="text-sm font-medium text-foreground mb-2 text-center">Sobre Mi</h3>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed text-center">{profile.bio}</p>
             </div>
           )}
 
