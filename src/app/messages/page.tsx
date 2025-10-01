@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { Search, MessageSquare, X, ChevronLeft } from "lucide-react";
+import { Search, MessageSquare, X, ChevronLeft, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
+import { motion, AnimatePresence } from "framer-motion";
 
 // 1:1 chat page. Open with /messages?to=<userId>
 function MessagesContent() {
@@ -27,29 +27,61 @@ function MessagesContent() {
   const listRef = useRef<HTMLDivElement | null>(null);
   const [search, setSearch] = useState("");
   const [conversations, setConversations] = useState<Array<{ 
-    otherId: string; 
-    name: string | null; 
-    avatar_url: string | null; 
+    otherId: string;
+    name: string | null;
+    avatar_url: string | null;
     lastAt: string;
     lastMessage: string;
     lastMessageId: string;
   }>>([]);
-  // Use a ref instead of state for mobile detection to avoid hydration issues
-  const [showConversations, setShowConversations] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [showConversationList, setShowConversationList] = useState(true);
+  const prevMessagesLength = useRef(messages.length); // Track previous message count
+  const isInitialLoad = useRef(true); // Track initial load
+  const lastMessageId = useRef<string | null>(null); // Track the ID of the last message
 
-  // Auto scroll to bottom when messages change
+  // Auto scroll to bottom when NEW messages are added
   useEffect(() => {
-    try {
-      listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-    } catch {}
-  }, [messages.length]);
+    // Skip scroll on initial load
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      prevMessagesLength.current = messages.length;
+      // Update last message ID if there are messages
+      if (messages.length > 0) {
+        lastMessageId.current = messages[messages.length - 1].id;
+      }
+      return;
+    }
+    
+    // Check if we actually have new messages (not just a re-render)
+    const hasNewMessages = messages.length > prevMessagesLength.current;
+    const actualLastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+    const lastMessageChanged = actualLastMessageId !== lastMessageId.current;
+    
+    // Only scroll to bottom if we have new messages or the last message changed
+    if ((hasNewMessages || lastMessageChanged) && listRef.current) {
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        if (listRef.current) {
+          listRef.current.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
+        }
+      });
+    }
+    
+    // Update tracking variables
+    prevMessagesLength.current = messages.length;
+    lastMessageId.current = actualLastMessageId;
+  }, [messages]);
 
   // Set initial state for mobile view
   useEffect(() => {
     const checkIsMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobileView(mobile);
+      // On mobile, default to showing conversation list
+      if (mobile) {
+        setShowConversationList(true);
+      }
     };
     
     // Initial check
@@ -62,18 +94,14 @@ function MessagesContent() {
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
-  // Handle responsive view changes when targetId changes
+  // Effect to handle mobile view state when targetId changes
   useEffect(() => {
-    const checkIsMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobileView(mobile);
-      // On mobile, show conversation list first when there's no targetId
-      // When there is a targetId on mobile, hide conversation list (show chat)
-      setShowConversations(mobile ? !targetId : true);
-    };
-    
-    checkIsMobile();
-  }, [targetId]);
+    if (isMobileView) {
+      // If we have a targetId, show the chat view
+      // If we don't have a targetId, show the conversation list
+      setShowConversationList(!targetId);
+    }
+  }, [isMobileView, targetId]);
 
   // Initialize session and load conversations
   useEffect(() => {
@@ -138,14 +166,40 @@ function MessagesContent() {
               });
               
               if (active) {
-                setConversations(conversationsList.map(c => ({
-                  otherId: c.otherId,
-                  lastAt: c.lastAt,
-                  lastMessage: c.lastMessage,
-                  lastMessageId: c.lastMessageId,
-                  name: profileMap[c.otherId]?.name ?? null,
-                  avatar_url: profileMap[c.otherId]?.avatar_url ?? null
-                })));
+                // Only update conversations if they've actually changed
+                setConversations(prevConversations => {
+                  // Convert both arrays to JSON strings for comparison
+                  const prevConversationsStr = JSON.stringify(prevConversations.map(c => ({
+                    otherId: c.otherId,
+                    lastAt: c.lastAt,
+                    lastMessage: c.lastMessage,
+                    lastMessageId: c.lastMessageId,
+                    name: c.name,
+                    avatar_url: c.avatar_url
+                  })).sort((a, b) => a.otherId.localeCompare(b.otherId)));
+                  
+                  const newConversationsStr = JSON.stringify(conversationsList.map(c => ({
+                    otherId: c.otherId,
+                    lastAt: c.lastAt,
+                    lastMessage: c.lastMessage,
+                    lastMessageId: c.lastMessageId,
+                    name: profileMap[c.otherId]?.name ?? null,
+                    avatar_url: profileMap[c.otherId]?.avatar_url ?? null
+                  })).sort((a, b) => a.otherId.localeCompare(b.otherId)));
+                  
+                  // Only update if conversations have actually changed
+                  if (prevConversationsStr !== newConversationsStr) {
+                    return conversationsList.map(c => ({
+                      otherId: c.otherId,
+                      lastAt: c.lastAt,
+                      lastMessage: c.lastMessage,
+                      lastMessageId: c.lastMessageId,
+                      name: profileMap[c.otherId]?.name ?? null,
+                      avatar_url: profileMap[c.otherId]?.avatar_url ?? null
+                    }));
+                  }
+                  return prevConversations;
+                });
               }
             } else {
               if (active) setConversations([]);
@@ -209,6 +263,11 @@ function MessagesContent() {
     let poll: number | null = null;
     (async () => {
       try {
+        // Reset initial load flag and tracking variables when switching conversations
+        isInitialLoad.current = true;
+        prevMessagesLength.current = 0;
+        lastMessageId.current = null;
+        
         // Ensure the target user profile is loaded
         const { data: targetProfile } = await supabase
           .from("public_profiles")
@@ -255,7 +314,14 @@ function MessagesContent() {
               const inThread = (m.sender_id === me && m.recipient_id === targetId) || (m.sender_id === targetId && m.recipient_id === me);
               if (!inThread) return;
               if (payload.eventType === 'INSERT') {
-                setMessages((prev) => [...prev, payload.new as any]);
+                setMessages((prev) => {
+                  // Check if message already exists to prevent duplicates
+                  const messageExists = prev.some(m => m.id === payload.new.id);
+                  if (messageExists) {
+                    return prev;
+                  }
+                  return [...prev, payload.new as any];
+                });
                 if ((payload.new as any).recipient_id === me) {
                   supabase
                     .from('messages')
@@ -264,7 +330,21 @@ function MessagesContent() {
                     .is('read_at', null);
                 }
               } else if (payload.eventType === 'UPDATE') {
-                setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, ...m } : x)));
+                setMessages((prev) => {
+                  // Only update if something actually changed
+                  const existingMessage = prev.find(m => m.id === payload.new.id);
+                  if (existingMessage) {
+                    // Check if anything actually changed
+                    const hasChanges = 
+                      existingMessage.read_at !== payload.new.read_at ||
+                      existingMessage.content !== payload.new.content;
+                    
+                    if (hasChanges) {
+                      return prev.map((x) => (x.id === payload.new.id ? { ...x, ...payload.new } : x));
+                    }
+                  }
+                  return prev;
+                });
               }
             }
           )
@@ -280,7 +360,34 @@ function MessagesContent() {
               .in('recipient_id', [me, targetId])
               .order('created_at', { ascending: true });
             if (!data) return;
-            setMessages((data as any));
+            
+            // Only update messages if they've actually changed
+            setMessages(prevMessages => {
+              // Convert both arrays to JSON strings for comparison
+              const prevMessagesStr = JSON.stringify(prevMessages.map(m => ({
+                id: m.id,
+                sender_id: m.sender_id,
+                recipient_id: m.recipient_id,
+                content: m.content,
+                created_at: m.created_at,
+                read_at: m.read_at
+              })));
+              
+              const newMessagesStr = JSON.stringify(data.map(m => ({
+                id: m.id,
+                sender_id: m.sender_id,
+                recipient_id: m.recipient_id,
+                content: m.content,
+                created_at: m.created_at,
+                read_at: m.read_at
+              })));
+              
+              // Only update if messages have actually changed
+              if (prevMessagesStr !== newMessagesStr) {
+                return data as any;
+              }
+              return prevMessages;
+            });
           } catch {}
         }, 4000);
       } catch (e) {
@@ -315,12 +422,16 @@ function MessagesContent() {
               const existingConversation = prev.find(c => c.otherId === otherId);
               
               if (existingConversation) {
-                // Update existing conversation with new message
-                return prev.map(c => 
-                  c.otherId === otherId 
-                    ? { ...c, lastAt: newMessage.created_at, lastMessage: newMessage.content, lastMessageId: newMessage.id }
-                    : c
-                ).sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+                // Only update if the message is actually newer
+                const isNewer = new Date(newMessage.created_at) > new Date(existingConversation.lastAt);
+                if (isNewer) {
+                  return prev.map(c => 
+                    c.otherId === otherId 
+                      ? { ...c, lastAt: newMessage.created_at, lastMessage: newMessage.content, lastMessageId: newMessage.id }
+                      : c
+                  ).sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+                }
+                return prev;
               } else {
                 // Add new conversation
                 return [
@@ -348,13 +459,24 @@ function MessagesContent() {
               .single()
               .then(({ data, error }) => {
                 if (!error && data) {
-                  setConversations(prev => 
-                    prev.map(c => 
-                      c.otherId === otherId 
-                        ? { ...c, name: data.name ?? null, avatar_url: data.avatar_url ?? null }
-                        : c
-                    )
-                  );
+                  setConversations(prev => {
+                    // Only update if profile data has actually changed
+                    const conversation = prev.find(c => c.otherId === otherId);
+                    if (conversation) {
+                      const hasChanges = 
+                        conversation.name !== (data.name ?? null) ||
+                        conversation.avatar_url !== (data.avatar_url ?? null);
+                      
+                      if (hasChanges) {
+                        return prev.map(c => 
+                          c.otherId === otherId 
+                            ? { ...c, name: data.name ?? null, avatar_url: data.avatar_url ?? null }
+                            : c
+                        );
+                      }
+                    }
+                    return prev;
+                  });
                 }
               });
           }
@@ -386,187 +508,297 @@ function MessagesContent() {
     }
   };
 
-  // Handle mobile view logic with proper state management
-  const toggleConversationView = () => {
+  // Handle opening a conversation with transition
+  const openConversation = (conversationId: string) => {
     if (isMobileView) {
-      // On mobile, if we're viewing a chat, go back to conversation list
-      // If we're on conversation list, go to main page
-      if (targetId) {
-        router.push("/messages");
-      } else {
-        router.push("/main");
-      }
-    }
-  };
-
-  // Determine back button destination
-  const backButtonDestination = () => {
-    if (isMobileView && targetId) {
-      // If on mobile and in a conversation, go back to conversation list
-      return () => router.push("/messages");
+      // On mobile, navigate to the conversation (this will automatically show the chat view)
+      router.push(`/messages?to=${conversationId}`, { scroll: false });
     } else {
-      // Otherwise go to main page
-      return () => router.push("/main");
+      // On desktop, just navigate normally
+      router.push(`/messages?to=${conversationId}`);
     }
   };
 
-  // Show conversation list on mobile when appropriate, always show on desktop
-  const showConversationList = isMobileView ? !targetId : true;
-  // Show chat window when there's a targetId
-  const showChatWindow = !!targetId;
+  // Handle going back to conversation list
+  const goBackToConversations = () => {
+    if (isMobileView) {
+      router.push("/messages", { scroll: false });
+    } else {
+      router.push("/main");
+    }
+  };
+
+  // Conversation list component for mobile
+  const ConversationList = () => (
+    <motion.div
+      initial={{ x: -300, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: -300, opacity: 0 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      className="w-full h-full flex flex-col pb-20"
+    >
+      {/* Mobile Header */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <h1 className="text-xl font-bold">Chats</h1>
+        <Button variant="ghost" size="icon">
+          <Search className="h-5 w-5" />
+        </Button>
+      </div>
+      
+      {/* Search Bar */}
+      <div className="p-4">
+        <div className="flex w-full items-center gap-2 rounded-xl border bg-muted px-3 py-2">
+          <Search className="text-emerald-600" />
+          <input
+            className="h-9 flex-1 bg-transparent outline-none text-sm"
+            placeholder="Buscar"
+            value={search}
+            onChange={(e)=>setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+      
+      {/* Conversations List */}
+      <div className="flex-1 overflow-y-auto">
+        {conversations
+          .filter(c => !search || (c.name ?? '').toLowerCase().includes(search.toLowerCase()))
+          .map((c) => (
+            <button
+              key={c.otherId}
+              className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/60 text-left ${c.otherId===targetId ? 'bg-muted/60' : ''}`}
+              onClick={() => openConversation(c.otherId)}
+            >
+              <div className="relative h-12 w-12 overflow-hidden rounded-full bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {c.avatar_url ? <img src={c.avatar_url} alt={c.name ?? 'Usuario'} className="h-full w-full object-cover"/> : null}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-foreground truncate">{c.name ?? 'Usuario'}</div>
+                <div className="flex justify-between items-center">
+                  <div className="text-xs text-muted-foreground truncate max-w-[70%]" title={c.lastMessage}>
+                    {c.lastMessage ? (c.lastMessage.length > 30 ? c.lastMessage.substring(0, 30) + '...' : c.lastMessage) : 'No messages yet'}
+                  </div>
+                  <div className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                    {new Date(c.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+            </button>
+        ))}
+        {conversations.length===0 && (
+          <div className="px-4 py-6 text-sm text-muted-foreground">No hay conversaciones recientes.</div>
+        )}
+      </div>
+    </motion.div>
+  );
+
+  // Chat view component
+  const ChatView = () => (
+    <motion.div
+      initial={{ x: 300, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: 300, opacity: 0 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      className="w-full h-full flex flex-col"
+    >
+      {/* Chat Header */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={goBackToConversations}
+            className="md:hidden rounded-full w-10 h-10 border border-border/30 hover:border-border/50 transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {target?.avatar_url ? <img src={target.avatar_url} alt={target.name ?? 'Usuario'} className="h-full w-full object-cover"/> : null}
+          </div>
+          <div>
+            <div className="font-medium">{target?.name ?? 'Usuario'}</div>
+            <div className="text-xs text-muted-foreground">En línea</div>
+          </div>
+        </div>
+        <Button variant="ghost" size="icon">
+          <Menu className="h-5 w-5" />
+        </Button>
+      </div>
+      
+      {/* Messages Area - Increased padding to ensure content doesn't go behind bottom nav */}
+      <div className="flex-1 overflow-y-auto p-4 pb-24" ref={listRef}>
+        <div className="space-y-3">
+          {messages.map((m) => {
+            const mine = m.sender_id === me;
+            return (
+              <motion.div 
+                key={m.id} 
+                className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow ${mine ? 'bg-emerald-600 text-white' : 'bg-muted text-foreground'}`}>
+                  <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                  <div className="mt-1 text-[10px] opacity-70 text-right">
+                    {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {mine && (<span className="ml-2">{m.read_at ? '✓✓' : '✓'}</span>)}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+          {messages.length === 0 && (
+            <div className="text-center text-sm text-muted-foreground mt-10">Aún no hay mensajes. ¡Envía el primero!</div>
+          )}
+        </div>
+      </div>
+      
+      {/* Input Area - Increased mb-20 to ensure it's well above the bottom nav */}
+      <div className="p-4 border-t mb-20">
+        <div className="flex items-center gap-2">
+          <Input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
+            placeholder="Escribe tu mensaje…"
+            className="rounded-full flex-1"
+          />
+          <Button onClick={onSend} disabled={!canSend} className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700">
+            Enviar
+          </Button>
+        </div>
+      </div>
+    </motion.div>
+  );
 
   return (
-    <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
-      {/* Mobile Header - visible only on mobile/tablet */}
-      <DetailBackButton className="lg:hidden mb-4">
-        <div className="flex items-center justify-between w-full">
-          {/* Back Button */}
-          <Button 
-            onClick={backButtonDestination()}
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-8 h-8 border border-border/30 hover:border-border/50 transition-all duration-200"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          
-          {/* Center Title */}
-          <h1 className="text-base font-medium text-foreground truncate mx-2">
-            Chat
-          </h1>
-          
-          {/* Spacer for alignment */}
-          <div className="w-8 h-8" />
-        </div>
-      </DetailBackButton>
-      
-      {/* Desktop: Show original content without changes */}
-      <div className="hidden lg:block">
-        {/* This empty div ensures desktop version remains unchanged */}
-      </div>
-
-      <div className="flex gap-4">
-        {/* Sidebar - always visible on desktop, toggleable on mobile */}
-        <div className={cn(
-          "w-80 shrink-0",
-          isMobileView ? (targetId ? "hidden lg:block" : "block") : "block"
-        )}>
-          <div className="p-4">
-            <div className="flex w-full items-center gap-2 rounded-xl border bg-muted px-3 py-2">
-              <Search className="text-emerald-600" />
-              <input
-                className="h-9 flex-1 bg-transparent outline-none text-sm"
-                placeholder="Buscar"
-                value={search}
-                onChange={(e)=>setSearch(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="space-y-1 px-2">
-            {conversations
-              .filter(c => !search || (c.name ?? '').toLowerCase().includes(search.toLowerCase()))
-              .map((c) => (
-                <button
-                  key={c.otherId}
-                  className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-muted/60 text-left ${c.otherId===targetId ? 'bg-muted/60' : ''}`}
-                  onClick={() => {
-                    router.push(`/messages?to=${c.otherId}`);
-                  }}
-                >
-                  <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {c.avatar_url ? <img src={c.avatar_url} alt={c.name ?? 'Usuario'} className="h-full w-full object-cover"/> : null}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-foreground truncate">{c.name ?? 'Usuario'}</div>
-                    <div className="flex justify-between items-center">
-                      <div className="text-xs text-muted-foreground truncate max-w-[70%]" title={c.lastMessage}>
-                        {c.lastMessage ? (c.lastMessage.length > 30 ? c.lastMessage.substring(0, 30) + '...' : c.lastMessage) : 'No messages yet'}
-                      </div>
-                      <div className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                        {new Date(c.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-            ))}
-            {conversations.length===0 && (
-              <div className="px-3 py-6 text-sm text-muted-foreground">No hay conversaciones recientes.</div>
-            )}
-          </div>
-        </div>
-
-        {/* Chat pane */}
-        <Card className={cn(
-          "flex-1 rounded-2xl border shadow-md",
-          targetId ? "flex" : "hidden lg:flex" // Hide on mobile when conversation list is shown
-        )}>
-          <CardHeader className="px-6">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {isMobileView && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={toggleConversationView}
-                    className="h-8 w-8 p-0 md:hidden"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
-                )}
-                <span>Mensajes</span>
+    <main className="h-screen w-screen fixed inset-0 bg-background lg:static lg:h-auto lg:w-auto">
+      {/* Desktop version - unchanged */}
+      <div className="hidden lg:block h-full">
+        <div className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
+          <div className="flex gap-4 h-full">
+            {/* Sidebar */}
+            <div className="w-80 shrink-0">
+              <div className="p-4">
+                <div className="flex w-full items-center gap-2 rounded-xl border bg-muted px-3 py-2">
+                  <Search className="text-emerald-600" />
+                  <input
+                    className="h-9 flex-1 bg-transparent outline-none text-sm"
+                    placeholder="Buscar"
+                    value={search}
+                    onChange={(e)=>setSearch(e.target.value)}
+                  />
+                </div>
               </div>
-              {targetId ? (
-                <span className="text-sm text-muted-foreground">
-                  Conversación con {target?.name ?? 'Usuario'} · <Link href={`/profile/${targetId}`} className="underline">ver perfil</Link>
-                </span>
-              ) : (
-                <span className="text-sm text-muted-foreground">Selecciona un usuario para chatear</span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-6">
-            {loading ? (
-              <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">Cargando…</div>
-            ) : error ? (
-              <div className="rounded-md border border-destructive/550 bg-destructive/10 p-6 text-sm text-destructive">{error}</div>
-            ) : !targetId ? (
-              <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">No hay conversación seleccionada. Abre un perfil y pulsa “Chat”.</div>
-            ) : (
-              <div className="flex h-[60vh] flex-col">
-                <div ref={listRef} className="flex-1 overflow-y-auto space-y-3 pr-1">
-                  {messages.map((m) => {
-                    const mine = m.sender_id === me;
-                    return (
-                      <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow ${mine ? 'bg-emerald-600 text-white' : 'bg-muted text-foreground'}`}>
-                          <div className="whitespace-pre-wrap break-words">{m.content}</div>
-                          <div className="mt-1 text-[10px] opacity-70 text-right">
-                            {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            {mine && (<span className="ml-2">{m.read_at ? '✓✓' : '✓'}</span>)}
+              <div className="space-y-1 px-2">
+                {conversations
+                  .filter(c => !search || (c.name ?? '').toLowerCase().includes(search.toLowerCase()))
+                  .map((c) => (
+                    <button
+                      key={c.otherId}
+                      className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-muted/60 text-left ${c.otherId===targetId ? 'bg-muted/60' : ''}`}
+                      onClick={() => router.push(`/messages?to=${c.otherId}`)}
+                    >
+                      <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        {c.avatar_url ? <img src={c.avatar_url} alt={c.name ?? 'Usuario'} className="h-full w-full object-cover"/> : null}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-foreground truncate">{c.name ?? 'Usuario'}</div>
+                        <div className="flex justify-between items-center">
+                          <div className="text-xs text-muted-foreground truncate max-w-[70%]" title={c.lastMessage}>
+                            {c.lastMessage ? (c.lastMessage.length > 30 ? c.lastMessage.substring(0, 30) + '...' : c.lastMessage) : 'No messages yet'}
+                          </div>
+                          <div className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                            {new Date(c.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                  {messages.length === 0 && (
-                    <div className="text-center text-sm text-muted-foreground mt-10">Aún no hay mensajes. ¡Envía el primero!</div>
-                  )}
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <Input
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-                    placeholder="Escribe tu mensaje…"
-                    className="rounded-full"
-                  />
-                  <Button onClick={onSend} disabled={!canSend} className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700">Enviar</Button>
-                </div>
+                    </button>
+                ))}
+                {conversations.length===0 && (
+                  <div className="px-3 py-6 text-sm text-muted-foreground">No hay conversaciones recientes.</div>
+                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+
+            {/* Chat pane */}
+            <Card className="flex-1 rounded-2xl border shadow-md flex flex-col">
+              <CardHeader className="px-6">
+                <CardTitle className="flex items-center justify-between">
+                  <span>Mensajes</span>
+                  {targetId ? (
+                    <span className="text-sm text-muted-foreground">
+                      Conversación con {target?.name ?? 'Usuario'} · <Link href={`/profile/${targetId}`} className="underline">ver perfil</Link>
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Selecciona un usuario para chatear</span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-6 flex-1 flex flex-col">
+                {loading ? (
+                  <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">Cargando…</div>
+                ) : error ? (
+                  <div className="rounded-md border border-destructive/550 bg-destructive/10 p-6 text-sm text-destructive flex-1 flex items-center justify-center">{error}</div>
+                ) : !targetId ? (
+                  <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">No hay conversación seleccionada. Abre un perfil y pulsa “Chat”.</div>
+                ) : (
+                  <div className="flex flex-col h-full">
+                    <div ref={listRef} className="flex-1 overflow-y-auto space-y-3 pr-1">
+                      {messages.map((m) => {
+                        const mine = m.sender_id === me;
+                        return (
+                          <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow ${mine ? 'bg-emerald-600 text-white' : 'bg-muted text-foreground'}`}>
+                              <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                              <div className="mt-1 text-[10px] opacity-70 text-right">
+                                {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {mine && (<span className="ml-2">{m.read_at ? '✓✓' : '✓'}</span>)}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {messages.length === 0 && (
+                        <div className="text-center text-sm text-muted-foreground mt-10">Aún no hay mensajes. ¡Envía el primero!</div>
+                      )}
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Input
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
+                        placeholder="Escribe tu mensaje…"
+                        className="rounded-full"
+                      />
+                      <Button onClick={onSend} disabled={!canSend} className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700">Enviar</Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile version with full-screen experience */}
+      <div className="lg:hidden h-full w-full">
+        <AnimatePresence mode="wait">
+          {showConversationList && !loading ? (
+            <ConversationList key="conversation-list" />
+          ) : targetId && !loading ? (
+            <ChatView key="chat-view" />
+          ) : loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">Cargando…</div>
+            </div>
+          ) : (
+            <ConversationList key="conversation-list-default" />
+          )}
+        </AnimatePresence>
       </div>
     </main>
   );
