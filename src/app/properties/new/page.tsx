@@ -196,7 +196,7 @@ export default function NewPropertyPage() {
       const bathroomsNum = Number(form.bathrooms);
 
       // Upload files to Supabase Storage (bucket: property-images)
-      let uploadedUrls: string[] = [];
+      const uploadedUrls: string[] = [];
       if (files && files.length > 0) {
         setUploading(true);
         const bucket = "property-images";

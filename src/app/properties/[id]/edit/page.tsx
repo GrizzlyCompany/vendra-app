@@ -133,7 +133,7 @@ export default function EditPropertyPage() {
         .filter((s) => s.length > 0);
 
       // Upload any new files
-      let uploadedUrls: string[] = [];
+      const uploadedUrls: string[] = [];
       if (files && files.length > 0) {
         setUploading(true);
         const bucket = "property-images";

@@ -28,7 +28,8 @@
       ]
     },
     "types": [
-      "deno"
+      "deno",
+      "jest"
     ]
   },
   "include": [

@@ -17,7 +17,7 @@ async function getEmpresaProjects() {
     .order("created_at", { ascending: false })
     .limit(24);
   if (error) {
-    // eslint-disable-next-line no-console
+     
     console.warn("Error cargando projects:", error.message);
     return [] as any[];
   }
@@ -73,7 +73,7 @@ export default async function ProjectsIndexPage() {
               return (
                 <div key={p.id} className="overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1 flex flex-col bg-card">
                   <div className="relative aspect-video w-full bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    { }
                     <Link href={`/projects/${p.id}`}>
                       <img
                         src={img ?? "https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1600&auto=format&fit=crop"}

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { Search, ChevronLeft, Menu } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useKeyboardVisibility } from "@/hooks/useKeyboardVisibility";
 
 interface Message {
   id: string;
@@ -39,6 +39,7 @@ function MessagesContent() {
   const router = useRouter();
   const params = useSearchParams();
   const targetId = params.get("to");
+  const isKeyboardVisible = useKeyboardVisibility();
 
   const [me, setMe] = useState<string | null>(null);
   const [target, setTarget] = useState<{ id: string; name: string | null; avatar_url: string | null } | null>(null);
@@ -47,6 +48,7 @@ function MessagesContent() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [search, setSearch] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -88,6 +90,18 @@ function MessagesContent() {
     prevMessagesLength.current = messages.length;
     lastMessageId.current = actualLastMessageId;
   }, [messages]);
+
+  // Handle scrolling when keyboard visibility changes
+  useEffect(() => {
+    if (listRef.current && (isKeyboardVisible || isInputFocused)) {
+      // When keyboard opens or input is focused, scroll to bottom of messages
+      requestAnimationFrame(() => {
+        if (listRef.current) {
+          listRef.current.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
+        }
+      });
+    }
+  }, [isKeyboardVisible, isInputFocused]);
 
   // Set initial state for mobile view
   useEffect(() => {
@@ -324,7 +338,7 @@ function MessagesContent() {
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'messages' },
-            (payload: SupabasePayload) => {
+            (payload: any) => {
               const m = (payload.new || payload.old);
               if (!m) return;
               const inThread = (m.sender_id === me && m.recipient_id === targetId) || (m.sender_id === targetId && m.recipient_id === me);
@@ -336,7 +350,7 @@ function MessagesContent() {
                   if (messageExists) {
                     return prev;
                   }
-                  return [...prev, payload.new!];
+                  return [...prev, payload.new as Message];
                 });
                 if ((payload.new as Message).recipient_id === me) {
                   supabase
@@ -356,7 +370,7 @@ function MessagesContent() {
                       existingMessage.content !== payload.new!.content;
                     
                     if (hasChanges) {
-                      return prev.map((x) => (x.id === payload.new!.id ? { ...x, ...payload.new! } : x));
+                      return prev.map((x) => (x.id === payload.new!.id ? { ...x, ...(payload.new as Message) } : x));
                     }
                   }
                   return prev;
@@ -367,6 +381,7 @@ function MessagesContent() {
           .subscribe();
 
         // Polling fallback every 4s in case realtime is not enabled
+        // Added comment to refresh TypeScript checker
         poll = window.setInterval(async () => {
           try {
             const { data } = await supabase
@@ -420,17 +435,17 @@ function MessagesContent() {
   // Set up real-time subscription for new messages
   useEffect(() => {
     if (!me) return;
-    
+  
     const channel = supabase
       .channel('messages-conversations')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload: SupabasePayload) => {
+        (payload: any) => {
           // When a new message is inserted, update the conversations list
-          const newMessage = payload.new;
+          const newMessage = payload.new as Message | undefined;
           if (!newMessage) return;
-          
+        
           const isParticipant = newMessage.sender_id === me || newMessage.recipient_id === me;
           
           if (isParticipant) {
@@ -548,15 +563,9 @@ function MessagesContent() {
 
   // Conversation list component for mobile
   const ConversationList = () => (
-    <motion.div
-      initial={{ x: -300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: -300, opacity: 0 }}
-      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-      className="w-full h-full flex flex-col pb-20"
-    >
-      {/* Mobile Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+    <div className="w-full h-full flex flex-col pb-20">
+      {/* Mobile Header - Fixed at the top */}
+      <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-background z-10">
         <h1 className="text-xl font-bold">Chats</h1>
         <Button variant="ghost" size="icon">
           <Search className="h-5 w-5" />
@@ -607,88 +616,7 @@ function MessagesContent() {
           <div className="px-4 py-6 text-sm text-muted-foreground">No hay conversaciones recientes.</div>
         )}
       </div>
-    </motion.div>
-  );
-
-  // Chat view component
-  const ChatView = () => (
-    <motion.div
-      initial={{ x: 300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 300, opacity: 0 }}
-      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-      className="w-full h-full flex flex-col"
-    >
-      {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={goBackToConversations}
-            className="md:hidden rounded-full w-10 h-10 border border-border/30 hover:border-border/50 transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {target?.avatar_url ? <img src={target.avatar_url} alt={target.name ?? 'Usuario'} className="h-full w-full object-cover"/> : null}
-          </div>
-          <div>
-            <div className="font-medium">{target?.name ?? 'Usuario'}</div>
-            <div className="text-xs text-muted-foreground">En línea</div>
-          </div>
-        </div>
-        <Button variant="ghost" size="icon">
-          <Menu className="h-5 w-5" />
-        </Button>
-      </div>
-      
-      {/* Messages Area - Increased padding to ensure content doesn't go behind bottom nav */}
-      <div className="flex-1 overflow-y-auto p-4 pb-24" ref={listRef}>
-        <div className="space-y-3">
-          {messages.map((m) => {
-            const mine = m.sender_id === me;
-            return (
-              <motion.div 
-                key={m.id} 
-                className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow ${mine ? 'bg-emerald-600 text-white' : 'bg-muted text-foreground'}`}>
-                  <div className="whitespace-pre-wrap break-words">{m.content}</div>
-                  <div className="mt-1 text-[10px] opacity-70 text-right">
-                    {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    {mine && (<span className="ml-2">{m.read_at ? '✓✓' : '✓'}</span>)}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-          {messages.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground mt-10">Aún no hay mensajes. ¡Envía el primero!</div>
-          )}
-        </div>
-      </div>
-      
-      {/* Input Area - Increased mb-20 to ensure it's well above the bottom nav */}
-      <div className="p-4 border-t mb-20">
-        <div className="flex items-center gap-2">
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-            placeholder="Escribe tu mensaje…"
-            className="rounded-full flex-1"
-          />
-          <Button onClick={onSend} disabled={!canSend} className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700">
-            Enviar
-          </Button>
-        </div>
-      </div>
-    </motion.div>
+    </div>
   );
 
   return (
@@ -802,21 +730,96 @@ function MessagesContent() {
         </div>
       </div>
 
-      {/* Mobile version with full-screen experience */}
-      <div className="lg:hidden h-full w-full">
-        <AnimatePresence mode="wait">
-          {showConversationList && !loading ? (
-            <ConversationList key="conversation-list" />
-          ) : targetId && !loading ? (
-            <ChatView key="chat-view" />
-          ) : loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">Cargando…</div>
+      {/* Mobile version with full-screen experience - Refactored for proper input visibility */}
+      <div className="lg:hidden h-full w-full relative [&_*]:!touch-manipulation mobile-bottom-safe">
+        {showConversationList && !loading ? (
+          <ConversationList />
+        ) : targetId && !loading ? (
+          <div className="h-full flex flex-col">
+            {/* Chat Header - Fixed at the top */}
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-background z-10">
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={goBackToConversations}
+                  className="md:hidden rounded-full w-10 h-10 border border-border/30 hover:border-border/50 transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {target?.avatar_url ? <img src={target.avatar_url} alt={target.name ?? 'Usuario'} className="h-full w-full object-cover"/> : null}
+                </div>
+                <div>
+                  <div className="font-medium">{target?.name ?? 'Usuario'}</div>
+                  <div className="text-xs text-muted-foreground">En línea</div>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
             </div>
-          ) : (
-            <ConversationList key="conversation-list-default" />
-          )}
-        </AnimatePresence>
+            
+            {/* Messages Area - Scrollable content */}
+            <div 
+              className="flex-1 overflow-y-auto p-4" 
+              ref={listRef}
+              style={{
+                paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))'
+              }}
+            >
+              <div className="space-y-3">
+                {messages.map((m) => {
+                  const mine = m.sender_id === me;
+                  return (
+                    <div 
+                      key={m.id} 
+                      className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow ${mine ? 'bg-emerald-600 text-white' : 'bg-muted text-foreground'}`}>
+                        <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                        <div className="mt-1 text-[10px] opacity-70 text-right">
+                          {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {mine && (<span className="ml-2">{m.read_at ? '✓✓' : '✓'}</span>)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {messages.length === 0 && (
+                  <div className="text-center text-sm text-muted-foreground mt-10">Aún no hay mensajes. ¡Envía el primero!</div>
+                )}
+              </div>
+            </div>
+            
+            {/* Input Area - Fixed at the bottom */}
+            <div className="p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-40" style={{
+              paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'
+            }}>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={() => setIsInputFocused(false)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
+                  placeholder="Escribe tu mensaje…"
+                  className="rounded-full flex-1"
+                />
+                <Button onClick={onSend} disabled={!canSend} className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700">
+                  Enviar
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">Cargando…</div>
+          </div>
+        ) : (
+          <ConversationList />
+        )}
       </div>
     </main>
   );
