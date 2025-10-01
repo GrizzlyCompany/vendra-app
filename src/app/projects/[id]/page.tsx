@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
 import { useAuth } from "@/hooks/useAuth";
+import { ShareMenu } from "@/components/ShareMenu";
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic';
@@ -324,21 +325,19 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
         </div>
       </DetailBackButton>
       
-      {/* Desktop Back Button - HIDDEN */}
-      <div className="hidden">
-        <DetailBackButton className="hidden mb-4">
-          <Button 
-            asChild 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-8 h-8 border border-border/30 hover:border-border/50 transition-all duration-200"
-          >
-            <Link href="/projects">
-              <ChevronLeft className="w-4 h-4" />
-            </Link>
-          </Button>
-        </DetailBackButton>
-      </div>
+      {/* Desktop Back Button - visible only on desktop */}
+      <DetailBackButton className="hidden lg:block mb-4">
+        <Button 
+          asChild 
+          variant="ghost" 
+          size="icon" 
+          className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-8 h-8 border border-border/30 hover:border-border/50 transition-all duration-200"
+        >
+          <Link href="/projects">
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
+        </Button>
+      </DetailBackButton>
 
       <div className="container mx-auto max-w-6xl">
         {/* Project header */}
@@ -582,24 +581,13 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
         </div>
       </div>
       
-      {/* Share Menu - simplified for mobile */}
-      {showShareMenu && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 mobile-bottom-safe">
-          <div className="bg-background rounded-lg p-4 w-full max-w-xs sm:max-w-sm">
-            <h3 className="text-base font-bold mb-3">Compartir proyecto</h3>
-            <div className="flex space-x-2">
-              <Button variant="outline" className="flex-1 text-xs sm:text-sm py-2">Copiar enlace</Button>
-              <Button variant="outline" className="flex-1 text-xs sm:text-sm py-2">WhatsApp</Button>
-            </div>
-            <Button 
-              variant="ghost" 
-              className="w-full mt-3 text-xs sm:text-sm py-2" 
-              onClick={() => setShowShareMenu(false)}
-            >
-              Cerrar
-            </Button>
-          </div>
-        </div>
+      {/* Share Menu */}
+      {project && (
+        <ShareMenu 
+          project={project} 
+          isOpen={showShareMenu} 
+          onClose={() => setShowShareMenu(false)} 
+        />
       )}
     </main>
   );

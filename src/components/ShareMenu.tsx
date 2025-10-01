@@ -5,15 +5,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Share2, Copy, MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToastContext } from "@/components/ToastProvider";
-import type { Property } from "@/types";
+import type { Property, Project } from "@/types";
 
 interface ShareMenuProps {
-  property: Property;
+  property?: Property;
+  project?: Project;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
+export function ShareMenu({ property, project, isOpen, onClose }: ShareMenuProps) {
   const { success: showSuccess, error: showError, info: showInfo } = useToastContext();
   const [isClient, setIsClient] = useState(false);
   const [canShare, setCanShare] = useState(false);
@@ -24,26 +25,46 @@ export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
     setCanShare('share' in navigator);
   }, []);
 
+  // Determine if we're sharing a property or project
+  const isProperty = !!property;
+  const isProject = !!project;
+  
+  // Get share data based on type
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const shareTitle = property.title;
-  const shareText = `¡Mira esta increíble propiedad! ${shareTitle} - ${new Intl.NumberFormat("en-US", { 
-    style: "currency", 
-    currency: property.currency || "USD", 
-    maximumFractionDigits: 0 
-  }).format(property.price)} en ${property.location}`;
+  const shareTitle = isProperty ? property!.title : project!.project_name;
+  const shareLocation = isProperty ? property!.location : (project!.city_province || project!.address || '');
+  
+  const shareText = isProperty 
+    ? `¡Mira esta increíble propiedad! ${shareTitle} - ${new Intl.NumberFormat("en-US", { 
+        style: "currency", 
+        currency: property!.currency || "USD", 
+        maximumFractionDigits: 0 
+      }).format(property!.price)} en ${property!.location}`
+    : `¡Mira este increíble proyecto! ${shareTitle} en ${shareLocation}`;
 
   const handleWhatsAppShare = () => {
-    const whatsappText = encodeURIComponent(`${shareText}\\n\\n${shareUrl}`);
+    // Add a space before the URL to ensure proper separation
+    const whatsappText = encodeURIComponent(`${shareText}\n\n ${shareUrl}`);
     const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
     window.open(whatsappUrl, '_blank');
-    showInfo('Compartir en WhatsApp', 'Abriendo WhatsApp para compartir la propiedad');
+    showInfo(
+      isProperty ? 'Compartir en WhatsApp' : 'Compartir en WhatsApp',
+      isProperty 
+        ? 'Abriendo WhatsApp para compartir la propiedad' 
+        : 'Abriendo WhatsApp para compartir el proyecto'
+    );
     onClose();
   };
 
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      showSuccess('¡Enlace copiado!', 'El enlace de la propiedad se copió al portapapeles');
+      showSuccess(
+        isProperty ? '¡Enlace copiado!' : '¡Enlace copiado!',
+        isProperty 
+          ? 'El enlace de la propiedad se copió al portapapeles' 
+          : 'El enlace del proyecto se copió al portapapeles'
+      );
     } catch (error) {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
@@ -52,7 +73,12 @@ export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      showSuccess('¡Enlace copiado!', 'El enlace de la propiedad se copió al portapapeles');
+      showSuccess(
+        isProperty ? '¡Enlace copiado!' : '¡Enlace copiado!',
+        isProperty 
+          ? 'El enlace de la propiedad se copió al portapapeles' 
+          : 'El enlace del proyecto se copió al portapapeles'
+      );
     }
     onClose();
   };
@@ -65,10 +91,20 @@ export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
           text: shareText,
           url: shareUrl,
         });
-        showSuccess('¡Compartido!', 'Propiedad compartida exitosamente');
+        showSuccess(
+          isProperty ? '¡Compartido!' : '¡Compartido!',
+          isProperty 
+            ? 'Propiedad compartida exitosamente' 
+            : 'Proyecto compartido exitosamente'
+        );
       } catch (error: any) {
         if (error.name !== 'AbortError') {
-          showError('Error al compartir', 'No se pudo compartir la propiedad');
+          showError(
+            isProperty ? 'Error al compartir' : 'Error al compartir',
+            isProperty 
+              ? 'No se pudo compartir la propiedad' 
+              : 'No se pudo compartir el proyecto'
+          );
         }
       }
     }
@@ -114,7 +150,9 @@ export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">Compartir propiedad</h3>
+              <h3 className="text-lg font-semibold text-foreground">
+                {isProperty ? 'Compartir propiedad' : 'Compartir proyecto'}
+              </h3>
               <Button
                 variant="ghost"
                 size="icon"
@@ -125,10 +163,10 @@ export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
               </Button>
             </div>
 
-            {/* Property Info */}
+            {/* Item Info */}
             <div className="mb-6 p-3 bg-muted/50 rounded-lg">
               <p className="font-medium text-sm text-foreground truncate">{shareTitle}</p>
-              <p className="text-xs text-muted-foreground mt-1">{property.location}</p>
+              <p className="text-xs text-muted-foreground mt-1">{shareLocation}</p>
             </div>
 
             {/* Share Options */}
@@ -142,7 +180,9 @@ export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
                 <MessageCircle className="w-5 h-5 text-green-600" />
                 <div className="text-left">
                   <p className="font-medium text-sm">WhatsApp</p>
-                  <p className="text-xs text-muted-foreground">Compartir por WhatsApp</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isProperty ? 'Compartir por WhatsApp' : 'Compartir por WhatsApp'}
+                  </p>
                 </div>
               </Button>
 
@@ -155,7 +195,9 @@ export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
                 <Copy className="w-5 h-5 text-blue-600" />
                 <div className="text-left">
                   <p className="font-medium text-sm">Copiar enlace</p>
-                  <p className="text-xs text-muted-foreground">Copiar al portapapeles</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isProperty ? 'Copiar al portapapeles' : 'Copiar al portapapeles'}
+                  </p>
                 </div>
               </Button>
 
@@ -169,7 +211,9 @@ export function ShareMenu({ property, isOpen, onClose }: ShareMenuProps) {
                   <Share2 className="w-5 h-5 text-purple-600" />
                   <div className="text-left">
                     <p className="font-medium text-sm">Más opciones</p>
-                    <p className="text-xs text-muted-foreground">Compartir con otras apps</p>
+                    <p className="text-xs text-muted-foreground">
+                      {isProperty ? 'Compartir con otras apps' : 'Compartir con otras apps'}
+                    </p>
                   </div>
                 </Button>
               )}
