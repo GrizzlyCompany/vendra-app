@@ -649,7 +649,7 @@ function MessagesContent() {
   );
 
   return (
-    <main className="h-screen w-full fixed inset-0 bg-background lg:static lg:h-auto lg:w-auto">
+    <main className="h-[100dvh] w-full bg-background lg:static lg:h-auto lg:w-auto">
       {/* Desktop version - unchanged */}
       <div className="hidden lg:block h-full">
         <div className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
@@ -760,7 +760,7 @@ function MessagesContent() {
       </div>
 
       {/* Mobile version with full-screen experience - Refactored for proper input visibility */}
-      <div className="lg:hidden h-full w-full relative [&_*]:!touch-manipulation mobile-bottom-safe">
+      <div className="lg:hidden h-full w-full relative [&_*]:!touch-manipulation mobile-bottom-safe flex flex-col h-[100dvh] overflow-hidden">
         <AnimatePresence mode="wait">
           {showConversationList && !loading ? (
             <ConversationList key="conversation-list" />
@@ -771,10 +771,10 @@ function MessagesContent() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="h-full flex flex-col"
+              className="flex flex-col h-full"
             >
               {/* Chat Header - Fixed at the top */}
-              <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-background z-10">
+              <div className="flex items-center justify-between p-4 border-b bg-background z-10">
                 <div className="flex items-center gap-3">
                   <Button 
                     variant="ghost" 
@@ -798,7 +798,7 @@ function MessagesContent() {
                 </Button>
               </div>
               
-              {/* Messages Area - Scrollable content */}
+              {/* Messages Area - Scrollable content with flex-1 */}
               <div 
                 className="flex-1 overflow-y-auto p-4 min-w-0" 
                 ref={listRef}
@@ -833,11 +833,11 @@ function MessagesContent() {
                 </div>
               </div>
               
-              {/* Input Area - Fixed at the bottom */}
-              <div className="p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-40" style={{
+              {/* Input Area - Fixed at the bottom with border-t and p-2 */}
+              <div className="border-t p-2 bg-background z-40" style={{
                 paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'
               }}>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 p-2">
                   <Input
                     value={text}
                     onChange={(e) => setText(e.target.value)}
