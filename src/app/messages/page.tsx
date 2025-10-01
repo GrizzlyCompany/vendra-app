@@ -54,11 +54,12 @@ function MessagesContent() {
   const [search, setSearch] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isMobileView, setIsMobileView] = useState(false);
-  const [showConversationList, setShowConversationList] = useState(true);
+  const [showConversationList, setShowConversationList] = useState(false); // Default to false
   const [showSearchBar, setShowSearchBar] = useState(false);
   const prevMessagesLength = useRef(messages.length); // Track previous message count
   const isInitialLoad = useRef(true); // Track initial load
   const lastMessageId = useRef<string | null>(null); // Track the ID of the last message
+  const wasKeyboardVisible = useRef(false); // Track keyboard state changes
 
   // Auto scroll to bottom when NEW messages are added
   useEffect(() => {
@@ -93,25 +94,13 @@ function MessagesContent() {
     lastMessageId.current = actualLastMessageId;
   }, [messages]);
 
-  // Handle scrolling when keyboard visibility changes
-  useEffect(() => {
-    if (listRef.current && (isKeyboardVisible || isInputFocused)) {
-      // When keyboard opens or input is focused, scroll to bottom of messages
-      requestAnimationFrame(() => {
-        if (listRef.current) {
-          listRef.current.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-        }
-      });
-    }
-  }, [isKeyboardVisible, isInputFocused]);
-
   // Set initial state for mobile view
   useEffect(() => {
     const checkIsMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobileView(mobile);
-      // On mobile, default to showing conversation list
-      if (mobile) {
+      // Only set initial showConversationList state if we're on mobile and don't have a targetId
+      if (mobile && !targetId) {
         setShowConversationList(true);
       }
     };
@@ -124,7 +113,7 @@ function MessagesContent() {
     
     // Cleanup
     return () => window.removeEventListener('resize', checkIsMobile);
-  }, []);
+  }, [targetId]); // Add targetId as dependency
 
   // Effect to handle mobile view state when targetId changes
   useEffect(() => {
@@ -134,6 +123,26 @@ function MessagesContent() {
       setShowConversationList(!targetId);
     }
   }, [isMobileView, targetId]);
+
+  // Handle keyboard visibility changes without affecting navigation
+  useEffect(() => {
+    // Only update state if this is a genuine keyboard visibility change
+    // and we're not already in the process of navigating
+    if (wasKeyboardVisible.current !== isKeyboardVisible) {
+      wasKeyboardVisible.current = isKeyboardVisible;
+      
+      // Don't change the view state when keyboard visibility changes
+      // Just handle scrolling if needed
+      if (listRef.current && (isKeyboardVisible || isInputFocused)) {
+        // When keyboard opens or input is focused, scroll to bottom of messages
+        requestAnimationFrame(() => {
+          if (listRef.current) {
+            listRef.current.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
+          }
+        });
+      }
+    }
+  }, [isKeyboardVisible, isInputFocused]);
 
   // Initialize session and load conversations
   useEffect(() => {
