@@ -7,9 +7,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { Search, MessageSquare, X, ChevronLeft, Menu } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Search, ChevronLeft, Menu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+interface Message {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string;
+  created_at: string;
+  read_at: string | null;
+}
+
+interface Conversation {
+  otherId: string;
+  name: string | null;
+  avatar_url: string | null;
+  lastAt: string;
+  lastMessage: string;
+  lastMessageId: string;
+}
+
+interface SupabasePayload {
+  new?: Message;
+  old?: Message;
+  eventType: string;
+}
 
 // 1:1 chat page. Open with /messages?to=<userId>
 function MessagesContent() {
@@ -22,18 +45,11 @@ function MessagesContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [messages, setMessages] = useState<Array<{ id: string; sender_id: string; recipient_id: string; content: string; created_at: string; read_at: string | null }>>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
   const [search, setSearch] = useState("");
-  const [conversations, setConversations] = useState<Array<{ 
-    otherId: string;
-    name: string | null;
-    avatar_url: string | null;
-    lastAt: string;
-    lastMessage: string;
-    lastMessageId: string;
-  }>>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
   const prevMessagesLength = useRef(messages.length); // Track previous message count
@@ -138,7 +154,7 @@ function MessagesContent() {
               lastMessageId: string;
             }> = {};
             
-            (allMessages ?? []).forEach((message: any) => {
+            (allMessages ?? []).forEach((message) => {
               const otherId = message.sender_id === uid ? message.recipient_id : message.sender_id;
               // Only keep the most recent message for each conversation
               if (!conversationsMap[otherId]) {
@@ -161,7 +177,7 @@ function MessagesContent() {
                 .in('id', conversationsList.map(c => c.otherId));
                 
               const profileMap: Record<string, { name: string|null; avatar_url: string|null }> = {};
-              (profs ?? []).forEach((pp: any) => { 
+              (profs ?? []).forEach((pp) => { 
                 profileMap[pp.id] = { name: pp.name ?? null, avatar_url: pp.avatar_url ?? null }; 
               });
               
@@ -245,9 +261,9 @@ function MessagesContent() {
           .maybeSingle();
         if (active) setTarget(p ? { id: p.id, name: p.name ?? null, avatar_url: p.avatar_url ?? null } : { id: targetId, name: null, avatar_url: null });
 
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!active) return;
-        setError(e?.message ?? String(e));
+        setError(e instanceof Error ? e.message : String(e));
       } finally {
         if (active) setLoading(false);
       }
@@ -292,7 +308,7 @@ function MessagesContent() {
           .order("created_at", { ascending: true });
         if (error) throw error;
         if (cancelled) return;
-        setMessages((data ?? []) as any);
+        setMessages((data ?? []) as Message[]);
 
         // Mark as read for messages to me from target
         await supabase
@@ -308,39 +324,39 @@ function MessagesContent() {
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'messages' },
-            (payload: any) => {
-              const m = (payload.new || payload.old) as any;
+            (payload: SupabasePayload) => {
+              const m = (payload.new || payload.old);
               if (!m) return;
               const inThread = (m.sender_id === me && m.recipient_id === targetId) || (m.sender_id === targetId && m.recipient_id === me);
               if (!inThread) return;
               if (payload.eventType === 'INSERT') {
                 setMessages((prev) => {
                   // Check if message already exists to prevent duplicates
-                  const messageExists = prev.some(m => m.id === payload.new.id);
+                  const messageExists = prev.some(msg => msg.id === payload.new!.id);
                   if (messageExists) {
                     return prev;
                   }
-                  return [...prev, payload.new as any];
+                  return [...prev, payload.new!];
                 });
-                if ((payload.new as any).recipient_id === me) {
+                if ((payload.new as Message).recipient_id === me) {
                   supabase
                     .from('messages')
                     .update({ read_at: new Date().toISOString() })
-                    .eq('id', (payload.new as any).id)
+                    .eq('id', (payload.new as Message).id)
                     .is('read_at', null);
                 }
               } else if (payload.eventType === 'UPDATE') {
                 setMessages((prev) => {
                   // Only update if something actually changed
-                  const existingMessage = prev.find(m => m.id === payload.new.id);
+                  const existingMessage = prev.find(msg => msg.id === payload.new!.id);
                   if (existingMessage) {
                     // Check if anything actually changed
                     const hasChanges = 
-                      existingMessage.read_at !== payload.new.read_at ||
-                      existingMessage.content !== payload.new.content;
+                      existingMessage.read_at !== payload.new!.read_at ||
+                      existingMessage.content !== payload.new!.content;
                     
                     if (hasChanges) {
-                      return prev.map((x) => (x.id === payload.new.id ? { ...x, ...payload.new } : x));
+                      return prev.map((x) => (x.id === payload.new!.id ? { ...x, ...payload.new! } : x));
                     }
                   }
                   return prev;
@@ -373,7 +389,7 @@ function MessagesContent() {
                 read_at: m.read_at
               })));
               
-              const newMessagesStr = JSON.stringify(data.map(m => ({
+              const newMessagesStr = JSON.stringify((data as Message[]).map(m => ({
                 id: m.id,
                 sender_id: m.sender_id,
                 recipient_id: m.recipient_id,
@@ -384,7 +400,7 @@ function MessagesContent() {
               
               // Only update if messages have actually changed
               if (prevMessagesStr !== newMessagesStr) {
-                return data as any;
+                return data as Message[];
               }
               return prevMessages;
             });
@@ -410,9 +426,11 @@ function MessagesContent() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
+        (payload: SupabasePayload) => {
           // When a new message is inserted, update the conversations list
-          const newMessage = payload.new as any;
+          const newMessage = payload.new;
+          if (!newMessage) return;
+          
           const isParticipant = newMessage.sender_id === me || newMessage.recipient_id === me;
           
           if (isParticipant) {
@@ -488,7 +506,7 @@ function MessagesContent() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [me, supabase]);
+  }, [me]); // Removed supabase from dependency array
 
   const canSend = useMemo(() => me && targetId && text.trim().length > 0, [me, targetId, text]);
 
@@ -501,10 +519,10 @@ function MessagesContent() {
       if (error) throw error;
       if (data) {
         // Optimistic append in case realtime is delayed
-        setMessages((prev) => [...prev, data as any]);
+        setMessages((prev) => [...prev, data]);
       }
-    } catch (e: any) {
-      alert(e?.message ?? String(e));
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : String(e));
     }
   };
 
