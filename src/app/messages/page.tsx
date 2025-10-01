@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { Search, ChevronLeft, Menu } from "lucide-react";
 import { useKeyboardVisibility } from "@/hooks/useKeyboardVisibility";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   id: string;
@@ -54,6 +55,7 @@ function MessagesContent() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
+  const [showSearchBar, setShowSearchBar] = useState(false);
   const prevMessagesLength = useRef(messages.length); // Track previous message count
   const isInitialLoad = useRef(true); // Track initial load
   const lastMessageId = useRef<string | null>(null); // Track the ID of the last message
@@ -162,8 +164,8 @@ function MessagesContent() {
             
             // Group messages by conversation partner and get the latest message for each
             const conversationsMap: Record<string, { 
-              otherId: string; 
-              lastAt: string; 
+              otherId: string;
+              lastAt: string;
               lastMessage: string;
               lastMessageId: string;
             }> = {};
@@ -563,30 +565,57 @@ function MessagesContent() {
 
   // Conversation list component for mobile
   const ConversationList = () => (
-    <div className="w-full h-full flex flex-col pb-20">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="w-full h-full flex flex-col pb-20"
+    >
       {/* Mobile Header - Fixed at the top */}
       <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-background z-10">
-        <h1 className="text-xl font-bold">Chats</h1>
-        <Button variant="ghost" size="icon">
-          <Search className="h-5 w-5" />
-        </Button>
-      </div>
-      
-      {/* Search Bar */}
-      <div className="p-4">
-        <div className="flex w-full items-center gap-2 rounded-xl border bg-muted px-3 py-2">
-          <Search className="text-emerald-600" />
-          <input
-            className="h-9 flex-1 bg-transparent outline-none text-sm"
-            placeholder="Buscar"
-            value={search}
-            onChange={(e)=>setSearch(e.target.value)}
-          />
-        </div>
+        {showSearchBar ? (
+          <>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setShowSearchBar(false)}
+              className="rounded-full w-10 h-10 border border-border/30 hover:border-border/50 transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1 ml-2">
+              <div className="flex w-full items-center gap-2 rounded-xl border bg-muted px-3 py-2">
+                <Search className="text-emerald-600 h-4 w-4" />
+                <input
+                  autoFocus
+                  className="h-9 flex-1 bg-transparent outline-none text-sm"
+                  placeholder="Buscar"
+                  value={search}
+                  onChange={(e)=>setSearch(e.target.value)}
+                  onBlur={() => {
+                    if (!search) setShowSearchBar(false);
+                  }}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 className="text-xl font-bold">Chats</h1>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setShowSearchBar(true)}
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          </>
+        )}
       </div>
       
       {/* Conversations List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pt-2">
         {conversations
           .filter(c => !search || (c.name ?? '').toLowerCase().includes(search.toLowerCase()))
           .map((c) => (
@@ -616,11 +645,11 @@ function MessagesContent() {
           <div className="px-4 py-6 text-sm text-muted-foreground">No hay conversaciones recientes.</div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 
   return (
-    <main className="h-screen w-screen fixed inset-0 bg-background lg:static lg:h-auto lg:w-auto">
+    <main className="h-screen w-full fixed inset-0 bg-background lg:static lg:h-auto lg:w-auto">
       {/* Desktop version - unchanged */}
       <div className="hidden lg:block h-full">
         <div className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
@@ -671,7 +700,7 @@ function MessagesContent() {
             </div>
 
             {/* Chat pane */}
-            <Card className="flex-1 rounded-2xl border shadow-md flex flex-col">
+            <Card className="flex-1 rounded-2xl border shadow-md flex flex-col min-w-0">
               <CardHeader className="px-6">
                 <CardTitle className="flex items-center justify-between">
                   <span>Mensajes</span>
@@ -732,94 +761,112 @@ function MessagesContent() {
 
       {/* Mobile version with full-screen experience - Refactored for proper input visibility */}
       <div className="lg:hidden h-full w-full relative [&_*]:!touch-manipulation mobile-bottom-safe">
-        {showConversationList && !loading ? (
-          <ConversationList />
-        ) : targetId && !loading ? (
-          <div className="h-full flex flex-col">
-            {/* Chat Header - Fixed at the top */}
-            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-background z-10">
-              <div className="flex items-center gap-3">
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={goBackToConversations}
-                  className="md:hidden rounded-full w-10 h-10 border border-border/30 hover:border-border/50 transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {target?.avatar_url ? <img src={target.avatar_url} alt={target.name ?? 'Usuario'} className="h-full w-full object-cover"/> : null}
-                </div>
-                <div>
-                  <div className="font-medium">{target?.name ?? 'Usuario'}</div>
-                  <div className="text-xs text-muted-foreground">En línea</div>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </div>
-            
-            {/* Messages Area - Scrollable content */}
-            <div 
-              className="flex-1 overflow-y-auto p-4" 
-              ref={listRef}
-              style={{
-                paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))'
-              }}
+        <AnimatePresence mode="wait">
+          {showConversationList && !loading ? (
+            <ConversationList key="conversation-list" />
+          ) : targetId && !loading ? (
+            <motion.div
+              key="chat-view"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="h-full flex flex-col"
             >
-              <div className="space-y-3">
-                {messages.map((m) => {
-                  const mine = m.sender_id === me;
-                  return (
-                    <div 
-                      key={m.id} 
-                      className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow ${mine ? 'bg-emerald-600 text-white' : 'bg-muted text-foreground'}`}>
-                        <div className="whitespace-pre-wrap break-words">{m.content}</div>
-                        <div className="mt-1 text-[10px] opacity-70 text-right">
-                          {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          {mine && (<span className="ml-2">{m.read_at ? '✓✓' : '✓'}</span>)}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                {messages.length === 0 && (
-                  <div className="text-center text-sm text-muted-foreground mt-10">Aún no hay mensajes. ¡Envía el primero!</div>
-                )}
-              </div>
-            </div>
-            
-            {/* Input Area - Fixed at the bottom */}
-            <div className="p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-40" style={{
-              paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'
-            }}>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  onFocus={() => setIsInputFocused(true)}
-                  onBlur={() => setIsInputFocused(false)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-                  placeholder="Escribe tu mensaje…"
-                  className="rounded-full flex-1"
-                />
-                <Button onClick={onSend} disabled={!canSend} className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700">
-                  Enviar
+              {/* Chat Header - Fixed at the top */}
+              <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-background z-10">
+                <div className="flex items-center gap-3">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={goBackToConversations}
+                    className="md:hidden rounded-full w-10 h-10 border border-border/30 hover:border-border/50 transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {target?.avatar_url ? <img src={target.avatar_url} alt={target.name ?? 'Usuario'} className="h-full w-full object-cover"/> : null}
+                  </div>
+                  <div>
+                    <div className="font-medium">{target?.name ?? 'Usuario'}</div>
+                    <div className="text-xs text-muted-foreground">En línea</div>
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
                 </Button>
               </div>
-            </div>
-          </div>
-        ) : loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">Cargando…</div>
-          </div>
-        ) : (
-          <ConversationList />
-        )}
+              
+              {/* Messages Area - Scrollable content */}
+              <div 
+                className="flex-1 overflow-y-auto p-4 min-w-0" 
+                ref={listRef}
+                style={{
+                  paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))'
+                }}
+              >
+                <div className="space-y-3">
+                  {messages.map((m) => {
+                    const mine = m.sender_id === me;
+                    return (
+                      <motion.div 
+                        key={m.id} 
+                        className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow ${mine ? 'bg-emerald-600 text-white' : 'bg-muted text-foreground'}`}>
+                          <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                          <div className="mt-1 text-[10px] opacity-70 text-right">
+                            {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {mine && (<span className="ml-2">{m.read_at ? '✓✓' : '✓'}</span>)}
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                  {messages.length === 0 && (
+                    <div className="text-center text-sm text-muted-foreground mt-10">Aún no hay mensajes. ¡Envía el primero!</div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Input Area - Fixed at the bottom */}
+              <div className="p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-40" style={{
+                paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'
+              }}>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
+                    placeholder="Escribe tu mensaje…"
+                    className="rounded-full flex-1 min-w-0"
+                  />
+                  <Button onClick={onSend} disabled={!canSend} className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700 flex-shrink-0">
+                    Enviar
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          ) : loading ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center justify-center h-full"
+            >
+              <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">Cargando…</div>
+            </motion.div>
+          ) : (
+            <ConversationList key="conversation-list-fallback" />
+          )}
+        </AnimatePresence>
       </div>
     </main>
   );
