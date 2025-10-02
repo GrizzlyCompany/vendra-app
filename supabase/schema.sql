@@ -137,7 +137,7 @@ BEGIN
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'name', NEW.email),
-    'comprador',
+    COALESCE(NEW.raw_user_meta_data->>'role', 'comprador'),
     NEW.raw_user_meta_data->>'avatar_url',
     false
   )

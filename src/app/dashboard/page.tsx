@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToastContext } from "@/components/ToastProvider";
 import { handleSupabaseError } from "@/lib/errors";
+import { syncUserRole } from "@/lib/roleUtils";
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -29,17 +30,8 @@ export default function DashboardPage() {
     let mounted = true;
     const checkAuthorization = async () => {
       try {
-        const { data: userRes } = await supabase.from("users").select("id,role").eq("id", user.id).maybeSingle();
-        const { data: authUser } = await supabase.auth.getUser();
-        const metaRole = (authUser.user?.user_metadata as any)?.role as string | undefined;
-        const dbRole = userRes?.role as string | undefined;
-
-        // If metadata indicates empresa_constructora and DB missing/mismatch, try to upsert
-        if (metaRole && (!dbRole || dbRole !== metaRole)) {
-          await supabase.from("users").upsert({ id: user.id, role: metaRole }).eq("id", user.id);
-        }
-
-        const effectiveRole = (dbRole ?? metaRole) ?? "";
+        // Sync user role between auth metadata and database
+        const effectiveRole = await syncUserRole(user.id) ?? "";
         if (!mounted) return;
         
         if (effectiveRole === "empresa_constructora") {

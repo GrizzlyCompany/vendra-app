@@ -40,8 +40,8 @@ export const metadata: Metadata = {
   description:
     "Vendra conecta compradores y vendedores de propiedades. Publica, descubre y gestiona inmuebles en un solo lugar.",
   icons: {
-    icon: '/favicon.ico',
-    apple: '/favicon.ico',
+    icon: '/logofavi.ico',
+    apple: '/logofavi.ico',
   },
   appleWebApp: {
     capable: true,

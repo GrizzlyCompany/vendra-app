@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { getUserRole } from "@/lib/roleUtils";
 
 interface NavItem {
   href: string;
@@ -25,32 +26,17 @@ export function BottomNav() {
       return;
     }
 
-    const getUserRole = async () => {
+    const fetchUserRole = async () => {
       try {
-        // First try to get role from auth metadata
-        const authUser = (await supabase.auth.getUser()).data.user;
-        const metaRole = (authUser?.user_metadata as any)?.role as string | undefined;
-        
-        if (metaRole) {
-          setUserRole(metaRole);
-          return;
-        }
-
-        // Fallback to database role
-        const { data: profileData } = await supabase
-          .from("users")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        
-        setUserRole(profileData?.role || null);
+        const role = await getUserRole(user.id);
+        setUserRole(role);
       } catch (error) {
         console.debug("Error fetching user role:", error);
         setUserRole(null);
       }
     };
 
-    getUserRole();
+    fetchUserRole();
   }, [user]);
 
   // Determine profile destination based on user role

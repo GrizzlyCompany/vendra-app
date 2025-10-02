@@ -14,6 +14,7 @@ import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
+import { syncUserRole } from "@/lib/roleUtils";
 // BottomNav now rendered globally when authenticated
 
 type ProfileRow = {
@@ -324,14 +325,7 @@ export default function ProfilePage() {
         } else {
           // Sync role with auth metadata if needed
           const authUser = (await supabase.auth.getUser()).data.user;
-          const metaRole = (authUser?.user_metadata as any)?.role as string | undefined;
-          const dbRole = (profileData as any)?.role as string | undefined;
-          if (metaRole && metaRole !== dbRole) {
-            await supabase.from("users").upsert({ id: uid, role: metaRole }).eq("id", uid);
-            (profileData as any).role = metaRole;
-          }
-          // Redirect company accounts to dashboard (dashboard is su perfil)
-          const effectiveRole = ((profileData as any)?.role ?? metaRole) as string | undefined;
+          const effectiveRole = await syncUserRole(uid) ?? undefined;
           if (effectiveRole === "empresa_constructora") {
             router.replace("/dashboard");
             return;
