@@ -324,15 +324,33 @@ export default function ProfilePage() {
           }
         } else {
           // Sync role with auth metadata if needed
-          const authUser = (await supabase.auth.getUser()).data.user;
+          // Force refresh auth user data to get latest metadata
+          const { data: { user: authUser } } = await supabase.auth.getUser();
           const effectiveRole = await syncUserRole(uid) ?? undefined;
           if (effectiveRole === "empresa_constructora") {
             router.replace("/dashboard");
             return;
           }
 
+          // Fetch the latest full_name from seller_applications
+          let fullName = null;
+          try {
+            const { data: sellerApp } = await supabase
+              .from("seller_applications")
+              .select("full_name")
+              .eq("user_id", uid)
+              .in("status", ["draft", "submitted", "needs_more_info", "approved"] as any)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            fullName = sellerApp?.full_name ?? null;
+          } catch (e) {
+            console.debug("Error fetching seller application full name", e);
+          }
+
           // Backfill display fields from auth metadata if missing
-          // Compute a safe display name: prefer auth metadata; ignore DB name if it equals the email
+          // Compute a safe display name: prefer full_name from seller_applications, then DB name, then auth metadata
           const dbName = (profileData as any)?.name as string | null;
           const dbEmail = (profileData as any)?.email as string | null;
           const authName = (authUser?.user_metadata as any)?.name as string | null;
@@ -348,11 +366,15 @@ export default function ProfilePage() {
               .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
               .join(" ");
           })();
-          const displayName = (authName && authName.trim().length > 0)
-            ? authName
+          
+          // Priority: full_name from seller_applications > DB name > auth metadata > email-based name
+          const displayName = fullName && fullName.trim().length > 0
+            ? fullName
             : (dbName && dbName.trim().length > 0 && dbName !== dbEmail)
               ? dbName
-              : prettyFromEmail ?? null;
+              : (authName && authName.trim().length > 0)
+                ? authName
+                : prettyFromEmail ?? null;
 
           const merged: ProfileRow = {
             ...(profileData as ProfileRow),

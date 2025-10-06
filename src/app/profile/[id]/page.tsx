@@ -56,27 +56,61 @@ export default function PublicProfilePage() {
       setError(null);
       setProfileError(null);
       try {
-        // Fetch profile from a public view/table, falling back as needed
-        const fetchFrom = async (table: string) =>
-          await supabase
-            .from(table)
-            // Only select columns that exist across all fallback tables to avoid errors
-            .select("id,name,email,bio,avatar_url,role")
-            .eq("id", userId)
-            .maybeSingle();
-
+        // First try to fetch from public_profiles table which is kept in sync with private profile
         let p: any = null;
-        for (const table of ["public_profiles", "profiles", "users"]) {
-          const { data, error } = await fetchFrom(table);
-          if (data && !error) {
-            p = data;
-            break;
-          }
-          if (error) {
-            // keep last error for visibility
-            setProfileError(error.message ?? String(error));
+        const { data: publicProfile, error: publicProfileError } = await supabase
+          .from("public_profiles")
+          .select("id,name,email,bio,avatar_url,role")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (publicProfile && !publicProfileError) {
+          p = publicProfile;
+        } else {
+          // Fallback to other tables if public_profiles doesn't have the data
+          const fetchFrom = async (table: string) =>
+            await supabase
+              .from(table)
+              // Only select columns that exist across all fallback tables to avoid errors
+              .select("id,name,email,bio,avatar_url,role")
+              .eq("id", userId)
+              .maybeSingle();
+
+          for (const table of ["profiles", "users"]) {
+            const { data, error } = await fetchFrom(table);
+            if (data && !error) {
+              p = data;
+              break;
+            }
+            if (error) {
+              // keep last error for visibility
+              setProfileError(error.message ?? String(error));
+            }
           }
         }
+
+        // Fetch the latest full_name from seller_applications as highest priority
+        let fullName = null;
+        try {
+          const { data: sellerApp } = await supabase
+            .from("seller_applications")
+            .select("full_name")
+            .eq("user_id", userId)
+            .in("status", ["draft", "submitted", "needs_more_info", "approved"] as any)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          fullName = sellerApp?.full_name ?? null;
+        } catch (e) {
+          console.debug("Error fetching seller application full name", e);
+        }
+
+        // Use full_name from seller_applications if available (highest priority), 
+        // otherwise use name from public_profiles/users table
+        const displayName = fullName && fullName.trim().length > 0 
+          ? fullName 
+          : p?.name ?? null;
 
         // Fetch properties by owner_id (only public fields)
         const { data: props, error: propsErr } = await supabase
@@ -125,7 +159,7 @@ export default function PublicProfilePage() {
           p
             ? {
                 id: p.id,
-                name: p.name ?? null,
+                name: displayName, // Use the display name with full_name priority
                 email: p.email ?? null,
                 bio: p.bio ?? null,
                 avatar_url: p.avatar_url ?? null,

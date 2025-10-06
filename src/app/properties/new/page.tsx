@@ -68,6 +68,40 @@ export default function NewPropertyPage() {
           setLoading(false);
           return;
         }
+        // If user is vendedor_agente but hasn't completed seller application, redirect to apply
+        if (role === "vendedor_agente") {
+          const { data: app } = await supabase
+            .from("seller_applications")
+            .select("id,status")
+            .eq("user_id", userId)
+            .in("status", ["approved", "submitted"] as any)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (!app) {
+            // Fallback: si existe una solicitud reciente (posible latencia/replicación), permitir y mostrar banner
+            const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+            const { data: recent } = await supabase
+              .from("seller_applications")
+              .select("id,status,created_at")
+              .eq("user_id", userId)
+              .gte("created_at", tenMinAgo)
+              .order("created_at", { ascending: false })
+              .limit(1);
+            if (!recent || recent.length === 0) {
+              router.replace("/seller/apply");
+              return;
+            }
+            setPendingReview(true);
+          }
+          if ((app as any).status === "submitted") {
+            setPendingReview(true);
+          }
+          setUid(userId);
+          setLoading(false);
+          return;
+        }
+        // For comprador users, check if they have an approved or submitted application
         const { data: app } = await supabase
           .from("seller_applications")
           .select("id,status")
@@ -441,7 +475,7 @@ export default function NewPropertyPage() {
               </div>
 
               {/* URLs opcionales */}
-              <div className="grid gap-2">
+              <div className="grid gap-2 hidden">
                 <label className="text-sm text-muted-foreground" htmlFor="images">Imágenes (URLs, separadas por coma)</label>
                 <Input id="images" name="images" placeholder="https://... , https://..." value={form.images} onChange={onChange} />
               </div>
