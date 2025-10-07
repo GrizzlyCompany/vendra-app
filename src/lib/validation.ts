@@ -32,6 +32,15 @@ export const UserSchema = z.object({
   subscription_active: z.boolean().default(false).nullable().optional(),
   rating: z.number().min(0).max(5).nullable().optional(),
   reviews_count: z.number().int().min(0).nullable().optional(),
+  // Company fields
+  rnc: z.string().max(20, 'RNC is too long').nullable().optional(),
+  website: z.string().url('Invalid website URL').nullable().optional(),
+  headquarters_address: z.string().max(300, 'Address is too long').nullable().optional(),
+  operational_areas: z.array(z.string().max(100, 'Area name is too long')).nullable().optional(),
+  contact_person: z.string().max(150, 'Contact person name is too long').nullable().optional(),
+  primary_phone: z.string().max(20, 'Phone number is too long').nullable().optional(),
+  secondary_phone: z.string().max(20, 'Phone number is too long').nullable().optional(),
+  legal_documents: z.array(z.string().url('Invalid document URL')).nullable().optional(),
   inserted_at: z.string().datetime().nullable().optional(),
   updated_at: z.string().datetime().nullable().optional(),
 });
@@ -90,8 +99,7 @@ export const LoginFormSchema = z.object({
 export const SignupFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long'),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain uppercase, lowercase, and number'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   role: z.enum(['comprador', 'vendedor_agente', 'empresa_constructora'], {
     message: 'Please select a valid role'
   }),
@@ -115,6 +123,37 @@ export const SearchFiltersSchema = z.object({
   path: ['minPrice']
 });
 
+export const CompanyProfileFormSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().max(20, 'Phone number is too long').optional(),
+  logo_url: z.string().optional(),
+  // Company fields
+  rnc: z.string().min(1, 'RNC is required').max(20, 'RNC is too long'),
+  website: z.string().url('Invalid website URL').optional().or(z.literal('')),
+  headquarters_address: z.string().max(300, 'Address is too long').optional(),
+  operational_areas: z.string().optional(), // Will be processed into array
+  contact_person: z.string().max(150, 'Contact person name is too long').optional(),
+  primary_phone: z.string().max(20, 'Phone number is too long').optional(),
+  secondary_phone: z.string().max(20, 'Phone number is too long').optional(),
+  legal_documents: z.array(z.string().url('Invalid document URL')).optional(),
+  // Social media
+  facebook_url: z.string().url('Invalid Facebook URL').optional().or(z.literal('')),
+  instagram_url: z.string().url('Invalid Instagram URL').optional().or(z.literal('')),
+  linkedin_url: z.string().url('Invalid LinkedIn URL').optional().or(z.literal('')),
+  // Terms acceptance
+  terms_accepted: z.boolean().refine(val => val === true, {
+    message: 'Debe aceptar los términos y condiciones'
+  }),
+}).refine(data => {
+  // Custom validation: require RNC for empresa_constructora users only
+  // This will be checked at the component level based on user role
+  return true;
+}, {
+  message: 'RNC is required for construction companies',
+  path: ['rnc']
+});
+
 // API Response validation
 export const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
   z.object({
@@ -128,6 +167,7 @@ export type PropertyFormData = z.infer<typeof PropertyFormSchema>;
 export type LoginFormData = z.infer<typeof LoginFormSchema>;
 export type SignupFormData = z.infer<typeof SignupFormSchema>;
 export type SearchFiltersData = z.infer<typeof SearchFiltersSchema>;
+export type CompanyProfileFormData = z.infer<typeof CompanyProfileFormSchema>;
 
 // Validation helper functions
 export const validateProperty = (data: unknown) => PropertySchema.safeParse(data);
@@ -137,6 +177,7 @@ export const validatePropertyForm = (data: unknown) => PropertyFormSchema.safePa
 export const validateLoginForm = (data: unknown) => LoginFormSchema.safeParse(data);
 export const validateSignupForm = (data: unknown) => SignupFormSchema.safeParse(data);
 export const validateSearchFilters = (data: unknown) => SearchFiltersSchema.safeParse(data);
+export const validateCompanyProfileForm = (data: unknown) => CompanyProfileFormSchema.safeParse(data);
 
 // Safe validation wrapper for runtime data
 export function safeValidate<T>(

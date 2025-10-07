@@ -8,7 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { PropertyCard } from "@/components/PropertyCard";
+import { ProjectCard } from "@/components/ProjectCard";
 import type { Property } from "@/types";
+
+type Project = {
+  id: string;
+  project_name: string;
+  city_province: string | null;
+  address: string | null;
+  images: string[] | null;
+  unit_price_range: string | null;
+  project_status: string | null;
+};
+
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Star, Building, MessageSquare, ChevronLeft } from "lucide-react";
@@ -33,6 +45,7 @@ export default function PublicProfilePage() {
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -112,14 +125,33 @@ export default function PublicProfilePage() {
           ? fullName 
           : p?.name ?? null;
 
-        // Fetch properties by owner_id (only public fields)
-        const { data: props, error: propsErr } = await supabase
-          .from("properties")
-          .select("id,title,description,price,location,images,owner_id,type,inserted_at")
-          .eq("owner_id", userId)
-          .order("inserted_at", { ascending: false });
-        if (propsErr) {
-          setError(propsErr.message ?? String(propsErr));
+        // Fetch listings based on user role
+        let listingsData: any[] = [];
+        let listingsError: any = null;
+
+        // Check user role to determine what to fetch
+        if (p?.role === 'empresa_constructora') {
+          // Fetch projects for construction companies
+          const { data: projs, error: projsErr } = await supabase
+            .from("projects")
+            .select("id,project_name,city_province,address,images,unit_price_range,project_status")
+            .eq("owner_id", userId)
+            .order("created_at", { ascending: false });
+          listingsData = projs ?? [];
+          listingsError = projsErr;
+        } else {
+          // Fetch properties for other users
+          const { data: props, error: propsErr } = await supabase
+            .from("properties")
+            .select("id,title,description,price,location,images,owner_id,type,inserted_at")
+            .eq("owner_id", userId)
+            .order("inserted_at", { ascending: false });
+          listingsData = props ?? [];
+          listingsError = propsErr;
+        }
+
+        if (listingsError) {
+          setError(listingsError.message ?? String(listingsError));
         }
 
         // Member since & banner: try public_profiles fields if available
@@ -167,18 +199,36 @@ export default function PublicProfilePage() {
               }
             : null
         );
-        const normalized: Property[] = (props ?? []).map((p: any) => ({
-          id: String(p.id),
-          title: String(p.title),
-          description: p.description ?? null,
-          price: Number(p.price) || 0,
-          location: String(p.location ?? ""),
-          images: Array.isArray(p.images) ? p.images : (p.images ? [String(p.images)] : null),
-          owner_id: String(p.owner_id),
-          type: p.type ?? null,
-          inserted_at: (p.inserted_at as string) ?? new Date().toISOString(),
-        }));
-        setProperties(normalized);
+        // Process listings based on user role
+        if (p?.role === 'empresa_constructora') {
+          // Process projects
+          const normalizedProjects: Project[] = (listingsData ?? []).map((proj: any) => ({
+            id: String(proj.id),
+            project_name: String(proj.project_name),
+            city_province: proj.city_province ?? null,
+            address: proj.address ?? null,
+            images: Array.isArray(proj.images) ? proj.images : (proj.images ? [String(proj.images)] : null),
+            unit_price_range: proj.unit_price_range ?? null,
+            project_status: proj.project_status ?? null,
+          }));
+          setProjects(normalizedProjects);
+          setProperties([]); // Clear properties for construction companies
+        } else {
+          // Process properties
+          const normalizedProperties: Property[] = (listingsData ?? []).map((prop: any) => ({
+            id: String(prop.id),
+            title: String(prop.title),
+            description: prop.description ?? null,
+            price: Number(prop.price) || 0,
+            location: String(prop.location ?? ""),
+            images: Array.isArray(prop.images) ? prop.images : (prop.images ? [String(prop.images)] : null),
+            owner_id: String(prop.owner_id),
+            type: prop.type ?? null,
+            inserted_at: (prop.inserted_at as string) ?? new Date().toISOString(),
+          }));
+          setProperties(normalizedProperties);
+          setProjects([]); // Clear projects for regular users
+        }
 
         // Load ratings (average, count, and my rating if authenticated)
         try {
@@ -232,15 +282,20 @@ export default function PublicProfilePage() {
     };
   }, [userId]);
 
-  const hasListings = useMemo(() => (properties?.length ?? 0) > 0, [properties]);
+  const hasListings = useMemo(() => {
+    if (profile?.role === 'empresa_constructora') {
+      return (projects?.length ?? 0) > 0;
+    }
+    return (properties?.length ?? 0) > 0;
+  }, [profile?.role, properties, projects]);
   const roleBadge = useMemo(() => {
-    if (hasListings) return "Vendedor/Agente";
     if (profile?.role && profile.role.trim().length > 0) {
       const r = profile.role.toLowerCase();
+      if (r === 'empresa_constructora' || r.includes("empresa")) return "Empresa constructora";
       if (r.includes("vendedor") || r.includes("agente")) return "Vendedor/Agente";
-      if (r.includes("empresa")) return "Empresa constructora";
-      return "Comprador";
     }
+    // Fallback logic
+    if (hasListings) return "Vendedor/Agente";
     return "Comprador";
   }, [profile?.role, hasListings]);
 
@@ -364,8 +419,12 @@ export default function PublicProfilePage() {
               <div className="mt-1 text-sm font-medium text-foreground">{memberSince ?? '—'}</div>
             </div>
             <div className="text-center sm:text-left">
-              <div className="text-xs text-muted-foreground">Propiedades</div>
-              <div className="mt-1 text-sm font-medium text-foreground">{properties.length}</div>
+              <div className="text-xs text-muted-foreground">
+                {profile?.role === 'empresa_constructora' ? 'Proyectos' : 'Propiedades'}
+              </div>
+              <div className="mt-1 text-sm font-medium text-foreground">
+                {profile?.role === 'empresa_constructora' ? projects.length : properties.length}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -374,13 +433,18 @@ export default function PublicProfilePage() {
       {/* Tabs styled like private profile page */}
       <Tabs value={tabValue} onValueChange={(v:any)=>setTabValue(v)} className="w-full mt-3 sm:mt-4">
         <TabsList className="w-full overflow-x-auto flex gap-1 sm:gap-2 px-1 py-1 sm:grid sm:grid-cols-2">
-          <TabsTrigger className="shrink-0 text-xs sm:text-sm px-2 sm:px-3" value="listed"><Building className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Propiedades</TabsTrigger>
+          <TabsTrigger className="shrink-0 text-xs sm:text-sm px-2 sm:px-3" value="listed"><Building className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> {profile?.role === 'empresa_constructora' ? 'Proyectos' : 'Propiedades'}</TabsTrigger>
           <TabsTrigger className="shrink-0 text-xs sm:text-sm px-2 sm:px-3" value="reviews"><Star className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Valoraciones</TabsTrigger>
         </TabsList>
         <TabsContent value="listed">
           <Card className="mt-3 sm:mt-4">
             <CardHeader className="pb-3 sm:pb-6">
-              <CardTitle className="text-lg sm:text-xl">Propiedades de {profile?.name ?? "este usuario"}</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">
+                {profile?.role === 'empresa_constructora'
+                  ? `Proyectos de ${profile?.name ?? "esta empresa"}`
+                  : `Propiedades de ${profile?.name ?? "este usuario"}`
+                }
+              </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               {loading ? (
@@ -389,13 +453,23 @@ export default function PublicProfilePage() {
                 <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 sm:p-6 text-sm text-destructive">
                   {error}
                 </div>
-              ) : properties.length === 0 ? (
-                <div className="rounded-md border bg-muted/30 p-4 sm:p-6 text-sm text-muted-foreground">Este usuario aún no tiene propiedades publicadas.</div>
+              ) : ((profile?.role === 'empresa_constructora' ? projects.length : properties.length) === 0) ? (
+                <div className="rounded-md border bg-muted/30 p-4 sm:p-6 text-sm text-muted-foreground">
+                  {profile?.role === 'empresa_constructora'
+                    ? "Esta empresa aún no tiene proyectos publicados."
+                    : "Este usuario aún no tiene propiedades publicadas."
+                  }
+                </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-                  {properties.map((p) => (
-                    <PropertyCard key={p.id} property={p} />
-                  ))}
+                  {profile?.role === 'empresa_constructora'
+                    ? projects.map((p) => (
+                        <ProjectCard key={p.id} project={p} />
+                      ))
+                    : properties.map((p) => (
+                        <PropertyCard key={p.id} property={p} />
+                      ))
+                  }
                 </div>
               )}
             </CardContent>

@@ -54,12 +54,13 @@ export function useAuth() {
           return;
         }
 
-        // Validate session user data
+        // Validate session user data (non-blocking validation)
         const user = session?.user;
         if (user && isObject(user)) {
           const validationResult = validateUser(user);
           if (!validationResult.success) {
-            console.warn('Invalid user data from session:', validationResult.error);
+            console.warn('User data validation warnings:', validationResult.error);
+            // Don't fail auth for validation issues - allow the user to continue
           }
         }
 
@@ -90,12 +91,13 @@ export function useAuth() {
         async (event, session) => {
           if (!mounted) return;
 
-          // Validate session data
+          // Validate session data (non-blocking)
           const user = session?.user;
           if (user && isObject(user)) {
             const validationResult = validateUser(user);
             if (!validationResult.success) {
-              console.warn('Invalid user data from auth state change:', validationResult.error);
+              console.warn('User data validation warnings from auth state change:', validationResult.error);
+              // Don't fail auth for validation issues
             }
           }
 
@@ -143,4 +145,3 @@ export function useAuth() {
     signOut,
   };
 }
-

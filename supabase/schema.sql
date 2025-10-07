@@ -12,6 +12,7 @@ create table if not exists public.users (
   bio text,
   role text default 'comprador',
   avatar_url text,
+  phone text,
   subscription_active boolean default false,
   rating numeric,
   reviews_count integer,
@@ -79,6 +80,90 @@ BEGIN
   END IF;
 END $$;
 
+-- Add company profile columns to users table (idempotent)
+DO $$
+BEGIN
+  -- RNC field
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='rnc'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN rnc text;
+  END IF;
+
+  -- Website field
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='website'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN website text;
+  END IF;
+
+  -- Headquarters address
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='headquarters_address'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN headquarters_address text;
+  END IF;
+
+  -- Operational areas (array)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='operational_areas'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN operational_areas text[];
+  END IF;
+
+  -- Contact person
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='contact_person'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN contact_person text;
+  END IF;
+
+  -- Primary phone
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='primary_phone'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN primary_phone text;
+  END IF;
+
+  -- Secondary phone
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='secondary_phone'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN secondary_phone text;
+  END IF;
+
+  -- Legal documents array
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='legal_documents'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN legal_documents text[];
+  END IF;
+
+  -- Social media URLs
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='facebook_url'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN facebook_url text;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='instagram_url'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN instagram_url text;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='linkedin_url'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN linkedin_url text;
+  END IF;
+
+  -- Terms acceptance
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='terms_accepted'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN terms_accepted boolean DEFAULT false;
+  END IF;
+END $$;
+
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
@@ -131,18 +216,83 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+  user_name text;
+  user_role text;
 BEGIN
-  INSERT INTO public.users (id, email, name, role, avatar_url, subscription_active)
+  -- Safely extract metadata with defaults
+  user_name := COALESCE(
+    NULLIF(trim(NEW.raw_user_meta_data->>'name'), ''),
+    split_part(COALESCE(NEW.email, 'user@example.com'), '@', 1)
+  );
+
+  -- Validate and set role with fallback to default
+  user_role := CASE
+    WHEN NEW.raw_user_meta_data->>'role' IN ('comprador', 'vendedor_agente', 'empresa_constructora')
+    THEN NEW.raw_user_meta_data->>'role'
+    ELSE 'comprador'
+  END;
+
+  -- Insert user with all profile fields to prevent missing column errors
+  INSERT INTO public.users (
+    id,
+    email,
+    name,
+    role,
+    subscription_active,
+    phone,
+    bio,
+    rnc,
+    website,
+    headquarters_address,
+    operational_areas,
+    contact_person,
+    primary_phone,
+    secondary_phone,
+    legal_documents,
+    facebook_url,
+    instagram_url,
+    linkedin_url,
+    terms_accepted
+  )
   VALUES (
     NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'name', NEW.email),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'comprador'),
-    NEW.raw_user_meta_data->>'avatar_url',
-    false
+    COALESCE(NEW.email, ''),
+    user_name,
+    user_role,
+    false,
+    COALESCE(NEW.raw_user_meta_data->>'phone', null),
+    null, -- bio
+    null, -- rnc
+    null, -- website
+    null, -- headquarters_address
+    null, -- operational_areas
+    null, -- contact_person
+    null, -- primary_phone
+    null, -- secondary_phone
+    '{}', -- legal_documents (empty array)
+    null, -- facebook_url
+    null, -- instagram_url
+    null, -- linkedin_url
+    false -- terms_accepted
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    name = EXCLUDED.name,
+    role = CASE
+      WHEN users.role = 'empresa_constructora' THEN users.role -- Preserve empresa_constructora
+      ELSE EXCLUDED.role
+    END,
+    phone = COALESCE(EXCLUDED.phone, users.phone), -- Preserve existing if not null
+    updated_at = now()
+  WHERE users.id = EXCLUDED.id;
+
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log error but don't fail the auth transaction
+    RAISE WARNING 'Error in handle_new_user trigger for user %: %', NEW.id, SQLERRM;
+    RETURN NEW;
 END;
 $$;
 
@@ -509,6 +659,47 @@ BEGIN
   ) THEN
     CREATE POLICY objects_avatars_delete_own ON storage.objects FOR DELETE TO authenticated
       USING (bucket_id = 'avatars' AND owner = auth.uid());
+  END IF;
+END $$;
+
+-- Legal Documents bucket for company legal files (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM storage.buckets WHERE id = 'legal-docs'
+  ) THEN
+    INSERT INTO storage.buckets (id, name, public)
+    VALUES ('legal-docs','legal-docs', false);
+  END IF;
+END $$;
+
+-- RLS de Storage para 'legal-docs': subir/gestionar solo archivos propios
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname='objects_legal_docs_select_own' AND tablename='objects'
+  ) THEN
+    CREATE POLICY objects_legal_docs_select_own ON storage.objects FOR SELECT TO authenticated
+      USING (bucket_id = 'legal-docs' AND owner = auth.uid());
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname='objects_legal_docs_insert_own' AND tablename='objects'
+  ) THEN
+    CREATE POLICY objects_legal_docs_insert_own ON storage.objects FOR INSERT TO authenticated
+      WITH CHECK (bucket_id = 'legal-docs' AND owner = auth.uid());
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname='objects_legal_docs_update_own' AND tablename='objects'
+  ) THEN
+    CREATE POLICY objects_legal_docs_update_own ON storage.objects FOR UPDATE TO authenticated
+      USING (bucket_id = 'legal-docs' AND owner = auth.uid())
+      WITH CHECK (bucket_id = 'legal-docs' AND owner = auth.uid());
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname='objects_legal_docs_delete_own' AND tablename='objects'
+  ) THEN
+    CREATE POLICY objects_legal_docs_delete_own ON storage.objects FOR DELETE TO authenticated
+      USING (bucket_id = 'legal-docs' AND owner = auth.uid());
   END IF;
 END $$;
 
@@ -1110,3 +1301,99 @@ $$;
 GRANT EXECUTE ON FUNCTION public.increment_property_views(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_property_stats(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_monthly_view_trends(uuid, integer) TO authenticated;
+
+-- 11) Migration: Backfill missing profile fields for existing users -----------------
+-- This ensures existing users have all required profile fields initialized
+-- Only runs when all profile columns have been added (safe guard)
+DO $$
+DECLARE
+    user_record RECORD;
+    updated_count INTEGER := 0;
+    phone_exists BOOLEAN := FALSE;
+    rnc_exists BOOLEAN := FALSE;
+    terms_exists BOOLEAN := FALSE;
+    areas_exists BOOLEAN := FALSE;
+    docs_exists BOOLEAN := FALSE;
+BEGIN
+    -- Check if required columns exist before proceeding
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'phone'
+    ) INTO phone_exists;
+
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'rnc'
+    ) INTO rnc_exists;
+
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'terms_accepted'
+    ) INTO terms_exists;
+
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'operational_areas'
+    ) INTO areas_exists;
+
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'legal_documents'
+    ) INTO docs_exists;
+
+    -- Only proceed if all columns exist
+    IF phone_exists AND rnc_exists AND terms_exists AND areas_exists AND docs_exists THEN
+        -- Loop through all users and ensure they have all profile fields initialized
+        FOR user_record IN
+            SELECT id, email, name, role
+            FROM public.users
+            WHERE (phone::text = '' OR phone IS NULL)
+               OR (rnc = '' OR rnc IS NULL)
+               OR terms_accepted IS NULL
+               OR operational_areas IS NULL
+               OR legal_documents IS NULL
+        LOOP
+            RAISE NOTICE 'Backfilling profile fields for user: %', user_record.id;
+
+            UPDATE public.users
+            SET
+                phone = COALESCE(phone, ''),
+                bio = COALESCE(bio, ''),
+                rnc = COALESCE(rnc, ''),
+                website = COALESCE(website, null),
+                headquarters_address = COALESCE(headquarters_address, ''),
+                operational_areas = COALESCE(operational_areas, '{}'),
+                contact_person = COALESCE(contact_person, ''),
+                primary_phone = COALESCE(primary_phone, ''),
+                secondary_phone = COALESCE(secondary_phone, ''),
+                legal_documents = COALESCE(legal_documents, '{}'),
+                facebook_url = COALESCE(facebook_url, ''),
+                instagram_url = COALESCE(instagram_url, ''),
+                linkedin_url = COALESCE(linkedin_url, ''),
+                terms_accepted = COALESCE(terms_accepted, false)
+            WHERE id = user_record.id;
+
+            updated_count := updated_count + 1;
+        END LOOP;
+
+        RAISE NOTICE 'Profile fields backfill completed. Updated % users.', updated_count;
+    ELSE
+        RAISE NOTICE 'Profile backfill skipped - not all required columns exist yet. Will run on next schema deployment.';
+    END IF;
+END $$;
+
+-- Show final summary (only if all columns exist)
+DO $$
+DECLARE
+    phone_exists BOOLEAN := FALSE;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'phone'
+    ) INTO phone_exists;
+
+    IF phone_exists THEN
+        RAISE NOTICE 'User Profile Summary:';
+        -- Will show in the next deployment run after columns are added
+    END IF;
+END $$;

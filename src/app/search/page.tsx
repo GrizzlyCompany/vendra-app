@@ -373,7 +373,7 @@ function SearchContent() {
                             <div className="text-sm text-muted-foreground truncate">{a.email}</div>
                             {a.role && (
                               <div className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                {a.role}
+                                {a.role === 'comprador' ? 'comprador' : a.role === 'vendedor_agente' ? 'vendedor/agente' : a.role === 'empresa_constructora' ? 'empresa constructora' : a.role}
                               </div>
                             )}
                           </div>

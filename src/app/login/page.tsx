@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
@@ -11,10 +11,14 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToastContext } from "@/components/ToastProvider";
 import { handleSupabaseError } from "@/lib/errors";
+import { validateLoginForm, LoginFormData } from "@/lib/validation";
 import { UserPlus, ArrowLeft, Mail } from "lucide-react";
 
-export default function LoginPage() {
+export const dynamic = 'force-dynamic';
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { error: showError, success: showSuccess } = useToastContext();
   const [email, setEmail] = useState("");
@@ -25,6 +29,19 @@ export default function LoginPage() {
   const [recoveryLoading, setRecoveryLoading] = useState(false);
 
   useEffect(() => {
+    // Check for signup confirmation message
+    const message = searchParams.get('message');
+    if (message === 'email-confirmation-sent') {
+      showSuccess(
+        "Cuenta creada exitosamente",
+        "Revisa tu correo electrónico para confirmar tu cuenta antes de iniciar sesión"
+      );
+      // Clean up the URL
+      router.replace('/login', { scroll: false });
+    }
+  }, [searchParams, router, showSuccess]);
+
+  useEffect(() => {
     if (user && !authLoading) {
       router.replace("/main");
     }
@@ -33,8 +50,28 @@ export default function LoginPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    const formData: LoginFormData = {
+      email: email.trim().toLowerCase(),
+      password: password.trim()
+    };
+
+    // Validate form client-side
+    const validation = validateLoginForm(formData);
+    if (!validation.success) {
+      const errorMessage = validation.error.issues
+        .map((issue) => issue.message)
+        .join(', ');
+      showError("Datos inválidos", errorMessage);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
+      });
       if (error) throw error;
       showSuccess("¡Bienvenido de vuelta!");
       router.replace("/main");
@@ -81,7 +118,7 @@ export default function LoginPage() {
           <p className="mt-2 text-muted-foreground">Cargando...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -90,10 +127,10 @@ export default function LoginPage() {
       <div className="w-full lg:w-1/2 flex flex-col items-center justify-center px-4 py-2 mobile-bottom-safe relative z-20">
         {/* Back Button */}
         <div className="w-full max-w-sm mb-2">
-          <Button 
-            asChild 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
             className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-10 h-10 border border-border/30 hover:border-border/50"
           >
             <Link href="/">
@@ -101,7 +138,7 @@ export default function LoginPage() {
             </Link>
           </Button>
         </div>
-        
+
         {/* Logo and Brand */}
         <div className="flex flex-col items-center mb-3">
           <div className="flex flex-col items-center mb-1">
@@ -129,8 +166,8 @@ export default function LoginPage() {
               {isRecoveryMode ? "Recuperar contraseña" : "Iniciar sesión"}
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              {isRecoveryMode 
-                ? "Ingresa tu correo para recibir instrucciones de recuperación" 
+              {isRecoveryMode
+                ? "Ingresa tu correo para recibir instrucciones de recuperación"
                 : "Accede a tu cuenta para continuar"}
             </p>
           </CardHeader>
@@ -139,25 +176,25 @@ export default function LoginPage() {
               <form onSubmit={onRecoverySubmit} className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-1">Correo electrónico</label>
-                  <Input 
-                    type="email" 
-                    value={recoveryEmail} 
-                    onChange={(e) => setRecoveryEmail(e.target.value)} 
-                    required 
+                  <Input
+                    type="email"
+                    value={recoveryEmail}
+                    onChange={(e) => setRecoveryEmail(e.target.value)}
+                    required
                     placeholder="tu@correo.com"
                     className="h-9 text-sm"
                   />
                 </div>
-                <Button 
-                  type="submit" 
-                  disabled={recoveryLoading} 
+                <Button
+                  type="submit"
+                  disabled={recoveryLoading}
                   className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-sm mt-4"
                 >
                   {recoveryLoading ? "Enviando..." : "Enviar instrucciones"}
                 </Button>
                 <div className="mt-3 text-center">
-                  <Button 
-                    variant="link" 
+                  <Button
+                    variant="link"
                     className="p-0 h-auto font-medium text-primary text-xs"
                     onClick={() => setIsRecoveryMode(false)}
                   >
@@ -169,38 +206,38 @@ export default function LoginPage() {
               <form onSubmit={onSubmit} className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-1">Correo electrónico</label>
-                  <Input 
-                    type="email" 
-                    value={email} 
-                    onChange={(e) => setEmail(e.target.value)} 
-                    required 
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                     placeholder="tu@correo.com"
                     className="h-9 text-sm"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-1">Contraseña</label>
-                  <Input 
-                    type="password" 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
-                    required 
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                     placeholder="••••••••"
                     className="h-9 text-sm"
                   />
                 </div>
-                <Button 
-                  type="submit" 
-                  disabled={loading} 
+                <Button
+                  type="submit"
+                  disabled={loading}
                   className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-sm mt-4"
                 >
                   {loading ? "Ingresando..." : "Iniciar sesión"}
                 </Button>
-                
+
                 {/* Forgot password link */}
                 <div className="mt-2 text-center">
-                  <Button 
-                    variant="link" 
+                  <Button
+                    variant="link"
                     className="p-0 h-auto font-medium text-primary text-xs"
                     onClick={() => setIsRecoveryMode(true)}
                   >
@@ -209,7 +246,7 @@ export default function LoginPage() {
                 </div>
               </form>
             )}
-            
+
             {/* Sign up link */}
             <div className="mt-3 text-center">
               <p className="text-xs text-muted-foreground">
@@ -225,7 +262,7 @@ export default function LoginPage() {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Right Half - Image Overlay */}
       <div className="hidden lg:block fixed top-0 right-0 bottom-0 w-1/2 z-0">
         <div className="relative w-full h-full">
@@ -240,5 +277,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Cargando...</p>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }

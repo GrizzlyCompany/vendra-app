@@ -8,10 +8,14 @@ import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { validateSignupForm, SignupFormData } from "@/lib/validation";
+import { handleSupabaseError } from "@/lib/errors";
+import { useToastContext } from "@/components/ToastProvider";
 import { LogIn, ArrowLeft } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { success: showSuccess } = useToastContext();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,30 +34,57 @@ export default function SignupPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    const formData: SignupFormData = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+      role: role as SignupFormData['role']
+    };
+
+    // Validate form client-side
+    const validation = validateSignupForm(formData);
+    if (!validation.success) {
+      // Convert Zod error to readable string
+      const errorMessage = validation.error.issues
+        .map((issue) => issue.message)
+        .join(', ');
+      setError(errorMessage);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name, role } },
-      } as any);
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+            role: formData.role,
+          },
+        },
+      });
+
       if (error) throw error;
 
-      const userId = data.user?.id;
-      if (userId) {
-        // Crea/actualiza el perfil con el rol elegido.
-        const { error: profileError } = await supabase
-          .from("users")
-          .upsert({ id: userId, name, role, email }, { onConflict: "id" });
-        if (profileError) {
-          // Logically non-fatal for signup flow. Keep going.
-          console.warn("Profile insert error:", profileError.message);
+      // Handle successful signup based on authentication state
+      if (data.user) {
+        if (data.session) {
+          // User is immediately signed in (email confirmation disabled or not required)
+          showSuccess("Cuenta creada exitosamente", "Bienvenido a Vendra!");
+          router.replace("/main");
+        } else {
+          // Email confirmation required - redirect to login with message
+          router.replace("/login?message=email-confirmation-sent");
         }
+      } else {
+        // Unexpected case - user not created but no error
+        throw new Error("Cuenta no pudo ser creada. Por favor intenta nuevamente.");
       }
-
-      // If email confirmations are enabled, session may be null. For this demo, navigate anyway.
-      router.replace("/main");
     } catch (err: any) {
-      setError(err?.message ?? "Error al crear la cuenta");
+      const supabaseError = handleSupabaseError(err);
+      setError(supabaseError.message);
     } finally {
       setLoading(false);
     }
@@ -138,8 +169,9 @@ export default function SignupPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-0.5">Tipo de cuenta</label>
+              <label htmlFor="role-select" className="block text-xs font-medium text-muted-foreground mb-0.5">Tipo de cuenta</label>
               <select
+                id="role-select"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 className="w-full h-8 rounded-md border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
