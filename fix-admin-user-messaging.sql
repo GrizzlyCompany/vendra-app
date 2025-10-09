@@ -71,3 +71,20 @@ WHERE (m.sender_id = (SELECT id FROM public.users WHERE email = 'admin@vendra.co
        OR m.recipient_id = (SELECT id FROM public.users WHERE email = 'admin@vendra.com'))
   AND pp.email != 'admin@vendra.com'
 ORDER BY pp.email;
+
+-- Fix existing report messages to have the correct conversation_type
+UPDATE public.messages 
+SET conversation_type = 'user_to_admin' 
+WHERE content ILIKE '%Nuevo Reporte Recibido%';
+
+-- Verify the update
+SELECT id, sender_id, recipient_id, content, created_at, conversation_type, case_status 
+FROM public.messages 
+WHERE content ILIKE '%Nuevo Reporte Recibido%' 
+ORDER BY created_at DESC;
+
+-- Also check if there are any messages with admin_to_user type
+SELECT id, sender_id, recipient_id, content, created_at, conversation_type, case_status 
+FROM public.messages 
+WHERE conversation_type = 'admin_to_user' 
+ORDER BY created_at DESC;

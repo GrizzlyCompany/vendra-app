@@ -131,7 +131,7 @@ export default function AdminPage() {
           </div>
 
           {/* Content Area */}
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-auto p-4 md:p-6">
             {renderContent()}
           </main>
         </div>
@@ -159,7 +159,16 @@ function RequestsContent() {
 }
 
 function MessagesContent() {
-  return <MessagesTable />
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Mensajes de Soporte</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <MessagesTable />
+      </CardContent>
+    </Card>
+  );
 }
 
 function SettingsContent() {

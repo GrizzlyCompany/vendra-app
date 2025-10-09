@@ -5,13 +5,15 @@
 -- First, let's check the current user data
 SELECT id, email, role FROM public.users WHERE email = 'admin@vendra.com';
 
--- Update the admin user's role to comply with the constraint
+-- Fix admin user role to be empresa_constructora
 UPDATE public.users 
 SET role = 'empresa_constructora' 
-WHERE email = 'admin@vendra.com' AND role = 'admin';
+WHERE email = 'admin@vendra.com';
 
 -- Verify the update
-SELECT id, email, role FROM public.users WHERE email = 'admin@vendra.com';
+SELECT id, email, name, role 
+FROM public.users 
+WHERE email = 'admin@vendra.com';
 
 -- Ensure the admin user has a public profile for messaging visibility
 -- First, try to insert/update the public profile

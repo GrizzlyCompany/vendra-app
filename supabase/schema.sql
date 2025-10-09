@@ -1120,10 +1120,47 @@ CREATE TABLE IF NOT EXISTS public.messages (
   content text NOT NULL,
   created_at timestamptz DEFAULT now(),
   read_at timestamptz,
-  updated_at timestamptz DEFAULT now()
+  updated_at timestamptz DEFAULT now(),
+  -- Conversation grouping fields for admin support cases
+  conversation_type text DEFAULT 'user_to_user' CHECK (conversation_type IN ('user_to_user', 'user_to_admin', 'admin_to_user')),
+  case_status text DEFAULT 'open' CHECK (case_status IN ('open', 'closed', 'resolved')),
+  closed_at timestamptz,
+  closed_by uuid REFERENCES auth.users(id)
 );
 
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+-- Ensure these columns exist (idempotent ALTER TABLE)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'conversation_type'
+  ) THEN
+    ALTER TABLE public.messages ADD COLUMN conversation_type text DEFAULT 'user_to_user' CHECK (conversation_type IN ('user_to_user', 'user_to_admin', 'admin_to_user'));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'case_status'
+  ) THEN
+    ALTER TABLE public.messages ADD COLUMN case_status text DEFAULT 'open' CHECK (case_status IN ('open', 'closed', 'resolved'));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'closed_at'
+  ) THEN
+    ALTER TABLE public.messages ADD COLUMN closed_at timestamptz;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'closed_by'
+  ) THEN
+    ALTER TABLE public.messages ADD COLUMN closed_by uuid REFERENCES auth.users(id);
+  END IF;
+END $$;
 
 DO $$
 BEGIN
@@ -1180,6 +1217,11 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_messages_sender ON public.messages (sender_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_recipient ON public.messages (recipient_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_pair ON public.messages (sender_id, recipient_id, created_at DESC);
+-- Indexes for admin conversation support
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_type ON public.messages (conversation_type);
+CREATE INDEX IF NOT EXISTS idx_messages_case_status ON public.messages (case_status);
+CREATE INDEX IF NOT EXISTS idx_messages_closed_at ON public.messages (closed_at);
+CREATE INDEX IF NOT EXISTS idx_messages_admin_conversations ON public.messages (case_status, conversation_type, created_at DESC);
 
 -- 11) Contact Forms for admin management (idempotent) ---------------------
 CREATE TABLE IF NOT EXISTS public.contact_forms (

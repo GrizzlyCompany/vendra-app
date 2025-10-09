@@ -196,7 +196,9 @@ Descripción: ${description}
     .insert({
       sender_id: userId,
       recipient_id: adminId,
-      content: messageContent
+      content: messageContent,
+      conversation_type: 'user_to_admin',
+      case_status: 'open'
     });
   
   if (messageError) {

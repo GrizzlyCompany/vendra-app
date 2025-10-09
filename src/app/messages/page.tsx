@@ -59,6 +59,7 @@ function MessagesContent() {
   const [isMobileView, setIsMobileView] = useState(false);
   const [showConversationList, setShowConversationList] = useState(false); // Default to false
   const [showSearchBar, setShowSearchBar] = useState(false);
+  const [isClosedConversation, setIsClosedConversation] = useState(false);
   const prevMessagesLength = useRef(messages.length); // Track previous message count
   const isInitialLoad = useRef(true); // Track initial load
   const lastMessageId = useRef<string | null>(null); // Track the ID of the last message
@@ -288,6 +289,33 @@ function MessagesContent() {
           .eq("id", targetId)
           .maybeSingle();
         if (active) setTarget(p ? { id: p.id, name: p.name ?? null, avatar_url: p.avatar_url ?? null } : { id: targetId, name: null, avatar_url: null });
+
+        // Check if this is a closed admin conversation
+        const { data: adminUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', 'admin@vendra.com')
+          .single();
+
+        if (adminUser && (uid === targetId || adminUser.id === targetId)) {
+          // This is an admin conversation (user chatting with admin)
+          const { data: conversationMessages } = await supabase
+            .from('messages')
+            .select('case_status')
+            .or(`and(sender_id.eq.${uid},recipient_id.eq.${targetId}),and(sender_id.eq.${targetId},recipient_id.eq.${uid})`)
+            .eq('conversation_type', 'user_to_admin')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (active && conversationMessages && conversationMessages.length > 0) {
+            const isClosed = conversationMessages[0].case_status === 'closed';
+            setIsClosedConversation(isClosed);
+          } else if (active) {
+            setIsClosedConversation(false);
+          }
+        } else {
+          if (active) setIsClosedConversation(false);
+        }
 
       } catch (e: unknown) {
         if (!active) return;
@@ -541,17 +569,61 @@ function MessagesContent() {
 
   const onSend = async () => {
     if (!canSend) return;
-    const payload = { sender_id: me!, recipient_id: targetId!, content: text.trim() };
-    setText("");
+    
     try {
-      const { data, error } = await supabase.from("messages").insert(payload).select("id, sender_id, recipient_id, content, created_at, read_at").single();
-      if (error) throw error;
-      if (data) {
-        // Optimistic append in case realtime is delayed
-        setMessages((prev) => [...prev, data]);
+      // Check if this is a conversation with admin and if it's closed
+      const { data: adminUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', 'admin@vendra.com')
+        .single();
+        
+      const isAdminConversation = adminUser && targetId === adminUser.id;
+      
+      if (isAdminConversation) {
+        // Check conversation status
+        const response = await fetch('/functions/v1/check-conversation-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+          },
+          body: JSON.stringify({
+            recipient_id: adminUser.id,
+            conversation_type: 'user_to_admin'
+          })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          
+          if (result.is_closed) {
+            alert('Esta conversación ha sido cerrada. Por favor, crea un nuevo reporte si tienes otra inquietud.');
+            return;
+          }
+        }
       }
-    } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : String(e));
+      
+      const payload = { 
+        sender_id: me!, 
+        recipient_id: targetId!, 
+        content: text.trim(),
+        conversation_type: isAdminConversation ? 'user_to_admin' : 'user_to_user'
+      };
+      setText("");
+      try {
+        const { data, error } = await supabase.from("messages").insert(payload).select("id, sender_id, recipient_id, content, created_at, read_at").single();
+        if (error) throw error;
+        if (data) {
+          // Optimistic append in case realtime is delayed
+          setMessages((prev) => [...prev, data]);
+        }
+      } catch (e: unknown) {
+        alert(e instanceof Error ? e.message : String(e));
+      }
+    } catch (e) {
+      console.error('Error checking conversation status:', e);
+      alert('Error al verificar el estado de la conversación');
     }
   };
 
@@ -699,9 +771,10 @@ function MessagesContent() {
               setText={setText}
               setIsInputFocused={setIsInputFocused}
               onSend={onSend}
-              canSend={canSend}
+              canSend={canSend && !isClosedConversation}
               goBackToConversations={goBackToConversations}
               listRef={listRef}
+              isClosedConversation={isClosedConversation}
             />
           ) : loading ? (
             <motion.div
