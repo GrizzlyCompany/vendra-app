@@ -6,19 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface SellerApplication {
-  id: string
-  user_id: string
-  status: string
-  role_choice: string
-  full_name: string | null
-  email: string | null
-  created_at: string
-  submitted_at: string | null
-  review_notes: string | null
-  reviewer_id: string | null
-  user_name: string
-  user_email: string
+interface AdminAgent {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  properties_count: number;
+  last_login: string;
+  status: 'active' | 'inactive';
 }
 
 serve(async (req) => {
@@ -50,39 +45,15 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
 
-    if (authError) {
-      console.error('❌ Token validation error:', authError)
+    if (authError || !user) {
       return new Response(
-        JSON.stringify({
-          error: 'Token validation failed',
-          details: authError.message
-        }),
+        JSON.stringify({ error: 'Unauthorized - Authentication required' }),
         {
-          status: 401,
+          status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
-
-    if (!user) {
-      console.log('❌ No user found in token')
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid token',
-          details: 'No user associated with this token'
-        }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
-
-    console.log('✅ User authenticated:', {
-      email: user.email,
-      id: user.id,
-      metadata: user.user_metadata
-    })
 
     // Check if user has admin access (either by email or user metadata)
     const isAdmin = user.email === 'admin@vendra.com' ||
@@ -100,12 +71,11 @@ serve(async (req) => {
     })
 
     if (!isAdmin) {
-      console.log('❌ Admin access denied for user:', user.email)
       return new Response(
-        JSON.stringify({
+        JSON.stringify({ 
           error: 'Unauthorized - Admin access required',
           details: 'User does not have admin privileges',
-          user_email: user.email
+          user_email: user.email 
         }),
         {
           status: 403,
@@ -114,38 +84,45 @@ serve(async (req) => {
       )
     }
 
-    // Fetch seller applications
-    const { data: appsData, error: appsError } = await supabaseClient
-      .from('seller_applications')
-      .select('*')
-      .order('submitted_at', { ascending: false })
+    // Get all agents (users with role 'vendedor_agente')
+    const { data: agentsData, error: agentsError } = await supabaseClient
+      .from('users')
+      .select('id, name, email, primary_phone, updated_at')
+      .eq('role', 'vendedor_agente')
+      .order('name')
 
-    if (appsError) {
-      throw appsError
+    if (agentsError) {
+      throw agentsError
     }
 
-    // Fetch user details for all applicants
-    const userIds = (appsData || []).map(app => app.user_id)
-    const { data: usersData, error: usersError } = await supabaseClient
-      .from('users')
-      .select('id, name, email')
-      .in('id', userIds)
+    // Get property counts for each agent
+    const agents: AdminAgent[] = await Promise.all(
+      (agentsData || []).map(async (agent) => {
+        const { count: propertiesCount, error: countError } = await supabaseClient
+          .from('properties')
+          .select('*', { count: 'exact', head: true })
+          .eq('owner_id', agent.id)
+          .eq('is_published', true)
+          .eq('status', 'active')
 
-    // Create a map of user data
-    const userMap = new Map((usersData || []).map(u => [u.id, u]))
+        if (countError) {
+          console.error('Error counting properties for agent:', agent.id, countError)
+        }
 
-    // Combine the data
-    const applications: SellerApplication[] = (appsData || []).map((app: any) => {
-      const user = userMap.get(app.user_id)
-      return {
-        ...app,
-        user_name: user?.name || 'Unknown',
-        user_email: user?.email || 'Unknown'
-      }
-    })
+        return {
+          id: agent.id,
+          name: agent.name || 'N/A',
+          email: agent.email || 'N/A',
+          phone: agent.primary_phone || null,
+          properties_count: countError ? 0 : (propertiesCount || 0),
+          last_login: agent.updated_at || agent.updated_at || new Date().toISOString(),
+          status: 'active' as const // All agents are marked as active for now
+        }
+      })
+    )
 
     return new Response(
-      JSON.stringify({ applications }),
+      JSON.stringify({ agents }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -153,7 +130,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in admin-get-applications:', error)
+    console.error('Error in admin-get-agents:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     return new Response(
       JSON.stringify({

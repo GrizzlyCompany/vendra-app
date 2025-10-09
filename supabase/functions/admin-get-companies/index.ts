@@ -6,19 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface SellerApplication {
-  id: string
-  user_id: string
-  status: string
-  role_choice: string
-  full_name: string | null
-  email: string | null
-  created_at: string
-  submitted_at: string | null
-  review_notes: string | null
-  reviewer_id: string | null
-  user_name: string
-  user_email: string
+interface AdminCompany {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  contact_person: string | null;
+  projects_count: number;
+  verification_status: 'approved' | 'pending' | 'rejected';
+  created_at: string;
+  website?: string;
 }
 
 serve(async (req) => {
@@ -50,39 +47,15 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
 
-    if (authError) {
-      console.error('❌ Token validation error:', authError)
+    if (authError || !user) {
       return new Response(
-        JSON.stringify({
-          error: 'Token validation failed',
-          details: authError.message
-        }),
+        JSON.stringify({ error: 'Unauthorized - Authentication required' }),
         {
-          status: 401,
+          status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
-
-    if (!user) {
-      console.log('❌ No user found in token')
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid token',
-          details: 'No user associated with this token'
-        }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
-
-    console.log('✅ User authenticated:', {
-      email: user.email,
-      id: user.id,
-      metadata: user.user_metadata
-    })
 
     // Check if user has admin access (either by email or user metadata)
     const isAdmin = user.email === 'admin@vendra.com' ||
@@ -100,12 +73,11 @@ serve(async (req) => {
     })
 
     if (!isAdmin) {
-      console.log('❌ Admin access denied for user:', user.email)
       return new Response(
-        JSON.stringify({
+        JSON.stringify({ 
           error: 'Unauthorized - Admin access required',
           details: 'User does not have admin privileges',
-          user_email: user.email
+          user_email: user.email 
         }),
         {
           status: 403,
@@ -114,38 +86,45 @@ serve(async (req) => {
       )
     }
 
-    // Fetch seller applications
-    const { data: appsData, error: appsError } = await supabaseClient
-      .from('seller_applications')
-      .select('*')
-      .order('submitted_at', { ascending: false })
+    // Get all companies (users with role 'empresa_constructora')
+    const { data: companiesData, error: companiesError } = await supabaseClient
+      .from('users')
+      .select('id, name, email, primary_phone, contact_person, website, inserted_at')
+      .eq('role', 'empresa_constructora')
+      .order('name')
 
-    if (appsError) {
-      throw appsError
+    if (companiesError) {
+      throw companiesError
     }
 
-    // Fetch user details for all applicants
-    const userIds = (appsData || []).map(app => app.user_id)
-    const { data: usersData, error: usersError } = await supabaseClient
-      .from('users')
-      .select('id, name, email')
-      .in('id', userIds)
+    // Get project counts for each company
+    const companies: AdminCompany[] = await Promise.all(
+      (companiesData || []).map(async (company) => {
+        const { count: projectsCount, error: countError } = await supabaseClient
+          .from('projects')
+          .select('*', { count: 'exact', head: true })
+          .eq('owner_id', company.id)
 
-    // Create a map of user data
-    const userMap = new Map((usersData || []).map(u => [u.id, u]))
+        if (countError) {
+          console.error('Error counting projects for company:', company.id, countError)
+        }
 
-    // Combine the data
-    const applications: SellerApplication[] = (appsData || []).map((app: any) => {
-      const user = userMap.get(app.user_id)
-      return {
-        ...app,
-        user_name: user?.name || 'Unknown',
-        user_email: user?.email || 'Unknown'
-      }
-    })
+        return {
+          id: company.id,
+          name: company.name || 'N/A',
+          email: company.email || 'N/A',
+          phone: company.primary_phone || null,
+          contact_person: company.contact_person || null,
+          projects_count: countError ? 0 : (projectsCount || 0),
+          verification_status: 'approved' as const, // Companies are approved by default
+          created_at: company.inserted_at || new Date().toISOString(),
+          website: company.website || undefined
+        }
+      })
+    )
 
     return new Response(
-      JSON.stringify({ applications }),
+      JSON.stringify({ companies }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -153,7 +132,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in admin-get-applications:', error)
+    console.error('Error in admin-get-companies:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     return new Response(
       JSON.stringify({

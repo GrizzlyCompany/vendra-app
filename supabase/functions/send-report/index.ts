@@ -1,4 +1,4 @@
-// Edge Function to send reports via HTTP request to a webhook
+// Edge Function to send reports via messages system only
 
 console.log("Send report function started");
 
@@ -81,109 +81,71 @@ Deno.serve(async (req) => {
     console.log('Processing report:', { title, category, userEmail, userName });
     
     // Get environment variables
-    const webhookUrl = Deno.env.get('REPORTS_WEBHOOK_URL');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const adminEmail = Deno.env.get('ADMIN_EMAIL') || 'admin@vendra.com';
     
-    console.log('Environment variables:', { webhookUrl: !!webhookUrl, adminEmail, hasResendKey: !!Deno.env.get('RESEND_API_KEY') });
+    console.log('Environment variables:', { adminEmail });
     
-    // If webhook URL is configured, send to webhook
-    if (webhookUrl) {
-      console.log('Sending to webhook:', webhookUrl);
-      const webhookResponse = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description,
-          category,
-          userEmail,
-          userName,
-          userId,
-          adminEmail
-        })
-      });
+    // Create Supabase client with service role key for admin operations
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Get admin user ID
+    const { data: adminUser, error: adminError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', adminEmail)
+      .single();
+    
+    if (adminError || !adminUser) {
+      console.error('Admin user not found:', adminError);
+      // Try to find any user with admin-like role as fallback
+      const { data: fallbackAdmin, error: fallbackError } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .or('email.like.%@admin.com,email.like.%@vendra.com')
+        .limit(1)
+        .single();
       
-      if (!webhookResponse.ok) {
-        const errorText = await webhookResponse.text();
-        console.error('Webhook error:', errorText);
-        throw new Error(`Webhook failed with status ${webhookResponse.status}: ${errorText}`);
+      if (fallbackError || !fallbackAdmin) {
+        console.error('No fallback admin user found');
+        return new Response(
+          JSON.stringify({ 
+            message: 'Report received but admin user not configured',
+            details: 'Please contact system administrator to set up admin user',
+            received: { title, category, userEmail, userName }
+          }),
+          { headers: { "Content-Type": "application/json", ...corsHeaders }, status: 200 }
+        );
+      } else {
+        console.log('Using fallback admin user:', fallbackAdmin.id);
+        // Continue with fallback admin
+        await sendReportMessage(supabaseAdmin, fallbackAdmin.id, { title, description, category, userEmail, userName, userId });
+        return new Response(
+          JSON.stringify({ 
+            message: 'Report received and sent to fallback admin via messages',
+            received: { title, category, userEmail, userName }
+          }),
+          { 
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            }, 
+            status: 200 
+          }
+        );
       }
-      
-      return new Response(
-        JSON.stringify({ message: 'Report sent successfully via webhook' }),
-        { 
-          headers: { 
-            "Content-Type": "application/json",
-            ...corsHeaders
-          }, 
-          status: 200 
-        }
-      );
     }
     
-    // Fallback: Send email using Resend if API key is available
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (resendApiKey) {
-      console.log('Sending via Resend to:', adminEmail);
-      const emailData = {
-        from: 'reports@vendra.com',
-        to: adminEmail,
-        subject: `[Vendra Report] ${category}: ${title}`,
-        html: `
-          <h2>Nuevo Reporte</h2>
-          <p><strong>Usuario:</strong> ${userName} (${userEmail})</p>
-          <p><strong>ID de Usuario:</strong> ${userId}</p>
-          <p><strong>Categoría:</strong> ${category}</p>
-          <p><strong>Título:</strong> ${title}</p>
-          <p><strong>Descripción:</strong></p>
-          <p>${description}</p>
-        `
-      };
-      
-      const emailResponse = await fetch('https://api.resend.com/emails', {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${resendApiKey}`
-        },
-        body: JSON.stringify(emailData)
-      });
-      
-      if (!emailResponse.ok) {
-        const errorText = await emailResponse.text();
-        console.error('Resend API error:', errorText);
-        throw new Error(`Failed to send email: ${emailResponse.status} - ${errorText}`);
-      }
-      
-      const emailResult = await emailResponse.json();
-      console.log('Email sent successfully:', emailResult);
-      
-      return new Response(
-        JSON.stringify({ message: 'Report sent successfully via email', email: emailResult }),
-        { 
-          headers: { 
-            "Content-Type": "application/json",
-            ...corsHeaders
-          }, 
-          status: 200 
-        }
-      );
-    }
+    // Send message to admin with report details
+    await sendReportMessage(supabaseAdmin, adminUser.id, { title, description, category, userEmail, userName, userId });
     
-    // If no webhook or Resend API key, log the report
-    console.log('Report logged (no webhook or email service configured):', {
-      title,
-      description,
-      category,
-      userEmail,
-      userName,
-      userId,
-      adminEmail
-    });
+    console.log('Message sent to admin successfully');
     
     return new Response(
       JSON.stringify({ 
-        message: 'Report received but not sent (no service configured)', 
+        message: 'Report received and sent to admin via messages',
         received: { title, category, userEmail, userName }
       }),
       { 
@@ -216,3 +178,29 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+// Helper function to send report message
+async function sendReportMessage(supabaseAdmin: any, adminId: string, reportData: any) {
+  const { title, description, category, userEmail, userName, userId } = reportData;
+  
+  const messageContent = `
+Nuevo Reporte Recibido:
+Usuario: ${userName} (${userEmail})
+Categoría: ${category}
+Título: ${title}
+Descripción: ${description}
+  `;
+  
+  const { error: messageError } = await supabaseAdmin
+    .from('messages')
+    .insert({
+      sender_id: userId,
+      recipient_id: adminId,
+      content: messageContent
+    });
+  
+  if (messageError) {
+    console.error('Error sending message to admin:', messageError);
+    throw new Error(`Failed to send message to admin: ${messageError.message}`);
+  }
+}

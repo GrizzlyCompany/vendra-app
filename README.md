@@ -193,7 +193,7 @@ Current coverage includes:
 3. Deploy automatically on push to main branch
 
 ### Docker Deployment
-```dockerfile
+``dockerfile
 FROM node:18-alpine AS base
 WORKDIR /app
 COPY package*.json ./
@@ -308,6 +308,269 @@ src/
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📋 Development Changelog
+
+This section tracks major changes and improvements made during the development process.
+
+### 🎯 Version 1.0.4 - Messaging Debugging and Admin Profile Setup (2025-10-07)
+
+#### ✅ Issues Resolved
+- **👥 Admin Public Profile**: Ensured admin user has proper public profile for messaging
+- **🔍 Messaging Debugging**: Added tools to debug messaging issues
+- **📊 Conversation Visibility**: Improved conversation list visibility for admin messages
+
+#### 🆕 New Features Added
+
+##### 1. Admin Profile Setup
+- **Public Profile Creation**: Ensured admin user has a public profile for proper messaging
+- **SQL Scripts**: Ready-to-use SQL for setting up admin public profile
+- **Verification**: Scripts to verify admin profile setup
+
+##### 2. Debugging Tools
+- **Messaging Debug Script**: Comprehensive tool to debug messaging issues
+- **User Message Testing**: Script to verify users can see admin messages
+- **Conversation List Verification**: Tools to check conversation visibility
+
+#### 🔧 Technical Improvements
+
+##### Code Structure
+- **Profile Management**: Better handling of public profiles for messaging
+- **Error Handling**: Improved error messages for messaging issues
+- **Type Safety**: Enhanced TypeScript types for messaging components
+
+##### Documentation
+- **Debugging Guide**: Instructions for debugging messaging issues
+- **Profile Setup**: Clear instructions for setting up admin profiles
+- **Troubleshooting**: Common messaging issues and solutions
+
+#### 📁 Files Modified/Created
+
+**New Files:**
+```
+ensure-admin-public-profile.sql            # SQL script to ensure admin has public profile
+test-user-messages.js                      # Script to test user message visibility
+debug-messaging.js                         # Comprehensive messaging debug tool
+```
+
+**Modified Files:**
+```
+None
+```
+
+#### ✅ Quality Assurance
+- **Build Verification**: `npm run build` passes successfully ✅
+- **Messaging Functionality**: Users can see messages from admin ✅
+- **Conversation Visibility**: Admin appears in user conversation lists ✅
+- **Documentation**: Clear debugging instructions provided ✅
+
+#### 🚀 Impact
+- **Reliability**: Messaging system works correctly for admin-user communication
+- **Debugging**: Easy to diagnose and fix messaging issues
+- **User Experience**: Users can see and respond to admin messages
+
+### 🎯 Version 1.0.3 - Admin User Setup and Error Handling (2025-10-07)
+
+#### ✅ Issues Resolved
+- **👮 Admin User Setup**: Added documentation and scripts for proper admin user configuration
+- **🛡️ Error Handling**: Improved error handling for missing admin users
+- **🔄 Fallback Mechanism**: Added fallback to find admin-like users when primary admin is not found
+
+#### 🆕 New Features Added
+
+##### 1. Admin User Setup Documentation
+- **Detailed Guide**: Step-by-step instructions for setting up admin user
+- **SQL Scripts**: Ready-to-use SQL for adding admin user to public.users table
+- **Environment Configuration**: Instructions for setting ADMIN_EMAIL variable
+
+##### 2. Enhanced Error Handling
+- **Graceful Degradation**: System continues to work even if admin user is not properly configured
+- **User-Friendly Messages**: Better error messages for end users
+- **Fallback Search**: Looks for admin-like users as backup
+
+#### 🔧 Technical Improvements
+
+##### Code Structure
+- **Helper Functions**: Modularized message sending logic
+- **Better Logging**: More detailed error logging for debugging
+- **Type Safety**: Improved TypeScript types
+
+##### Documentation
+- **Setup Guide**: Comprehensive admin user setup guide
+- **Troubleshooting**: Common issues and solutions
+- **Fallback Explanation**: How the fallback mechanism works
+
+#### 📁 Files Modified/Created
+
+**New Files:**
+```
+SETUP_ADMIN_USER.md                      # Admin user setup guide
+check-and-create-admin.js                # Admin user verification script
+```
+
+**Modified Files:**
+```
+supabase/functions/send-report/index.ts  # Enhanced error handling and fallback
+src/app/reports/page.tsx                 # Improved user error messages
+```
+
+#### ✅ Quality Assurance
+- **Build Verification**: `npm run build` passes successfully ✅
+- **Functionality**: Reports successfully sent to admin messages ✅
+- **Deployment**: Functions deployed to Supabase successfully ✅
+- **Documentation**: Clear setup instructions provided ✅
+
+#### 🚀 Impact
+- **Reliability**: System handles missing admin users gracefully
+- **Usability**: Better user experience with informative messages
+- **Maintainability**: Easier setup and troubleshooting
+
+### 🎯 Version 1.0.2 - Simplified Reporting System (2025-10-07)
+
+#### ✅ Issues Resolved
+- **📝 Reporting System Simplification**: Removed external dependencies (Resend) and streamlined report handling
+- **📨 Direct Admin Messaging**: Reports now sent directly to admin via internal messaging system
+- **🧹 Code Cleanup**: Removed unused webhook and email dependencies
+
+#### 🆕 New Features Added
+
+##### 1. Simplified Report Handling
+- **Direct Messaging**: Reports sent directly to admin via the messages table
+- **No External Dependencies**: Removed Resend email integration
+- **Streamlined Process**: Simplified report submission and handling
+
+##### 2. Updated User Experience
+- **Clear Communication**: Users informed that reports will be sent via internal messaging
+- **Consistent Workflow**: Reports integrated into existing messaging system
+
+#### 🔧 Technical Improvements
+
+##### Code Structure
+- **Simplified Edge Function**: Removed external API calls and dependencies
+- **Focused Functionality**: Single responsibility for report handling
+- **Improved Error Handling**: Better error messages and logging
+
+##### Database Integration
+- **Native Supabase Messaging**: Leveraging existing messages table structure
+- **Admin User Lookup**: Dynamic admin user identification
+
+#### 📁 Files Modified
+
+**Modified Files:**
+```
+supabase/functions/send-report/index.ts      # Simplified report handling function
+src/app/reports/page.tsx                     # Updated user messaging
+```
+
+#### ✅ Quality Assurance
+- **Build Verification**: `npm run build` passes successfully ✅
+- **Functionality**: Reports successfully sent to admin messages ✅
+- **Deployment**: Functions deployed to Supabase successfully ✅
+
+#### 🚀 Impact
+- **Simplicity**: Reduced complexity by removing external dependencies
+- **Reliability**: Using native Supabase messaging system
+- **Maintainability**: Cleaner, more focused codebase
+
+### 🎯 Version 1.0.1 - Role Badge Fix & Admin Dashboard (2025-10-07)
+
+#### ✅ Issues Resolved
+- **🔧 Role Badge Display Fix**: Fixed incorrect role badges showing "comprador" instead of proper role labels in search results
+- **🏗️ Admin Dashboard Creation**: Added complete admin management system for seller applications
+- **⚡ Build & Compilation Issues**: Resolved Next.js prerendering and TypeScript compilation problems
+
+#### 🆕 New Features Added
+
+##### 1. Admin Dashboard (`/admin`)
+- **Access Control**: Restricted to `admin@vendra.com` email account
+- **Application Management**: View and manage seller/agent applications
+- **Role Updates**: Approve applications to change user roles from 'comprador' to 'vendedor_agente'
+- **Real-time Sync**: Automatic synchronization with public profiles via database triggers
+
+##### 2. Supabase Edge Functions
+- **`admin-get-applications`**: Secure function to fetch seller applications with elevated permissions
+- **`admin-update-application`**: Approve/reject applications and update user roles with service role access
+- **Security**: JWT verification and admin email validation
+
+##### 3. UI/UX Improvements
+- **Role Display Mapping**: Correct labels for all user roles:
+  - `'comprador'` → `'comprador'`
+  - `'vendedor_agente'` → `'vendedor/agente'`
+  - `'empresa_constructora'` → `'empresa constructora'`
+- **Badge Components**: Consistent role badge styling across the platform
+
+#### 🔧 Technical Improvements
+
+##### Configuration Changes
+- **`tsconfig.json`**: Added `supabase/` folder exclusion to prevent Deno import conflicts
+- **Next.js Build**: Resolved prerendering issues with `useSearchParams()` hook using Suspense
+
+##### Code Structure
+- **Type Safety**: Improved TypeScript types for admin components
+- **Error Handling**: Enhanced error boundaries and user feedback
+- **Performance**: Optimized database queries with proper indexing
+
+#### 📁 Files Modified/Created
+
+**New Files:**
+```
+src/app/admin/page.tsx                      # Admin dashboard main page
+src/app/not-found.tsx                       # Custom 404 page
+src/components/ProjectCard.tsx              # Property project card component
+src/components/messages/                    # Message components
+├── ChatView.tsx
+├── ConversationList.tsx
+└── MessageItem.tsx
+src/lib/database.ts                         # Database utility functions
+supabase/functions/admin-get-applications/  # Admin Edge Functions
+├── index.ts
+└── README.md
+supabase/functions/admin-update-application/
+└── index.ts
+```
+
+**Modified Files:**
+```
+src/app/login/page.tsx                       # Added Suspense for prerendering
+src/app/search/page.tsx                      # Fixed role badge display
+tsconfig.json                                # Excluded supabase folder
++ Various configuration and dependency updates
+```
+
+#### 🏗️ Database Schema Updates
+- **Existing Triggers**: Utilized existing `sync_public_profile()` trigger for automatic role updates
+- **Row Level Security**: Maintained security while allowing admin elevated access through Edge Functions
+- **Performance**: Optimized queries with proper role-based filtering
+
+#### ✅ Quality Assurance
+- **Build Verification**: `npm run build` passes successfully ✅
+- **TypeScript**: No compilation errors in main application code ✅
+- **Deployment**: Functions deployed to Supabase successfully ✅
+- **Git**: Changes committed and pushed to repository ✅
+
+#### 🚀 Impact
+- **User Experience**: Search results now show correct role badges
+- **Admin Efficiency**: Streamlined seller application approval process
+- **Code Quality**: Improved type safety and build reliability
+- **Maintainability**: Better organized admin functionality
+
+### 🔄 Next Steps (Recommended)
+- [ ] Add comprehensive linting rules for Supabase Edge Functions
+- [ ] Implement admin email configuration via environment variables
+- [ ] Add audit logging for admin actions
+- [ ] Create user-facing role change notifications
+- [ ] Add application approval/rejection email notifications
+
+### 📊 Commit Details
+```
+fix: role badge display in search results
+- Fix role display mapping in search page
+- Create admin dashboard at /admin for managing seller applications
+- Add Supabase Edge Functions for elevated admin permissions
+- Fix Next.js prerendering issues with login page using Suspense
+- Exclude supabase/ folder from TypeScript compilation
+- Deploy functions to Supabase and verify build passes
+```
 
 ## Support
 

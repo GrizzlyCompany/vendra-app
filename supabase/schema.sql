@@ -227,11 +227,16 @@ BEGIN
   );
 
   -- Validate and set role with fallback to default
-  user_role := CASE
-    WHEN NEW.raw_user_meta_data->>'role' IN ('comprador', 'vendedor_agente', 'empresa_constructora')
-    THEN NEW.raw_user_meta_data->>'role'
-    ELSE 'comprador'
-  END;
+  -- Special handling for admin user to ensure it gets the correct role
+  IF NEW.email = 'admin@vendra.com' THEN
+    user_role := 'empresa_constructora';
+  ELSE
+    user_role := CASE
+      WHEN NEW.raw_user_meta_data->>'role' IN ('comprador', 'vendedor_agente', 'empresa_constructora')
+      THEN NEW.raw_user_meta_data->>'role'
+      ELSE 'comprador'
+    END;
+  END IF;
 
   -- Insert user with all profile fields to prevent missing column errors
   INSERT INTO public.users (
@@ -1176,6 +1181,72 @@ CREATE INDEX IF NOT EXISTS idx_messages_sender ON public.messages (sender_id, cr
 CREATE INDEX IF NOT EXISTS idx_messages_recipient ON public.messages (recipient_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_pair ON public.messages (sender_id, recipient_id, created_at DESC);
 
+-- 11) Contact Forms for admin management (idempotent) ---------------------
+CREATE TABLE IF NOT EXISTS public.contact_forms (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  email text NOT NULL,
+  phone text,
+  property_id uuid REFERENCES public.properties(id) ON DELETE SET NULL,
+  message text NOT NULL,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'responded', 'archived')),
+  admin_response text,
+  response_date timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE public.contact_forms ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies (only admin can access)
+DO $$
+BEGIN
+  -- Admin can read all contact forms
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='contact_forms' AND policyname='contact_forms_admin_all'
+  ) THEN
+    CREATE POLICY "contact_forms_admin_all" ON public.contact_forms FOR ALL TO authenticated
+      USING (
+        EXISTS (
+          SELECT 1 FROM public.users u
+          WHERE u.id = auth.uid() AND u.email = 'admin@vendra.com'
+        )
+      )
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM public.users u
+          WHERE u.id = auth.uid() AND u.email = 'admin@vendra.com'
+        )
+      );
+  END IF;
+
+  -- Public insert policy for contact forms
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='contact_forms' AND policyname='contact_forms_public_insert'
+  ) THEN
+    CREATE POLICY "contact_forms_public_insert" ON public.contact_forms FOR INSERT
+      WITH CHECK (true);
+  END IF;
+END $$;
+
+-- Trigger to maintain updated_at
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname='trg_contact_forms_set_updated_at'
+  ) THEN
+    CREATE TRIGGER trg_contact_forms_set_updated_at
+      BEFORE UPDATE ON public.contact_forms
+      FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- Helpful indexes
+CREATE INDEX IF NOT EXISTS idx_contact_forms_status ON public.contact_forms (status);
+CREATE INDEX IF NOT EXISTS idx_contact_forms_created_at ON public.contact_forms (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_contact_forms_property ON public.contact_forms (property_id);
+
 -- 10) Property Views Tracking (for statistics) -----------------------------
 -- Add views_count column to properties table
 DO $$
@@ -1397,3 +1468,37 @@ BEGIN
         -- Will show in the next deployment run after columns are added
     END IF;
 END $$;
+
+-- Add a function to ensure admin user has correct role and profile
+CREATE OR REPLACE FUNCTION public.ensure_admin_user()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Ensure admin user has the correct role
+  UPDATE public.users 
+  SET role = 'empresa_constructora' 
+  WHERE email = 'admin@vendra.com' AND role NOT IN ('comprador', 'vendedor_agente', 'empresa_constructora');
+  
+  -- Ensure admin user has a public profile
+  INSERT INTO public.public_profiles (id, name, email, role)
+  SELECT id, 
+         COALESCE(name, 'Administrador Vendra') as name, 
+         email, 
+         role 
+  FROM public.users 
+  WHERE email = 'admin@vendra.com'
+  ON CONFLICT (id) 
+  DO UPDATE SET 
+      name = EXCLUDED.name,
+      email = EXCLUDED.email,
+      role = EXCLUDED.role,
+      updated_at = now();
+END;
+$$;
+
+-- Run the function to ensure admin user is properly set up
+SELECT public.ensure_admin_user();
+
+-- Drop the function after use as it's not needed for ongoing operations
+DROP FUNCTION public.ensure_admin_user();

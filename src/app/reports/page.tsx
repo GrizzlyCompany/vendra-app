@@ -104,7 +104,7 @@ export default function ReportsPage() {
       console.log('Report sent successfully:', data);
       
       // Show success message
-      showSuccess("Reporte enviado correctamente", "Gracias por tu reporte. Lo revisaremos pronto.");
+      showSuccess("Reporte enviado correctamente", data.message || "Gracias por tu reporte. Lo revisaremos pronto y te responderemos a través del sistema de mensajes.");
       
       // Reset form
       setFormData({
@@ -114,7 +114,11 @@ export default function ReportsPage() {
       });
     } catch (err: any) {
       console.error("Error sending report:", err);
-      showError("Error al enviar el reporte", err.message || "Por favor intenta nuevamente más tarde.");
+      // Show a more user-friendly error message
+      showError(
+        "Error al enviar el reporte", 
+        "Por favor intenta nuevamente más tarde. Si el problema persiste, contacta al administrador del sistema."
+      );
     } finally {
       setLoading(false);
     }
@@ -125,6 +129,13 @@ export default function ReportsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">Reportes</h1>
+          
+          <div className="bg-card rounded-lg border p-6 mb-6">
+            <p className="text-muted-foreground text-sm">
+              Tu reporte será enviado directamente al administrador del sistema a través del sistema de mensajes. 
+              Podrás ver la respuesta del administrador en la sección de mensajes de tu cuenta.
+            </p>
+          </div>
           
           <div className="bg-card rounded-lg border p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
