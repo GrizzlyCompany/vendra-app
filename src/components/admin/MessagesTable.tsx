@@ -5,23 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Search,
   Filter,
-  Eye,
-  EyeOff,
   MessageSquare,
-  Reply,
-  Trash2,
-  Send,
   Clock,
-  User,
   MoreHorizontal,
   AlertCircle,
-  Mail
+  Mail,
+  CheckCircle,
+  XCircle
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useToastContext } from '@/components/ToastProvider'
@@ -30,20 +25,27 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ConversationDetail } from './ConversationDetail'
 
-interface AdminMessage {
+interface Conversation {
   id: string;
-  sender_id: string;
-  recipient_id: string;
-  content: string;
-  created_at: string;
-  read_at: string | null;
-  sender_name: string;
-  recipient_name: string;
-  is_from_admin: boolean;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  conversation_type: string;
+  case_status: string;
+  last_message: {
+    content: string;
+    created_at: string;
+    sender_name: string;
+    is_from_admin: boolean;
+  };
+  message_count: number;
+  unread_count?: number;
+  closed_at?: string;
+  closed_by?: string;
 }
 
 interface MessagesTableProps {
@@ -51,156 +53,118 @@ interface MessagesTableProps {
 }
 
 export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
-  const [messages, setMessages] = useState<AdminMessage[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [senderFilter, setSenderFilter] = useState<string>('all')
-  const [readFilter, setReadFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
-  const [selectedMessage, setSelectedMessage] = useState<AdminMessage | null>(null)
-  const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [showReplyModal, setShowReplyModal] = useState(false)
-  const [replyContent, setReplyContent] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const { error: showError, success: showSuccess } = useToastContext()
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
 
-  const itemsPerPage = 50
+  const itemsPerPage = 20
 
-  const fetchMessages = async () => {
+  const fetchConversations = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const { data: messagesData, error: messagesError } = await supabase.functions.invoke('admin-get-messages', {
+      const { data: conversationsData, error: conversationsError } = await supabase.functions.invoke('admin-get-messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
       })
 
-      if (messagesError) throw messagesError
+      if (conversationsError) throw conversationsError
 
-      setMessages(messagesData.messages || [])
+      setConversations(conversationsData.conversations || [])
     } catch (err) {
-      console.error('Error fetching messages:', err)
-      setError('Error al cargar los mensajes')
-      showError('Error al cargar los mensajes')
+      console.error('Error fetching conversations:', err)
+      setError('Error al cargar las conversaciones')
+      showError('Error al cargar las conversaciones')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleMarkAsRead = async (messageId: string, isCurrentlyRead: boolean) => {
+  const handleCloseCase = async (conversationId: string, userId: string) => {
     try {
-      setActionLoading(messageId)
+      setActionLoading(conversationId);
 
-      // Note: This would typically call an update function, but for now just show success
-      // In a real implementation, you'd call an admin-update-message function
+      // Call the admin-close-case function using Supabase functions API
+      const { data, error } = await supabase.functions.invoke('admin-close-case', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: { user_id: userId }
+      });
 
-      if (!isCurrentlyRead) {
-        showSuccess('Mensaje marcado como leído')
-        // Optimistically update the UI
-        setMessages(messages.map(message =>
-          message.id === messageId
-            ? { ...message, read_at: new Date().toISOString() }
-            : message
-        ))
-      }
+      if (error) throw error;
+
+      showSuccess('Caso cerrado exitosamente. El usuario no podrá seguir chateando sobre este caso.');
+
+      // Refresh conversations to show updated status
+      await fetchConversations();
+
+      onRefreshStats?.();
     } catch (err) {
-      console.error('Error updating message status:', err)
-      showError('Error al actualizar el estado del mensaje')
+      console.error('Error closing case:', err);
+      showError('Error al cerrar el caso: ' + (err instanceof Error ? err.message : 'Error desconocido'));
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
-  const handleDeleteMessage = async (messageId: string) => {
+  const handleReopenCase = async (conversationId: string, userId: string) => {
     try {
-      setActionLoading(messageId)
+      setActionLoading(conversationId);
 
-      // Note: This would typically call a delete function, but for now just show success
-      showSuccess('Mensaje eliminado exitosamente')
+      // Call the admin-reopen-case function using Supabase functions API
+      const { data, error } = await supabase.functions.invoke('admin-reopen-case', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: { user_id: userId }
+      });
 
-      // Optimistically update the UI
-      setMessages(messages.filter(message => message.id !== messageId))
+      if (error) throw error;
 
-      onRefreshStats?.()
+      showSuccess('Caso reabierto exitosamente. El usuario puede seguir chateando sobre este caso.');
+
+      // Refresh conversations to show updated status
+      await fetchConversations();
+
+      onRefreshStats?.();
     } catch (err) {
-      console.error('Error deleting message:', err)
-      showError('Error al eliminar el mensaje')
+      console.error('Error reopening case:', err);
+      showError('Error al reabrir el caso: ' + (err instanceof Error ? err.message : 'Error desconocido'));
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
-  const handleReplyToMessage = async () => {
-    if (!selectedMessage || !replyContent.trim()) return
+  // Filtered and paginated conversations
+  const filteredConversations = useMemo(() => {
+    return conversations.filter(conversation => {
+      const matchesSearch = conversation.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          conversation.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          conversation.last_message.content.toLowerCase().includes(searchTerm.toLowerCase())
 
-    try {
-      setActionLoading(selectedMessage.id)
+      const matchesStatus = statusFilter === 'all' || conversation.case_status === statusFilter
 
-      // Note: This would typically call a send message function, but for now just show success
-      showSuccess('Respuesta enviada exitosamente')
-
-      setReplyContent('')
-      setShowReplyModal(false)
-
-      // Refresh messages to show the new reply
-      await fetchMessages()
-    } catch (err) {
-      console.error('Error sending reply:', err)
-      showError('Error al enviar la respuesta')
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  const handleViewMessage = (message: AdminMessage) => {
-    setSelectedMessage(message)
-    setShowDetailsModal(true)
-    // Auto-mark as read when viewing
-    if (!message.read_at) {
-      handleMarkAsRead(message.id, false)
-    }
-  }
-
-  const handleOpenReplyModal = (message: AdminMessage) => {
-    setSelectedMessage(message)
-    setReplyContent('')
-    setShowReplyModal(true)
-  }
-
-  // Filtered and paginated messages
-  const filteredMessages = useMemo(() => {
-    return messages.filter(message => {
-      const matchesSearch = message.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          message.sender_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          message.recipient_name.toLowerCase().includes(searchTerm.toLowerCase())
-
-      const matchesSender = senderFilter === 'all' ||
-                          (senderFilter === 'admin' && message.is_from_admin) ||
-                          (senderFilter === 'users' && !message.is_from_admin)
-
-      const matchesRead = readFilter === 'all' ||
-                         (readFilter === 'read' && message.read_at) ||
-                         (readFilter === 'unread' && !message.read_at)
-
-      return matchesSearch && matchesSender && matchesRead
+      return matchesSearch && matchesStatus
     })
-  }, [messages, searchTerm, senderFilter, readFilter])
+  }, [conversations, searchTerm, statusFilter])
 
-  const totalPages = Math.ceil(filteredMessages.length / itemsPerPage)
-  const paginatedMessages = filteredMessages.slice(
+  const totalPages = Math.ceil(filteredConversations.length / itemsPerPage)
+  const paginatedConversations = filteredConversations.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
-
-  // Unique values for filters
-  const uniqueSenders = useMemo(() => {
-    const senders = new Set(messages.map(m => m.sender_name).filter(Boolean))
-    return Array.from(senders)
-  }, [messages])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -230,22 +194,48 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
   }
 
   useEffect(() => {
-    fetchMessages()
+    fetchConversations()
   }, [])
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, senderFilter, readFilter])
+  }, [searchTerm, statusFilter])
+
+  // If a conversation is selected, show the detail view
+  if (selectedConversation) {
+    // Validate that the selected conversation ID is valid
+    const isValidConversationId = selectedConversation && 
+                                  typeof selectedConversation === 'string' && 
+                                  selectedConversation.length > 0;
+    
+    if (!isValidConversationId) {
+      // If invalid, go back to the list
+      setSelectedConversation(null);
+      showError('ID de conversación no válido');
+      return null;
+    }
+    
+    return (
+      <Card className="h-full flex flex-col">
+        <CardContent className="p-0 flex-1">
+          <ConversationDetail 
+            conversationId={selectedConversation} 
+            onBack={() => setSelectedConversation(null)} 
+          />
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Mensajes y Comentarios</h2>
-          <p className="text-gray-600">Sistema de mensajería del administrador</p>
+          <h2 className="text-2xl font-bold text-gray-900">Conversaciones de Soporte</h2>
+          <p className="text-gray-600">Gestión de casos y mensajería de usuarios</p>
         </div>
-        <Button onClick={fetchMessages} variant="outline">
+        <Button onClick={fetchConversations} variant="outline">
           <Filter className="h-4 w-4 mr-2" />
           Actualizar
         </Button>
@@ -262,7 +252,7 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
               <Button
-                onClick={fetchMessages}
+                onClick={fetchConversations}
                 variant="outline"
                 size="sm"
                 className="border-red-300 text-red-700 hover:bg-red-100"
@@ -288,7 +278,7 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Buscar en mensajes, remitentes o destinatarios..."
+                  placeholder="Buscar por usuario, email o contenido..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -297,36 +287,26 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
             </div>
 
             <select
-              value={senderFilter}
-              onChange={(e) => setSenderFilter(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
               className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Filtrar por remitente"
+              title="Filtrar por estado del caso"
             >
-              <option value="all">Todos los remitentes</option>
-              <option value="admin">De admin</option>
-              <option value="users">De usuarios</option>
-            </select>
-
-            <select
-              value={readFilter}
-              onChange={(e) => setReadFilter(e.target.value)}
-              className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Filtrar por estado de lectura"
-            >
-              <option value="all">Todos los estados</option>
-              <option value="read">Leídos</option>
-              <option value="unread">No leídos</option>
+              <option value="all">Todos los casos</option>
+              <option value="open">Casos abiertos</option>
+              <option value="closed">Casos cerrados</option>
+              <option value="resolved">Casos resueltos</option>
             </select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Messages List */}
+      {/* Conversations List */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Mensajes ({filteredMessages.length})
+            Conversaciones ({filteredConversations.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -345,130 +325,149 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
                 </div>
               ))}
             </div>
-          ) : paginatedMessages.length === 0 ? (
+          ) : paginatedConversations.length === 0 ? (
             <div className="text-center py-8">
               <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">
-                {messages.length === 0
-                  ? 'No hay mensajes en el sistema'
-                  : 'No se encontraron mensajes con los filtros aplicados'
+                {conversations.length === 0
+                  ? 'No hay conversaciones activas'
+                  : 'No se encontraron conversaciones con los filtros aplicados'
                 }
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {paginatedMessages.map((message) => (
+              {paginatedConversations.map((conversation) => (
                 <div
-                  key={message.id}
-                  className={`flex items-center gap-4 p-4 border rounded-lg transition-colors ${
-                    !message.read_at ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
+                  key={conversation.id}
+                  className={`flex items-center gap-4 p-4 border rounded-lg transition-colors cursor-pointer ${
+                    conversation.unread_count && conversation.unread_count > 0
+                      ? 'bg-blue-50 border-blue-200'
+                      : conversation.case_status === 'closed'
+                      ? 'bg-gray-50'
+                      : 'hover:bg-gray-50'
                   }`}
+                  onClick={() => {
+                    // Validate conversation ID before setting it
+                    if (conversation.id && typeof conversation.id === 'string' && conversation.id.length > 0) {
+                      setSelectedConversation(conversation.id);
+                    } else {
+                      showError('ID de conversación no válido');
+                    }
+                  }}
                 >
-                  {/* Sender Avatar */}
+                  {/* User Avatar */}
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src="" alt={message.sender_name} />
+                    <AvatarImage src="" alt={conversation.user_name} />
                     <AvatarFallback className="bg-blue-100 text-blue-600">
-                      {getInitials(message.sender_name)}
+                      {getInitials(conversation.user_name)}
                     </AvatarFallback>
                   </Avatar>
 
-                  {/* Message Content */}
+                  {/* Conversation Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium text-gray-900 truncate">
-                            {message.sender_name}
+                            {conversation.user_name}
                           </span>
-                          <span className="text-gray-400">→</span>
-                          <span className="font-medium text-gray-900 truncate">
-                            {message.recipient_name}
+                          <span className="text-gray-400 text-sm">
+                            ({conversation.user_email})
                           </span>
-                          {message.is_from_admin && (
-                            <Badge variant="secondary" className="text-xs">
-                              Admin
+                          {conversation.case_status === 'closed' && (
+                            <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600">
+                              Cerrado
+                            </Badge>
+                          )}
+                          {conversation.unread_count && conversation.unread_count > 0 && (
+                            <Badge variant="outline" className="text-xs border-red-300 text-red-600">
+                              {conversation.unread_count} sin leer
                             </Badge>
                           )}
                         </div>
 
                         <p className="text-sm text-gray-600 mb-1 truncate">
-                          {truncateContent(message.content)}
+                          {conversation.last_message.is_from_admin ? 'Tú: ' : ''}
+                          {truncateContent(conversation.last_message.content)}
                         </p>
 
                         <div className="flex items-center gap-3 text-xs text-gray-500">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {formatDate(message.created_at)}
+                            {formatDate(conversation.last_message.created_at)}
                           </span>
-                          {!message.read_at && (
-                            <span className="flex items-center gap-1">
-                              <EyeOff className="h-3 w-3 text-blue-500" />
-                              No leído
-                            </span>
-                          )}
+                          <span className="flex items-center gap-1">
+                            <MessageSquare className="h-3 w-3" />
+                            {conversation.message_count} mensajes
+                          </span>
                         </div>
                       </div>
 
                       <div className="ml-4 flex flex-col items-end gap-2">
-                        {message.read_at ? (
-                          <Badge variant="secondary" className="text-green-600 flex items-center gap-1">
-                            <Eye className="h-3 w-3" />
-                            Leído
+                        {conversation.case_status === 'open' ? (
+                          <Badge variant="outline" className="text-green-600 border-green-300 flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Abierto
+                          </Badge>
+                        ) : conversation.case_status === 'closed' ? (
+                          <Badge variant="secondary" className="text-gray-600 flex items-center gap-1">
+                            <XCircle className="h-3 w-3" />
+                            Cerrado
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-blue-600 border-blue-300 flex items-center gap-1">
-                            <EyeOff className="h-3 w-3" />
-                            No leído
+                            Resuelto
                           </Badge>
                         )}
 
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => handleViewMessage(message)}
-                              className="gap-2"
-                            >
-                              <Eye className="h-4 w-4" />
-                              Ver mensaje completo
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleOpenReplyModal(message)}
-                              className="gap-2"
-                            >
-                              <Reply className="h-4 w-4" />
-                              Responder
-                            </DropdownMenuItem>
-                            {!message.read_at && (
+                        {conversation.case_status === 'open' ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Acciones del Caso</DropdownMenuLabel>
                               <DropdownMenuItem
-                                onClick={() => handleMarkAsRead(message.id, false)}
-                                className="gap-2"
-                                disabled={actionLoading === message.id}
+                                onClick={() => {
+                                  if (confirm(`¿Estás seguro de que quieres cerrar el caso con ${conversation.user_name}? Una vez cerrado, el usuario no podrá seguir chateando sobre este caso.`)) {
+                                    handleCloseCase(conversation.id, conversation.user_id);
+                                  }
+                                }}
+                                className="gap-2 text-orange-600 focus:text-orange-600"
+                                disabled={actionLoading === conversation.id}
                               >
-                                <Eye className="h-4 w-4" />
-                                Marcar como leído
+                                <XCircle className="h-4 w-4" />
+                                {actionLoading === conversation.id ? 'Cerrando...' : 'Cerrar Caso'}
                               </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (confirm('¿Estás seguro de que quieres eliminar este mensaje?')) {
-                                  handleDeleteMessage(message.id)
-                                }
-                              }}
-                              className="gap-2 text-red-600 focus:text-red-600"
-                              disabled={actionLoading === message.id}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Eliminar mensaje
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : conversation.case_status === 'closed' ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Acciones del Caso</DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  if (confirm(`¿Estás seguro de que quieres reabrir el caso con ${conversation.user_name}? El usuario podrá seguir chateando sobre este caso.`)) {
+                                    handleReopenCase(conversation.id, conversation.user_id);
+                                  }
+                                }}
+                                className="gap-2 text-green-600 focus:text-green-600"
+                                disabled={actionLoading === conversation.id}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                                {actionLoading === conversation.id ? 'Reabriendo...' : 'Reabrir Caso'}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -479,7 +478,7 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-4 border-t">
                   <p className="text-sm text-gray-500">
-                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredMessages.length)} de {filteredMessages.length} mensajes
+                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredConversations.length)} de {filteredConversations.length} conversaciones
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -506,119 +505,6 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
         </CardContent>
       </Card>
 
-      {/* Message Details Modal */}
-      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Detalles del Mensaje</DialogTitle>
-            <DialogDescription>
-              Contenido completo y información del mensaje
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedMessage && (
-            <div className="space-y-4">
-              {/* Message Header */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src="" alt={selectedMessage.sender_name} />
-                    <AvatarFallback className="bg-blue-100 text-blue-600">
-                      {getInitials(selectedMessage.sender_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">
-                      De: {selectedMessage.sender_name} → Para: {selectedMessage.recipient_name}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {formatDate(selectedMessage.created_at)}
-                    </p>
-                  </div>
-                </div>
-                {selectedMessage.is_from_admin && (
-                  <Badge variant="secondary">Mensaje de Admin</Badge>
-                )}
-              </div>
-
-              {/* Message Content */}
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-gray-900 whitespace-pre-wrap">{selectedMessage.content}</p>
-                </CardContent>
-              </Card>
-
-              {/* Message Status */}
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">
-                  Estado: {selectedMessage.read_at ? 'Leído' : 'No leído'}
-                </span>
-                {selectedMessage.read_at && (
-                  <span className="text-gray-500">
-                    Leído: {formatDate(selectedMessage.read_at)}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Reply Modal */}
-      <Dialog open={showReplyModal} onOpenChange={setShowReplyModal}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Responder Mensaje</DialogTitle>
-            <DialogDescription>
-              Responder al mensaje de {selectedMessage?.sender_name}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedMessage && (
-            <div className="space-y-4">
-              {/* Original Message */}
-              <Card className="bg-gray-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-gray-600">Mensaje original:</span>
-                    <Badge variant="outline">{selectedMessage.sender_name}</Badge>
-                  </div>
-                  <p className="text-sm text-gray-700 italic">"{truncateContent(selectedMessage.content, 150)}"</p>
-                </CardContent>
-              </Card>
-
-              {/* Reply Input */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Tu respuesta</label>
-                <textarea
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  placeholder="Escribe tu respuesta..."
-                  className="w-full h-32 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowReplyModal(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleReplyToMessage}
-                  disabled={!replyContent.trim() || actionLoading === selectedMessage.id}
-                  className="gap-2"
-                >
-                  <Send className="h-4 w-4" />
-                  {actionLoading === selectedMessage.id ? 'Enviando...' : 'Enviar Respuesta'}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
