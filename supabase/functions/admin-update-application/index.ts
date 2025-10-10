@@ -106,7 +106,7 @@ serve(async (req) => {
       }
 
       if (application) {
-        // Update user role to 'vendedor_agente'
+        // Update user role to 'vendedor_agente' in database
         const { error: userError } = await supabaseClient
           .from('users')
           .update({ role: 'vendedor_agente' })
@@ -115,6 +115,20 @@ serve(async (req) => {
         if (userError) {
           console.error('Error updating user role:', userError)
           // Don't fail the request if role update fails, just log it
+        }
+        
+        // Also update auth metadata to ensure consistency
+        try {
+          const { error: updateMetadataError } = await supabaseClient.auth.admin.updateUserById(
+            application.user_id,
+            { user_metadata: { role: 'vendedor_agente' } }
+          );
+          
+          if (updateMetadataError) {
+            console.error('Error updating user auth metadata:', updateMetadataError)
+          }
+        } catch (metadataError) {
+          console.error('Error updating user auth metadata:', metadataError)
         }
       }
     }
