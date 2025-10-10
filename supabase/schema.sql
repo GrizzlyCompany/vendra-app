@@ -292,6 +292,22 @@ BEGIN
     updated_at = now()
   WHERE users.id = EXCLUDED.id;
 
+  -- Ensure the user has a public profile
+  INSERT INTO public.public_profiles (id, name, email, bio, avatar_url, role)
+  VALUES (
+    NEW.id,
+    user_name,
+    COALESCE(NEW.email, ''),
+    null, -- bio
+    null, -- avatar_url
+    user_role
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    role = EXCLUDED.role,
+    updated_at = now();
+
   RETURN NEW;
 EXCEPTION
   WHEN OTHERS THEN

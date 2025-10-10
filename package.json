@@ -14,6 +14,7 @@
     "test:e2e": "playwright test",
     "test:admin-messaging": "node test-admin-messaging.js",
     "test:function-error": "node test-function-error.js",
+    "test:email-confirmation": "node test-email-confirmation.js",
     "prepare": "husky"
   },
   "dependencies": {
@@ -23,6 +24,8 @@
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

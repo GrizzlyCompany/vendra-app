@@ -31,6 +31,71 @@ export default function ProfilePage() {
   const router = useRouter();
   const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+
+  // Move the processProfileData function inside the component so it has access to setProfile and router
+  const processProfileData = async (profileData: any, authUser: any, userId: string) => {
+    // Sync role with auth metadata if needed
+    // Force refresh auth user data to get latest metadata
+    const effectiveRole = await syncUserRole(userId) ?? undefined;
+    if (effectiveRole === "empresa_constructora") {
+      router.replace("/dashboard");
+      return;
+    }
+
+    // Fetch the latest full_name from seller_applications
+    let fullName = null;
+    try {
+      const { data: sellerApp } = await supabase
+        .from("seller_applications")
+        .select("full_name")
+        .eq("user_id", userId)
+        .in("status", ["draft", "submitted", "needs_more_info", "approved"] as any)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      fullName = sellerApp?.full_name ?? null;
+    } catch (e) {
+      console.debug("Error fetching seller application full name", e);
+    }
+
+    // Backfill display fields from auth metadata if missing
+    // Compute a safe display name: prefer full_name from seller_applications, then DB name, then auth metadata
+    const dbName = profileData?.name as string | null;
+    const dbEmail = profileData?.email as string | null;
+    const authName = authUser?.user_metadata?.name as string | null;
+    const prettyFromEmail = (() => {
+      const email = authUser?.email ?? dbEmail ?? null;
+      if (!email) return null;
+      const local = email.split("@")[0] ?? "";
+      const normalized = local.replace(/[._-]+/g, " ").trim();
+      if (!normalized) return null;
+      return normalized
+        .split(" ")
+        .filter(Boolean)
+        .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
+        .join(" ");
+    })();
+    
+    // Priority: full_name from seller_applications > DB name > auth metadata > email-based name
+    const displayName = fullName && fullName.trim().length > 0
+      ? fullName
+      : (dbName && dbName.trim().length > 0 && dbName !== dbEmail)
+        ? dbName
+        : (authName && authName.trim().length > 0)
+          ? authName
+          : prettyFromEmail ?? null;
+
+    const merged: ProfileRow = {
+      ...profileData,
+      name: displayName,
+      avatar_url:
+        profileData?.avatar_url ??
+        authUser?.user_metadata?.avatar_url ??
+        null,
+    } as ProfileRow;
+    setProfile(merged);
+  };
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -284,107 +349,59 @@ export default function ProfilePage() {
           setMemberSince(`${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`);
         }
 
-        // Fetch profile
+        // Fetch profile with robust error handling
         const { data: profileData, error: profileError } = await supabase
           .from("users")
           .select("id,name,email,bio,role,avatar_url,subscription_active")
           .eq("id", uid)
-          .single();
+          .maybeSingle(); // Changed from single() to maybeSingle()
 
         if (!active) return;
-        if (profileError) {
-          const msg = profileError.message || "";
-          // If the 'users' table doesn't exist or schema cache not updated, fallback to session
-          if (msg.includes("schema cache") || msg.includes("relation") || msg.includes("users")) {
-            const session = (await supabase.auth.getSession()).data.session;
-            const user = session?.user;
-            const email = user?.email ?? null;
-            const prettyFromEmail = (() => {
-              if (!email) return null;
-              const local = email.split("@")[0] ?? "";
-              const normalized = local.replace(/[._-]+/g, " ").trim();
-              if (!normalized) return null;
-              return normalized
-                .split(" ")
-                .filter(Boolean)
-                .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-                .join(" ");
-            })();
-            setProfile({
-              id: uid,
-              name: user?.user_metadata?.name ?? prettyFromEmail ?? "Usuario",
-              email: user?.email ?? null,
-              bio: null,
-              role: null,
-              avatar_url: user?.user_metadata?.avatar_url ?? null,
-              subscription_active: null,
-            } as ProfileRow);
-          } else {
-            setError(profileError.message);
-          }
-        } else {
-          // Sync role with auth metadata if needed
-          // Force refresh auth user data to get latest metadata
-          const { data: { user: authUser } } = await supabase.auth.getUser();
-          const effectiveRole = await syncUserRole(uid) ?? undefined;
-          if (effectiveRole === "empresa_constructora") {
-            router.replace("/dashboard");
-            return;
-          }
-
-          // Fetch the latest full_name from seller_applications
-          let fullName = null;
-          try {
-            const { data: sellerApp } = await supabase
-              .from("seller_applications")
-              .select("full_name")
-              .eq("user_id", uid)
-              .in("status", ["draft", "submitted", "needs_more_info", "approved"] as any)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
+        
+        // Handle case where no profile data exists
+        if (!profileData && !profileError) {
+          // Try to create a minimal profile from auth data
+          const { data: authUser } = await supabase.auth.getUser();
+          if (authUser?.user) {
+            const userMeta = authUser.user.user_metadata || {};
             
-            fullName = sellerApp?.full_name ?? null;
-          } catch (e) {
-            console.debug("Error fetching seller application full name", e);
+            // Create minimal user profile
+            const { error: insertError } = await supabase
+              .from("users")
+              .insert({
+                id: uid,
+                email: authUser.user.email || '',
+                name: userMeta.name || authUser.user.email?.split('@')[0] || 'Usuario',
+                role: userMeta.role || 'comprador',
+                subscription_active: false,
+              });
+            
+            if (!insertError) {
+              // Retry fetching the profile
+              const { data: retryProfileData, error: retryProfileError } = await supabase
+                .from("users")
+                .select("id,name,email,bio,role,avatar_url,subscription_active")
+                .eq("id", uid)
+                .maybeSingle();
+              
+              if (retryProfileData && !retryProfileError) {
+                processProfileData(retryProfileData, authUser.user, uid);
+              } else {
+                setError("No se pudo cargar el perfil. Por favor, contacte al soporte.");
+              }
+            } else {
+              setError("No se pudo crear el perfil. Por favor, contacte al soporte.");
+            }
+          } else {
+            setError("No se pudo obtener la información del usuario.");
           }
-
-          // Backfill display fields from auth metadata if missing
-          // Compute a safe display name: prefer full_name from seller_applications, then DB name, then auth metadata
-          const dbName = (profileData as any)?.name as string | null;
-          const dbEmail = (profileData as any)?.email as string | null;
-          const authName = (authUser?.user_metadata as any)?.name as string | null;
-          const prettyFromEmail = (() => {
-            const email = authUser?.email ?? dbEmail ?? null;
-            if (!email) return null;
-            const local = email.split("@")[0] ?? "";
-            const normalized = local.replace(/[._-]+/g, " ").trim();
-            if (!normalized) return null;
-            return normalized
-              .split(" ")
-              .filter(Boolean)
-              .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-              .join(" ");
-          })();
-          
-          // Priority: full_name from seller_applications > DB name > auth metadata > email-based name
-          const displayName = fullName && fullName.trim().length > 0
-            ? fullName
-            : (dbName && dbName.trim().length > 0 && dbName !== dbEmail)
-              ? dbName
-              : (authName && authName.trim().length > 0)
-                ? authName
-                : prettyFromEmail ?? null;
-
-          const merged: ProfileRow = {
-            ...(profileData as ProfileRow),
-            name: displayName,
-            avatar_url:
-              (profileData as any)?.avatar_url ??
-              (authUser?.user_metadata as any)?.avatar_url ??
-              null,
-          } as ProfileRow;
-          setProfile(merged);
+        } else if (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          setError(profileError.message);
+        } else {
+          // Process profile data normally
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          processProfileData(profileData, authUser, uid);
         }
 
         // Fetch user's properties
@@ -1020,3 +1037,5 @@ export default function ProfilePage() {
     </main>
   );
 }
+
+
