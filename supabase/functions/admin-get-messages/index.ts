@@ -109,7 +109,6 @@ serve(async (req) => {
         closed_by
       `)
       .or(`sender_id.eq.${adminUser.id},recipient_id.eq.${adminUser.id}`)
-      .or('conversation_type.eq.user_to_admin,conversation_type.eq.admin_to_user') // Include both types
       .order('created_at', { ascending: false })
       .limit(1000) // Increase limit to ensure we get all recent messages
 
@@ -136,7 +135,14 @@ serve(async (req) => {
         return {
           ...msg,
           conversation_type: 'user_to_admin',
-          case_status: msg.case_status === 'closed' ? 'open' : msg.case_status // Reopen closed reports
+          case_status: 'open' // Ensure reports are marked as open
+        };
+      }
+      // Also ensure all user_to_admin conversations have a proper case_status
+      if (msg.conversation_type === 'user_to_admin' && !msg.case_status) {
+        return {
+          ...msg,
+          case_status: 'open'
         };
       }
       return msg;

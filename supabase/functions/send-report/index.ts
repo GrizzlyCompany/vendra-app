@@ -198,7 +198,7 @@ Descripción: ${description}
       recipient_id: adminId,
       content: messageContent,
       conversation_type: 'user_to_admin',
-      case_status: 'open'
+      case_status: 'open' // Ensure the case is marked as open so it appears in the admin messages section
     });
   
   if (messageError) {

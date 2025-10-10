@@ -14,6 +14,7 @@ import {
   Home,
   Menu,
   X,
+  User,
 } from 'lucide-react'
 
 export type AdminSection =
@@ -21,6 +22,7 @@ export type AdminSection =
   | 'properties'
   | 'agents'
   | 'companies'
+  | 'buyers'
   | 'requests'
   | 'messages'
   | 'settings'
@@ -50,6 +52,12 @@ const navigationItems = [
     label: 'Agentes',
     icon: Users,
     description: 'Agentes Inmobiliarios',
+  },
+  {
+    id: 'buyers' as AdminSection,
+    label: 'Compradores',
+    icon: User,
+    description: 'Usuarios Compradores',
   },
   {
     id: 'companies' as AdminSection,

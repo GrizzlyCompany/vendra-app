@@ -17,6 +17,7 @@ import { MessagesTable } from "@/components/admin/MessagesTable"
 import { SettingsPanel } from "@/components/admin/SettingsPanel"
 import { ContactFormsTable } from "@/components/admin/ContactFormsTable"
 import { ApplicationsTable } from "@/components/admin/ApplicationsTable"
+import { BuyersTable } from "@/components/admin/BuyersTable"
 import { supabase } from "@/lib/supabase/client"
 
 type SellerApplication = {
@@ -91,6 +92,8 @@ export default function AdminPage() {
         return <PropertiesContent />
       case 'agents':
         return <AgentsContent />
+      case 'buyers':
+        return <BuyersContent />
       case 'companies':
         return <CompaniesContent />
       case 'requests':
@@ -148,6 +151,10 @@ function PropertiesContent() {
 
 function AgentsContent() {
   return <AgentsTable />
+}
+
+function BuyersContent() {
+  return <BuyersTable />
 }
 
 function CompaniesContent() {

@@ -174,6 +174,7 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
                           conversation.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           conversation.last_message.content.toLowerCase().includes(searchTerm.toLowerCase())
 
+      // Show all conversations by default, but allow filtering by status
       const matchesStatus = statusFilter === 'all' || conversation.case_status === statusFilter
 
       return matchesSearch && matchesStatus
@@ -354,6 +355,13 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
                   : 'No se encontraron conversaciones con los filtros aplicados'
                 }
               </p>
+              <Button 
+                onClick={fetchConversations} 
+                variant="outline" 
+                className="mt-4"
+              >
+                Recargar conversaciones
+              </Button>
             </div>
           ) : (
             <div className="space-y-3">
