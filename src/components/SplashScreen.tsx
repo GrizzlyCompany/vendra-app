@@ -6,9 +6,10 @@ import { LoadingSpinner } from "@/components/ui/loading";
 
 interface SplashScreenProps {
   onComplete: () => void;
+  show?: boolean; // Add optional show prop
 }
 
-export function SplashScreen({ onComplete }: SplashScreenProps) {
+export function SplashScreen({ onComplete, show = true }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
@@ -22,6 +23,11 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     return () => clearTimeout(timer);
   }, [onComplete]);
 
+  // If show is false, don't render the splash screen
+  if (!show) {
+    return null;
+  }
+
   return (
     <AnimatePresence>
       {isVisible && (
@@ -29,9 +35,9 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="fixed inset-0 z-50 flex items-center justify-center splash-screen"
+          className="fixed inset-0 z-50 splash-screen"
         >
-          <div className="text-center space-y-8">
+          <div className="splash-content">
             {/* Logo/Texto principal */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -39,10 +45,10 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
               className="space-y-2"
             >
-              <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary">
+              <h1 className="splash-logo font-serif font-bold text-primary">
                 Vendra
               </h1>
-              <p className="text-sm text-muted-foreground font-sans">
+              <p className="splash-subtitle text-muted-foreground font-sans">
                 Conecta compradores y vendedores
               </p>
             </motion.div>
@@ -53,7 +59,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.8, ease: "easeOut" }}
             >
-              <LoadingSpinner size="lg" className="text-primary" />
+              <LoadingSpinner size="lg" className="text-primary my-6" />
             </motion.div>
 
             {/* Texto de carga */}
@@ -61,7 +67,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 1.2 }}
-              className="text-xs text-muted-foreground font-sans"
+              className="splash-loading text-muted-foreground font-sans"
             >
               Cargando...
             </motion.p>

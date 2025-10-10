@@ -93,16 +93,25 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
     try {
       setActionLoading(conversationId);
 
-      // Call the admin-close-case function using Supabase functions API
-      const { data, error } = await supabase.functions.invoke('admin-close-case', {
+      // Get the current session
+      const { data: { session } } = await supabase.auth.getSession();
+
+      // Call the admin-close-case function using fetch directly
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-close-case`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
         },
-        body: { user_id: userId }
+        body: JSON.stringify({ user_id: userId })
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      const data = await response.json();
 
       showSuccess('Caso cerrado exitosamente. El usuario no podrá seguir chateando sobre este caso.');
 
@@ -112,7 +121,8 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
       onRefreshStats?.();
     } catch (err) {
       console.error('Error closing case:', err);
-      showError('Error al cerrar el caso: ' + (err instanceof Error ? err.message : 'Error desconocido'));
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+      showError('Error al cerrar el caso: ' + errorMessage);
     } finally {
       setActionLoading(null);
     }
@@ -122,16 +132,25 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
     try {
       setActionLoading(conversationId);
 
-      // Call the admin-reopen-case function using Supabase functions API
-      const { data, error } = await supabase.functions.invoke('admin-reopen-case', {
+      // Get the current session
+      const { data: { session } } = await supabase.auth.getSession();
+
+      // Call the admin-reopen-case function using fetch directly
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-reopen-case`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
         },
-        body: { user_id: userId }
+        body: JSON.stringify({ user_id: userId })
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      const data = await response.json();
 
       showSuccess('Caso reabierto exitosamente. El usuario puede seguir chateando sobre este caso.');
 
@@ -141,7 +160,8 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
       onRefreshStats?.();
     } catch (err) {
       console.error('Error reopening case:', err);
-      showError('Error al reabrir el caso: ' + (err instanceof Error ? err.message : 'Error desconocido'));
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+      showError('Error al reabrir el caso: ' + errorMessage);
     } finally {
       setActionLoading(null);
     }

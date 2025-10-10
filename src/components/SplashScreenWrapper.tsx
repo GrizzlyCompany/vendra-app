@@ -6,9 +6,5 @@ import { useSplashScreen } from "@/hooks/useSplashScreen";
 export function SplashScreenWrapper() {
   const { showSplash, hideSplash } = useSplashScreen();
 
-  if (!showSplash) {
-    return null;
-  }
-
-  return <SplashScreen onComplete={hideSplash} />;
+  return <SplashScreen onComplete={hideSplash} show={showSplash} />;
 }
