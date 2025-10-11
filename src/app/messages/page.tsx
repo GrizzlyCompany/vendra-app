@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { Search, ChevronLeft, Menu } from "lucide-react";
+import { Search, ChevronLeft, Menu, AlertCircle } from "lucide-react";
 import { useKeyboardVisibility } from "@/hooks/useKeyboardVisibility";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConversationList } from "@/components/messages/ConversationList";
@@ -21,6 +21,10 @@ interface Message {
   content: string;
   created_at: string;
   read_at: string | null;
+  conversation_type?: string;
+  case_status?: string;
+  closed_at?: string;
+  closed_by?: string;
 }
 
 interface Conversation {
@@ -291,13 +295,24 @@ function MessagesContent() {
         if (active) setTarget(p ? { id: p.id, name: p.name ?? null, avatar_url: p.avatar_url ?? null } : { id: targetId, name: null, avatar_url: null });
 
         // Check if this is a closed admin conversation
-        const { data: adminUser } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', 'admin@vendra.com')
-          .single();
+        // Assuming admin email is admin@vendra.com, we'll get admin profile to get their ID
+        let adminUserId = null;
+        try {
+          // Try to get admin profile instead of user record
+          const { data: adminProfile } = await supabase
+            .from('public_profiles')
+            .select('id')
+            .eq('email', 'admin@vendra.com')
+            .single();
 
-        if (adminUser && (uid === targetId || adminUser.id === targetId)) {
+          if (adminProfile) {
+            adminUserId = adminProfile.id;
+          }
+        } catch (error) {
+          console.warn('Could not fetch admin profile:', error);
+        }
+
+        if (adminUserId && (uid === targetId || adminUserId === targetId)) {
           // This is an admin conversation (user chatting with admin)
           const { data: conversationMessages } = await supabase
             .from('messages')
@@ -309,8 +324,16 @@ function MessagesContent() {
 
           if (active && conversationMessages && conversationMessages.length > 0) {
             const isClosed = conversationMessages[0].case_status === 'closed';
+            console.log('Checking conversation status:', {
+              conversationMessages: conversationMessages[0],
+              isClosed,
+              uid,
+              targetId,
+              adminId: adminUserId
+            });
             setIsClosedConversation(isClosed);
           } else if (active) {
+            console.log('No conversation messages found for admin conversation');
             setIsClosedConversation(false);
           }
         } else {
@@ -474,10 +497,10 @@ function MessagesContent() {
     };
   }, [me, targetId]);
 
-  // Set up real-time subscription for new messages
+  // Set up real-time subscription for new messages and updates
   useEffect(() => {
     if (!me) return;
-  
+
     const channel = supabase
       .channel('messages-conversations')
       .on(
@@ -487,21 +510,21 @@ function MessagesContent() {
           // When a new message is inserted, update the conversations list
           const newMessage = payload.new as Message | undefined;
           if (!newMessage) return;
-        
+
           const isParticipant = newMessage.sender_id === me || newMessage.recipient_id === me;
-          
+
           if (isParticipant) {
             // Update conversations list with the new message
             setConversations(prev => {
               const otherId = newMessage.sender_id === me ? newMessage.recipient_id : newMessage.sender_id;
               const existingConversation = prev.find(c => c.otherId === otherId);
-              
+
               if (existingConversation) {
                 // Only update if the message is actually newer
                 const isNewer = new Date(newMessage.created_at) > new Date(existingConversation.lastAt);
                 if (isNewer) {
-                  return prev.map(c => 
-                    c.otherId === otherId 
+                  return prev.map(c =>
+                    c.otherId === otherId
                       ? { ...c, lastAt: newMessage.created_at, lastMessage: newMessage.content, lastMessageId: newMessage.id }
                       : c
                   ).sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
@@ -522,10 +545,10 @@ function MessagesContent() {
                 ];
               }
             });
-            
+
             // If this is a new conversation partner, fetch their profile
             const otherId = newMessage.sender_id === me ? newMessage.recipient_id : newMessage.sender_id;
-            
+
             // Fetch profile for new conversation partner
             supabase
               .from('public_profiles')
@@ -538,13 +561,13 @@ function MessagesContent() {
                     // Only update if profile data has actually changed
                     const conversation = prev.find(c => c.otherId === otherId);
                     if (conversation) {
-                      const hasChanges = 
+                      const hasChanges =
                         conversation.name !== (data.name ?? null) ||
                         conversation.avatar_url !== (data.avatar_url ?? null);
-                      
+
                       if (hasChanges) {
-                        return prev.map(c => 
-                          c.otherId === otherId 
+                        return prev.map(c =>
+                          c.otherId === otherId
                             ? { ...c, name: data.name ?? null, avatar_url: data.avatar_url ?? null }
                             : c
                         );
@@ -557,13 +580,69 @@ function MessagesContent() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages' },
+        (payload: any) => {
+          // When a message is updated (e.g., case_status changed), check if it affects current conversation
+          const updatedMessage = payload.new as Message | undefined;
+          if (!updatedMessage) return;
+
+          const isInCurrentConversation = targetId &&
+            ((updatedMessage.sender_id === me && updatedMessage.recipient_id === targetId) ||
+             (updatedMessage.sender_id === targetId && updatedMessage.recipient_id === me));
+
+          // If this is an admin conversation that got updated, re-check the conversation status
+          if (isInCurrentConversation && updatedMessage.conversation_type === 'user_to_admin') {
+            // Re-check if conversation is closed
+            (async () => {
+              try {
+                let adminUserId = null;
+                try {
+                  // Try to get admin profile instead of user record
+                  const { data: adminProfile } = await supabase
+                    .from('public_profiles')
+                    .select('id')
+                    .eq('email', 'admin@vendra.com')
+                    .single();
+
+                  if (adminProfile) {
+                    adminUserId = adminProfile.id;
+                  }
+                } catch (error) {
+                  console.warn('Could not fetch admin profile:', error);
+                }
+
+                if (adminUserId && (me === targetId || adminUserId === targetId)) {
+                  const { data: conversationMessages } = await supabase
+                    .from('messages')
+                    .select('case_status')
+                    .or(`and(sender_id.eq.${me},recipient_id.eq.${targetId}),and(sender_id.eq.${targetId},recipient_id.eq.${me})`)
+                    .eq('conversation_type', 'user_to_admin')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                  if (conversationMessages && conversationMessages.length > 0) {
+                    const isClosed = conversationMessages[0].case_status === 'closed';
+                    setIsClosedConversation(isClosed);
+                  } else {
+                    setIsClosedConversation(false);
+                  }
+                }
+              } catch (error) {
+                console.error('Error checking conversation status on update:', error);
+              }
+            })();
+          }
+        }
+      )
       .subscribe();
-    
+
     // Cleanup function
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [me]); // Removed supabase from dependency array
+  }, [me, targetId]); // Added targetId to dependencies to re-evaluate when conversation changes
 
   const canSend = useMemo(() => Boolean(me && targetId && text.trim().length > 0), [me, targetId, text]);
 
@@ -572,13 +651,23 @@ function MessagesContent() {
     
     try {
       // Check if this is a conversation with admin and if it's closed
-      const { data: adminUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', 'admin@vendra.com')
-        .single();
-        
-      const isAdminConversation = adminUser && targetId === adminUser.id;
+      let adminUserId = null;
+      try {
+        // Try to get admin profile instead of user record
+        const { data: adminProfile } = await supabase
+          .from('public_profiles')
+          .select('id')
+          .eq('email', 'admin@vendra.com')
+          .single();
+
+        if (adminProfile) {
+          adminUserId = adminProfile.id;
+        }
+      } catch (error) {
+        console.warn('Could not fetch admin profile:', error);
+      }
+
+      const isAdminConversation = adminUserId && targetId === adminUserId;
       
       if (isAdminConversation) {
         // Check conversation status
@@ -589,7 +678,7 @@ function MessagesContent() {
             'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
           },
           body: JSON.stringify({
-            recipient_id: adminUser.id,
+            recipient_id: adminUserId,
             conversation_type: 'user_to_admin'
           })
         });
@@ -722,6 +811,34 @@ function MessagesContent() {
                   <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">No hay conversación seleccionada. Abre un perfil y pulsa “Chat”.</div>
                 ) : (
                   <div className="flex flex-col h-full">
+                    {/* Closed Case Banner - Desktop */}
+                    {isClosedConversation && (
+                      <div className="p-0 mb-4">
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <h3 className="font-medium text-amber-800 mb-1">
+                              Caso Cerrado
+                            </h3>
+                            <p className="text-sm text-amber-700 mb-3">
+                              Su caso ha sido cerrado por el administrador. Si tiene una inquietud diferente,
+                              por favor cree un nuevo reporte desde la sección de reportes.
+                            </p>
+                            <Button
+                              onClick={() => {
+                                // Navigate to reports page to create a new report
+                                window.open('/reports', '_self');
+                              }}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-sm"
+                              size="sm"
+                            >
+                              Crear Nuevo Reporte
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div ref={listRef} className="flex-1 overflow-y-auto space-y-3 pr-1">
                       {messages.map((m) => (
                         <MessageItem key={m.id} message={m} me={me} />
@@ -732,13 +849,27 @@ function MessagesContent() {
                     </div>
                     <div className="mt-3 flex items-center gap-2">
                       <Input
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-                        placeholder="Escribe tu mensaje…"
-                        className="rounded-full"
+                        value={isClosedConversation ? "" : text}
+                        onChange={(e) => !isClosedConversation && setText(e.target.value)}
+                        onFocus={() => !isClosedConversation && setIsInputFocused(true)}
+                        onBlur={() => setIsInputFocused(false)}
+                        onKeyDown={(e) => {
+                          if (!isClosedConversation && e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            onSend();
+                          }
+                        }}
+                        placeholder={isClosedConversation ? "Admin bloqueó mensajes" : "Escribe tu mensaje…"}
+                        disabled={isClosedConversation}
+                        className={`rounded-full ${isClosedConversation ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                       />
-                      <Button onClick={onSend} disabled={!canSend} className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700">Enviar</Button>
+                      <Button
+                        onClick={onSend}
+                        disabled={!canSend || isClosedConversation}
+                        className={`rounded-full ${isClosedConversation ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                      >
+                        Enviar
+                      </Button>
                     </div>
                   </div>
                 )}

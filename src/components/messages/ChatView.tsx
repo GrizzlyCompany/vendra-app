@@ -2,7 +2,7 @@ import { RefObject } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Menu, ChevronLeft, AlertCircle, MessageCircle } from "lucide-react";
+import { Menu, ChevronLeft, AlertCircle, MessageCircle, Lock } from "lucide-react";
 import { MessageItem } from "./MessageItem";
 
 interface Message {
@@ -75,6 +75,34 @@ export function ChatView({
         </Button>
       </div>
 
+      {/* Closed Case Banner */}
+      {isClosedConversation && (
+        <div className="px-4 pt-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3 mb-4">
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-medium text-amber-800 mb-1">
+                Caso Cerrado
+              </h3>
+              <p className="text-sm text-amber-700 mb-3">
+                Su caso ha sido cerrado por el administrador. Si tiene una inquietud diferente,
+                por favor cree un nuevo reporte desde la sección de reportes.
+              </p>
+              <Button
+                onClick={() => {
+                  // Navigate to reports page to create a new report
+                  window.open('/reports', '_self');
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-sm"
+                size="sm"
+              >
+                Crear Nuevo Reporte
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Messages Area - Scrollable content with flex-1 */}
       <div
         className="flex-1 overflow-y-auto p-4 min-w-0"
@@ -97,45 +125,30 @@ export function ChatView({
       <div className="border-t p-2 bg-background z-40" style={{
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'
       }}>
-        {isClosedConversation ? (
-          <div className="flex flex-col items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <AlertCircle className="h-8 w-8 text-amber-600" />
-            <div className="text-center">
-              <h3 className="font-medium text-amber-800 mb-1">
-                Esta conversación ha sido cerrada
-              </h3>
-              <p className="text-sm text-amber-700 mb-3">
-                El caso ha sido resuelto. Para seguir comunicándote con el administrador,
-                puedes crear un nuevo reporte.
-              </p>
-              <Button
-                onClick={() => {
-                  // Navigate to reports page to create a new report
-                  window.open('/reports', '_blank');
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Crear Nuevo Reporte
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 p-2">
-            <Input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onFocus={() => setIsInputFocused(true)}
-              onBlur={() => setIsInputFocused(false)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-              placeholder="Escribe tu mensaje…"
-              className="rounded-full flex-1 min-w-0"
-            />
-            <Button onClick={onSend} disabled={!canSend} className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700 flex-shrink-0">
-              Enviar
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2 p-2">
+          <Input
+            value={isClosedConversation ? "" : text}
+            onChange={(e) => !isClosedConversation && setText(e.target.value)}
+            onFocus={() => !isClosedConversation && setIsInputFocused(true)}
+            onBlur={() => setIsInputFocused(false)}
+            onKeyDown={(e) => {
+              if (!isClosedConversation && e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                onSend();
+              }
+            }}
+            placeholder={isClosedConversation ? "Admin bloqueó mensajes" : "Escribe tu mensaje…"}
+            disabled={isClosedConversation}
+            className={`rounded-full flex-1 min-w-0 ${isClosedConversation ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+          />
+          <Button
+            onClick={onSend}
+            disabled={!canSend || isClosedConversation}
+            className={`rounded-full flex-shrink-0 ${isClosedConversation ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white'}`}
+          >
+            Enviar
+          </Button>
+        </div>
       </div>
     </motion.div>
   );

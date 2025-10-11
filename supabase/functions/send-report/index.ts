@@ -179,30 +179,97 @@ Deno.serve(async (req) => {
   }
 });
 
-// Helper function to send report message
+// Helper function to send report message - ALTERNATIVE APPROACH
+// Instead of trying to reopen conversations, we create a new report that overrides closed status
 async function sendReportMessage(supabaseAdmin: any, adminId: string, reportData: any) {
   const { title, description, category, userEmail, userName, userId } = reportData;
-  
+
+  console.log('Creating new report message with case reopening power:', { userId, adminId });
+
+  // Check if there are any closed conversations first (for logging)
+  const { data: existingClosed, error: checkError } = await supabaseAdmin
+    .from('messages')
+    .select('id')
+    .or(`and(sender_id.eq.${userId},recipient_id.eq.${adminId}),and(sender_id.eq.${adminId},recipient_id.eq.${userId})`)
+    .eq('conversation_type', 'user_to_admin')
+    .eq('case_status', 'closed')
+    .limit(1);
+
+  const hasClosedConversations = !checkError && existingClosed && existingClosed.length > 0;
+
   const messageContent = `
-Nuevo Reporte Recibido:
+🆕 NUEVO REPORTE RECIBIDO 🆕
 Usuario: ${userName} (${userEmail})
 Categoría: ${category}
 Título: ${title}
 Descripción: ${description}
+
+${hasClosedConversations ? '⚡ ¡CASO REACTIVADO! Este reporte ha reactivado conversaciones cerradas previas.' : '📋 Nuevo reporte enviado al administrador.'}
+
+🔄 Para continuar la conversación, utiliza el sistema de mensajes normalmente.
   `;
-  
-  const { error: messageError } = await supabaseAdmin
+
+  console.log('Inserting report with special content...');
+
+  // Insert the report message with a special marker that indicates it should reopen cases
+  const { data, error: insertError } = await supabaseAdmin
     .from('messages')
     .insert({
       sender_id: userId,
       recipient_id: adminId,
       content: messageContent,
       conversation_type: 'user_to_admin',
-      case_status: 'open' // Ensure the case is marked as open so it appears in the admin messages section
-    });
-  
-  if (messageError) {
-    console.error('Error sending message to admin:', messageError);
-    throw new Error(`Failed to send message to admin: ${messageError.message}`);
+      case_status: 'open' // This message itself has open status
+    })
+    .select('id, created_at')
+    .single();
+
+  if (insertError) {
+    console.error('Failed to insert report message:', insertError);
+
+    // Try with explicit timestamps
+    const { error: timestampError } = await supabaseAdmin
+      .from('messages')
+      .insert({
+        sender_id: userId,
+        recipient_id: adminId,
+        content: `[MENSAJE DE RESPALDO] ${userName}: ${title}`,
+        conversation_type: 'user_to_admin',
+        case_status: 'open',
+        created_at: new Date().toISOString(),
+        read_at: null
+      });
+
+    if (timestampError) {
+      console.error('Even fallback insertion failed:', timestampError);
+      throw new Error(`Complete failure to create report message: ${timestampError.message}`);
+    } else {
+      console.log('✅ Fallback report insertion successful');
+      return;
+    }
+  }
+
+  console.log('✅ Report message created successfully:', data?.id);
+
+  // AFTER successful insertion, attempt to reopen previous closed conversations
+  // This happens after the report is already sent, so it won't affect the report insertion
+  if (hasClosedConversations) {
+    console.log('🆙 Attempting to reopen previous closed conversations...');
+
+    const { error: reopenError } = await supabaseAdmin
+      .from('messages')
+      .update({
+        case_status: 'open',
+        reopened_at: new Date().toISOString()
+      })
+      .or(`and(sender_id.eq.${userId},recipient_id.eq.${adminId}),and(sender_id.eq.${adminId},recipient_id.eq.${userId})`)
+      .eq('conversation_type', 'user_to_admin')
+      .eq('case_status', 'closed');
+
+    if (reopenError) {
+      console.warn('Could not reopen closed conversations, but report was sent:', reopenError);
+    } else {
+      console.log('✅ Successfully reopened previous closed conversations');
+    }
   }
 }
