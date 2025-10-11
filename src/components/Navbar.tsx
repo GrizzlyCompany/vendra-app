@@ -55,10 +55,13 @@ export function Navbar() {
     router.push(term ? `/search?q=${encodeURIComponent(term)}` : "/search");
   };
 
+  // Determine the logo link target based on user authentication status
+  const logoLink = user ? "/main" : "/";
+
   return (
     <header className={`${pathname === '/main' ? '' : 'hidden md:block'} sticky top-0 z-40 bg-background/80 backdrop-blur relative shadow-[0_2px_0_0_hsl(var(--border)/0.22),0_10px_20px_-18px_hsl(var(--border)/0.22)] dark:shadow-[0_2px_0_0_hsl(var(--border)/0.34),0_10px_20px_-18px_hsl(var(--border)/0.34)] mobile-horizontal-safe`}>
       <div className="container mx-auto flex items-center justify-between gap-3 px-3 sm:px-4 py-3 sm:py-4">
-        <Link href="/" className="flex items-center gap-2 text-primary" aria-label="Ir al inicio">
+        <Link href={logoLink} className="flex items-center gap-2 text-primary" aria-label="Ir al inicio">
           <Image
             src="https://vvuvuibcmvqxtvdadwne.supabase.co/storage/v1/object/public/logo/logo3.png"
             alt="Logotipo de Vendra"
@@ -69,8 +72,6 @@ export function Navbar() {
           />
           <span className="whitespace-nowrap text-2xl font-serif font-extrabold tracking-wide">VENDRA</span>
         </Link>
-
-        
 
         {/* Search bar (desktop) */}
         <form onSubmit={onSearch} className="hidden md:flex flex-1 max-w-2xl items-center gap-2" role="search">
