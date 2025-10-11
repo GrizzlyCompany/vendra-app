@@ -167,11 +167,11 @@ function RequestsContent() {
 
 function MessagesContent() {
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle>Mensajes de Soporte</CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
         <MessagesTable />
       </CardContent>
     </Card>

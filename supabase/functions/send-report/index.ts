@@ -179,24 +179,13 @@ Deno.serve(async (req) => {
   }
 });
 
-// Helper function to send report message - ALTERNATIVE APPROACH
-// Instead of trying to reopen conversations, we create a new report that overrides closed status
+// Helper function to send report message
 async function sendReportMessage(supabaseAdmin: any, adminId: string, reportData: any) {
   const { title, description, category, userEmail, userName, userId } = reportData;
 
-  console.log('Creating new report message with case reopening power:', { userId, adminId });
+  console.log('Creating new report message:', { userId, adminId });
 
-  // Check if there are any closed conversations first (for logging)
-  const { data: existingClosed, error: checkError } = await supabaseAdmin
-    .from('messages')
-    .select('id')
-    .or(`and(sender_id.eq.${userId},recipient_id.eq.${adminId}),and(sender_id.eq.${adminId},recipient_id.eq.${userId})`)
-    .eq('conversation_type', 'user_to_admin')
-    .eq('case_status', 'closed')
-    .limit(1);
-
-  const hasClosedConversations = !checkError && existingClosed && existingClosed.length > 0;
-
+  // Create the message content for the report
   const messageContent = `
 🆕 NUEVO REPORTE RECIBIDO 🆕
 Usuario: ${userName} (${userEmail})
@@ -204,14 +193,15 @@ Categoría: ${category}
 Título: ${title}
 Descripción: ${description}
 
-${hasClosedConversations ? '⚡ ¡CASO REACTIVADO! Este reporte ha reactivado conversaciones cerradas previas.' : '📋 Nuevo reporte enviado al administrador.'}
+📋 Este mensaje ha sido enviado como un nuevo reporte. Si había una conversación previa cerrada, se ha reabierto automáticamente.
 
 🔄 Para continuar la conversación, utiliza el sistema de mensajes normalmente.
   `;
 
-  console.log('Inserting report with special content...');
+  console.log('Inserting report message...');
 
-  // Insert the report message with a special marker that indicates it should reopen cases
+  // Insert the new report message
+  // The database trigger will automatically reopen any closed conversations
   const { data, error: insertError } = await supabaseAdmin
     .from('messages')
     .insert({
@@ -219,57 +209,15 @@ ${hasClosedConversations ? '⚡ ¡CASO REACTIVADO! Este reporte ha reactivado co
       recipient_id: adminId,
       content: messageContent,
       conversation_type: 'user_to_admin',
-      case_status: 'open' // This message itself has open status
+      case_status: 'open'
     })
     .select('id, created_at')
     .single();
 
   if (insertError) {
     console.error('Failed to insert report message:', insertError);
-
-    // Try with explicit timestamps
-    const { error: timestampError } = await supabaseAdmin
-      .from('messages')
-      .insert({
-        sender_id: userId,
-        recipient_id: adminId,
-        content: `[MENSAJE DE RESPALDO] ${userName}: ${title}`,
-        conversation_type: 'user_to_admin',
-        case_status: 'open',
-        created_at: new Date().toISOString(),
-        read_at: null
-      });
-
-    if (timestampError) {
-      console.error('Even fallback insertion failed:', timestampError);
-      throw new Error(`Complete failure to create report message: ${timestampError.message}`);
-    } else {
-      console.log('✅ Fallback report insertion successful');
-      return;
-    }
+    throw new Error(`Failed to create report message: ${insertError.message}`);
   }
 
   console.log('✅ Report message created successfully:', data?.id);
-
-  // AFTER successful insertion, attempt to reopen previous closed conversations
-  // This happens after the report is already sent, so it won't affect the report insertion
-  if (hasClosedConversations) {
-    console.log('🆙 Attempting to reopen previous closed conversations...');
-
-    const { error: reopenError } = await supabaseAdmin
-      .from('messages')
-      .update({
-        case_status: 'open',
-        reopened_at: new Date().toISOString()
-      })
-      .or(`and(sender_id.eq.${userId},recipient_id.eq.${adminId}),and(sender_id.eq.${adminId},recipient_id.eq.${userId})`)
-      .eq('conversation_type', 'user_to_admin')
-      .eq('case_status', 'closed');
-
-    if (reopenError) {
-      console.warn('Could not reopen closed conversations, but report was sent:', reopenError);
-    } else {
-      console.log('✅ Successfully reopened previous closed conversations');
-    }
-  }
 }

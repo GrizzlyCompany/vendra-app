@@ -237,14 +237,14 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
     }
     
     return (
-      <Card className="h-full flex flex-col">
-        <CardContent className="p-0 flex-1">
+      <div className="h-full flex flex-col">
+        <div className="flex-1 overflow-hidden">
           <ConversationDetail 
             conversationId={selectedConversation} 
             onBack={() => setSelectedConversation(null)} 
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     )
   }
 

@@ -383,7 +383,7 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-background z-10">
+      <div className="flex items-center justify-between p-4 border-b bg-background z-10 flex-shrink-0">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -412,24 +412,28 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
 
       {/* Messages Area */}
       <div
-        className="flex-1 overflow-y-auto p-4 min-w-0"
-        ref={listRef}
-        style={{
-          paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))'
-        }}
+        className="flex-1 overflow-hidden"
       >
-        <div className="space-y-3">
-          {messages.map((m) => (
-            <MessageItem key={m.id} message={m} me={adminUserId} animated />
-          ))}
-          {messages.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground mt-10">Aún no hay mensajes. ¡Envía el primero!</div>
-          )}
+        <div 
+          className="h-full overflow-y-auto p-4 min-w-0"
+          ref={listRef}
+          style={{
+            paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))'
+          }}
+        >
+          <div className="space-y-3">
+            {messages.map((m) => (
+              <MessageItem key={m.id} message={m} me={adminUserId} animated />
+            ))}
+            {messages.length === 0 && (
+              <div className="text-center text-sm text-muted-foreground mt-10">Aún no hay mensajes. ¡Envía el primero!</div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Input Area */}
-      <div className="border-t p-2 bg-background z-40" style={{
+      <div className="border-t p-2 bg-background z-40 flex-shrink-0" style={{
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'
       }}>
         {isClosedConversation ? (

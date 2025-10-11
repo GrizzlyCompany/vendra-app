@@ -739,107 +739,108 @@ function MessagesContent() {
 
   return (
     <main className="h-[100dvh] w-full bg-background lg:static lg:h-auto lg:w-auto">
-      {/* Desktop version - unchanged */}
-      <div className="hidden lg:block h-full">
-        <div className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
-          <div className="flex gap-4 h-full">
-            {/* Sidebar */}
-            <div className="w-80 shrink-0">
-              <div className="p-4">
-                <div className="flex w-full items-center gap-2 rounded-xl border bg-muted px-3 py-2">
-                  <Search className="text-emerald-600" />
-                  <input
-                    className="h-9 flex-1 bg-transparent outline-none text-sm"
-                    placeholder="Buscar"
-                    value={search}
-                    onChange={(e)=>setSearch(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-1 px-2">
-                {conversations
-                  .filter(c => !search || (c.name ?? '').toLowerCase().includes(search.toLowerCase()))
-                  .map((c) => (
-                    <button
-                      key={c.otherId}
-                      className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-muted/60 text-left ${c.otherId===targetId ? 'bg-muted/60' : ''}`}
-                      onClick={() => router.push(`/messages?to=${c.otherId}`)}
-                    >
-                      <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        {c.avatar_url ? <img src={c.avatar_url} alt={c.name ?? 'Usuario'} className="h-full w-full object-cover"/> : null}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-foreground truncate">{c.name ?? 'Usuario'}</div>
-                        <div className="flex justify-between items-center">
-                          <div className="text-xs text-muted-foreground truncate max-w-[70%]" title={c.lastMessage}>
-                            {c.lastMessage ? (c.lastMessage.length > 30 ? c.lastMessage.substring(0, 30) + '...' : c.lastMessage) : 'No messages yet'}
-                          </div>
-                          <div className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                            {new Date(c.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                ))}
-                {conversations.length===0 && (
-                  <div className="px-3 py-6 text-sm text-muted-foreground">No hay conversaciones recientes.</div>
-                )}
+      {/* Desktop version - Fixed layout */}
+      <div className="hidden lg:block h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
+        <div className="flex gap-4 h-full">
+          {/* Sidebar - Completely Fixed */}
+          <div className="w-80 shrink-0 flex flex-col h-full">
+            <div className="p-4 flex-shrink-0">
+              <div className="flex w-full items-center gap-2 rounded-xl border bg-muted px-3 py-2">
+                <Search className="text-emerald-600" />
+                <input
+                  className="h-9 flex-1 bg-transparent outline-none text-sm"
+                  placeholder="Buscar"
+                  value={search}
+                  onChange={(e)=>setSearch(e.target.value)}
+                />
               </div>
             </div>
-
-            {/* Chat pane */}
-            <Card className="flex-1 rounded-2xl border shadow-md flex flex-col min-w-0">
-              <CardHeader className="px-6">
-                <CardTitle className="flex items-center justify-between">
-                  <span>Mensajes</span>
-                  {targetId ? (
-                    <span className="text-sm text-muted-foreground">
-                      Conversación con {target?.name ?? 'Usuario'} · <Link href={`/profile/${targetId}`} className="underline">ver perfil</Link>
-                    </span>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Selecciona un usuario para chatear</span>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-6 flex-1 flex flex-col">
-                {loading ? (
-                  <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">Cargando…</div>
-                ) : error ? (
-                  <div className="rounded-md border border-destructive/550 bg-destructive/10 p-6 text-sm text-destructive flex-1 flex items-center justify-center">{error}</div>
-                ) : !targetId ? (
-                  <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">No hay conversación seleccionada. Abre un perfil y pulsa “Chat”.</div>
-                ) : (
-                  <div className="flex flex-col h-full">
-                    {/* Closed Case Banner - Desktop */}
-                    {isClosedConversation && (
-                      <div className="p-0 mb-4">
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-                          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <h3 className="font-medium text-amber-800 mb-1">
-                              Caso Cerrado
-                            </h3>
-                            <p className="text-sm text-amber-700 mb-3">
-                              Su caso ha sido cerrado por el administrador. Si tiene una inquietud diferente,
-                              por favor cree un nuevo reporte desde la sección de reportes.
-                            </p>
-                            <Button
-                              onClick={() => {
-                                // Navigate to reports page to create a new report
-                                window.open('/reports', '_self');
-                              }}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-sm"
-                              size="sm"
-                            >
-                              Crear Nuevo Reporte
-                            </Button>
-                          </div>
+            <div className="space-y-1 px-2 flex-1 overflow-y-auto flex-shrink-0">
+              {conversations
+                .filter(c => !search || (c.name ?? '').toLowerCase().includes(search.toLowerCase()))
+                .map((c) => (
+                  <button
+                    key={c.otherId}
+                    className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-muted/60 text-left ${c.otherId===targetId ? 'bg-muted/60' : ''}`}
+                    onClick={() => router.push(`/messages?to=${c.otherId}`)}
+                  >
+                    <div className="relative h-10 w-10 overflow-hidden rounded-full bg-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {c.avatar_url ? <img src={c.avatar_url} alt={c.name ?? 'Usuario'} className="h-full w-full object-cover"/> : null}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-foreground truncate">{c.name ?? 'Usuario'}</div>
+                      <div className="flex justify-between items-center">
+                        <div className="text-xs text-muted-foreground truncate max-w-[70%]" title={c.lastMessage}>
+                          {c.lastMessage ? (c.lastMessage.length > 30 ? c.lastMessage.substring(0, 30) + '...' : c.lastMessage) : 'No messages yet'}
+                        </div>
+                        <div className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                          {new Date(c.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
-                    )}
+                    </div>
+                  </button>
+              ))}
+              {conversations.length===0 && (
+                <div className="px-3 py-6 text-sm text-muted-foreground">No hay conversaciones recientes.</div>
+              )}
+            </div>
+          </div>
 
-                    <div ref={listRef} className="flex-1 overflow-y-auto space-y-3 pr-1">
+          {/* Chat pane */}
+          <Card className="flex-1 rounded-2xl border shadow-md flex flex-col min-w-0 h-full">
+            <CardHeader className="px-6 flex-shrink-0">
+              <CardTitle className="flex items-center justify-between">
+                <span>Mensajes</span>
+                {targetId ? (
+                  <span className="text-sm text-muted-foreground">
+                    Conversación con {target?.name ?? 'Usuario'} · <Link href={`/profile/${targetId}`} className="underline">ver perfil</Link>
+                  </span>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Selecciona un usuario para chatear</span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-6 flex-1 flex flex-col h-full p-0">
+              {loading ? (
+                <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground flex-1 flex items-center justify-center m-6">Cargando…</div>
+              ) : error ? (
+                <div className="rounded-md border border-destructive/550 bg-destructive/10 p-6 text-sm text-destructive flex-1 flex items-center justify-center m-6">{error}</div>
+              ) : !targetId ? (
+                <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground flex-1 flex items-center justify-center m-6">No hay conversación seleccionada. Abre un perfil y pulsa "Chat".</div>
+              ) : (
+                <div className="flex flex-col h-full">
+                  {/* Closed Case Banner - Desktop */}
+                  {isClosedConversation && (
+                    <div className="p-6 pb-4 flex-shrink-0">
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <h3 className="font-medium text-amber-800 mb-1">
+                            Caso Cerrado
+                          </h3>
+                          <p className="text-sm text-amber-700 mb-3">
+                            Su caso ha sido cerrado por el administrador. Si tiene una inquietud diferente,
+                            por favor cree un nuevo reporte desde la sección de reportes.
+                          </p>
+                          <Button
+                            onClick={() => {
+                              // Navigate to reports page to create a new report
+                              window.open('/reports', '_self');
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-sm"
+                            size="sm"
+                          >
+                            Crear Nuevo Reporte
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Messages Area - Scrollable */}
+                  <div className="flex-1 min-h-0 px-6">
+                    <div ref={listRef} className="h-full overflow-y-auto space-y-3 pb-4 scrollbar-thin scrollbar-thumb-muted-foreground/40 scrollbar-track-stone-100 hover:scrollbar-thumb-muted-foreground/60 scrollbar-thumb-rounded-full scrollbar-track-rounded-full [&::-webkit-scrollbar-button]:hidden">
                       {messages.map((m) => (
                         <MessageItem key={m.id} message={m} me={me} />
                       ))}
@@ -847,7 +848,11 @@ function MessagesContent() {
                         <div className="text-center text-sm text-muted-foreground mt-10">Aún no hay mensajes. ¡Envía el primero!</div>
                       )}
                     </div>
-                    <div className="mt-3 flex items-center gap-2">
+                  </div>
+
+                  {/* Input Area - Fixed at bottom, always visible */}
+                  <div className="flex-shrink-0 px-6 pb-6">
+                    <div className="flex items-center gap-2 p-3 border-t bg-muted/30 rounded-t-lg">
                       <Input
                         value={isClosedConversation ? "" : text}
                         onChange={(e) => !isClosedConversation && setText(e.target.value)}
@@ -861,21 +866,21 @@ function MessagesContent() {
                         }}
                         placeholder={isClosedConversation ? "Admin bloqueó mensajes" : "Escribe tu mensaje…"}
                         disabled={isClosedConversation}
-                        className={`rounded-full ${isClosedConversation ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                        className={`rounded-full flex-1 min-w-0 ${isClosedConversation ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                       />
                       <Button
                         onClick={onSend}
                         disabled={!canSend || isClosedConversation}
-                        className={`rounded-full ${isClosedConversation ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                        className={`rounded-full flex-shrink-0 ${isClosedConversation ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
                       >
                         Enviar
                       </Button>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
