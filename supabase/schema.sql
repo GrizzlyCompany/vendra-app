@@ -1382,7 +1382,10 @@ RETURNS TABLE (
   active_properties bigint,
   total_views bigint,
   views_this_month bigint,
-  unique_viewers bigint
+  unique_viewers bigint,
+  active_projects bigint,
+  total_project_views bigint,
+  project_views_this_month bigint
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -1399,7 +1402,13 @@ BEGIN
     (SELECT COUNT(DISTINCT viewer_id) FROM public.property_views pv 
      JOIN public.properties p ON p.id = pv.property_id 
      WHERE p.owner_id = $1 
-     AND viewer_id IS NOT NULL) as unique_viewers;
+     AND viewer_id IS NOT NULL) as unique_viewers,
+    (SELECT COUNT(*) FROM public.projects WHERE owner_id = $1) as active_projects,
+    (SELECT COALESCE(SUM(views_count), 0) FROM public.projects WHERE owner_id = $1) as total_project_views,
+    (SELECT COUNT(*) FROM public.project_views pv 
+     JOIN public.projects p ON p.id = pv.project_id 
+     WHERE p.owner_id = $1 
+     AND pv.created_at >= date_trunc('month', now())) as project_views_this_month;
 END;
 $$;
 
@@ -1414,15 +1423,35 @@ SECURITY DEFINER
 AS $$
 BEGIN
   RETURN QUERY
+  WITH combined_views AS (
+    -- Property views
+    SELECT 
+      date_trunc('month', pv.created_at) as month,
+      COUNT(*) as views
+    FROM public.property_views pv
+    JOIN public.properties p ON p.id = pv.property_id
+    WHERE p.owner_id = $1
+      AND pv.created_at >= date_trunc('month', now()) - INTERVAL '1 month' * months_back
+    GROUP BY date_trunc('month', pv.created_at)
+    
+    UNION ALL
+    
+    -- Project views
+    SELECT 
+      date_trunc('month', pv.created_at) as month,
+      COUNT(*) as views
+    FROM public.project_views pv
+    JOIN public.projects p ON p.id = pv.project_id
+    WHERE p.owner_id = $1
+      AND pv.created_at >= date_trunc('month', now()) - INTERVAL '1 month' * months_back
+    GROUP BY date_trunc('month', pv.created_at)
+  )
   SELECT 
-    TO_CHAR(date_trunc('month', pv.created_at), 'Mon YYYY') as month_year,
-    COUNT(*) as views_count
-  FROM public.property_views pv
-  JOIN public.properties p ON p.id = pv.property_id
-  WHERE p.owner_id = $1
-    AND pv.created_at >= date_trunc('month', now()) - INTERVAL '1 month' * months_back
-  GROUP BY date_trunc('month', pv.created_at)
-  ORDER BY date_trunc('month', pv.created_at) DESC;
+    TO_CHAR(month, 'Mon YYYY') as month_year,
+    SUM(views)::bigint as views_count
+  FROM combined_views
+  GROUP BY month
+  ORDER BY month DESC;
 END;
 $$;
 
@@ -1533,11 +1562,6 @@ RETURNS void
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  -- Ensure admin user has the correct role
-  UPDATE public.users 
-  SET role = 'empresa_constructora' 
-  WHERE email = 'admin@vendra.com' AND role NOT IN ('comprador', 'vendedor_agente', 'empresa_constructora');
-  
   -- Ensure admin user has a public profile
   INSERT INTO public.public_profiles (id, name, email, role)
   SELECT id, 

@@ -84,7 +84,7 @@ export default function DashboardPage() {
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
             <h1 className="font-serif text-xl lg:text-2xl text-primary">
               {section === "mis" && "Mis Propiedades"}
-              {section === "agregar" && "Agregar Propiedad"}
+              {section === "agregar" && "Agregar Proyecto"}
               {section === "estadisticas" && "Estadísticas"}
               {section === "mensajes" && "Mensajes"}
               {section === "perfil" && "Perfil"}

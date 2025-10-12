@@ -11,9 +11,8 @@ export interface PropertyStats {
 
 export interface ProjectStats {
   activeProjects: number;
-  totalProjectsViews: number;
-  projectsViewsThisMonth: number;
-  uniqueProjectViewers: number;
+  totalProjectViews: number;
+  projectViewsThisMonth: number;
 }
 
 export interface CombinedStats extends PropertyStats, ProjectStats {}
@@ -57,7 +56,7 @@ export function useStats() {
       // Get projects data
       const { data: projectsStats, error: projectsError } = await supabase
         .from('projects')
-        .select('id, project_name, created_at')
+        .select('id, project_name, created_at, views_count')
         .eq('owner_id', user.id);
 
       if (projectsError) {
@@ -69,6 +68,7 @@ export function useStats() {
       const activeProperties = basicStats?.length || 0;
       const totalViews = basicStats?.reduce((sum, prop) => sum + (prop.views_count || 0), 0) || 0;
       const activeProjects = projectsStats?.length || 0;
+      const totalProjectViews = projectsStats?.reduce((sum, proj) => sum + (proj.views_count || 0), 0) || 0;
 
       // Try to get general stats using the database function
       let statsData = null;
@@ -78,7 +78,16 @@ export function useStats() {
         });
 
         if (!statsError && rpcData && rpcData.length > 0) {
-          statsData = rpcData[0];
+          const rpcStats = rpcData[0];
+          statsData = {
+            activeProperties: rpcStats.active_properties,
+            totalViews: rpcStats.total_views,
+            viewsThisMonth: rpcStats.views_this_month,
+            uniqueViewers: rpcStats.unique_viewers,
+            activeProjects: rpcStats.active_projects,
+            totalProjectViews: rpcStats.total_project_views,
+            projectViewsThisMonth: rpcStats.project_views_this_month
+          };
         } else {
           console.warn('RPC function not available, using fallback stats');
         }
@@ -93,9 +102,8 @@ export function useStats() {
         viewsThisMonth: 0, // Will be 0 if RPC not available
         uniqueViewers: 0,
         activeProjects,
-        totalProjectsViews: 0, // Projects don't have views tracking yet
-        projectsViewsThisMonth: 0,
-        uniqueProjectViewers: 0
+        totalProjectViews,
+        projectViewsThisMonth: 0 // Will be 0 if RPC not available
       });
 
       // Get per-property view statistics
@@ -112,12 +120,12 @@ export function useStats() {
 
       setPropertyViews(propertiesData || []);
 
-      // Get per-project statistics (projects don't have views_count yet, so we'll use basic data)
+      // Get per-project view statistics
       const { data: projectsData, error: projectsDataError } = await supabase
         .from('projects')
-        .select('id, project_name, created_at')
+        .select('id, project_name, views_count, created_at')
         .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('views_count', { ascending: false, nullsFirst: false });
 
       if (projectsDataError) {
         console.warn('Projects data error:', projectsDataError);
@@ -128,7 +136,7 @@ export function useStats() {
       const transformedProjectsData = (projectsData || []).map(project => ({
         id: project.id,
         title: project.project_name,
-        views_count: 0, // Projects don't have views tracking yet
+        views_count: project.views_count || 0,
         inserted_at: project.created_at
       }));
 

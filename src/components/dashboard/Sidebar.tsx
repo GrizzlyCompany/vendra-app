@@ -12,7 +12,7 @@ export type DashboardSection = "mis" | "agregar" | "estadisticas" | "perfil" | "
 
 const menuItems = [
   { id: "mis" as const, label: "Mis Propiedades", icon: Home },
-  { id: "agregar" as const, label: "Agregar Propiedad", icon: PlusCircle },
+  { id: "agregar" as const, label: "Agregar Proyecto", icon: PlusCircle },
   { id: "estadisticas" as const, label: "Estadísticas", icon: BarChart3 },
   { id: "mensajes" as const, label: "Mensajes", icon: MessageCircle },
   { id: "perfil" as const, label: "Perfil", icon: User2 },

@@ -1,12 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, CheckCircle2, Home, TrendingUp } from "lucide-react";
+import { Eye, CheckCircle2, Home, TrendingUp, BarChart3, Download, Building } from "lucide-react";
 import { useStats } from "@/hooks/useStats";
+import { useStatsCharts } from "@/hooks/useStatsCharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ViewsTrendChart } from "./ViewsTrendChart";
+import { Button } from "@/components/ui/button";
 
 export function StatsSection() {
   const { stats, propertyViews, projectViews, loading, error } = useStats();
+  const { monthlyViews, loading: chartsLoading, error: chartsError, refetchMonthlyViews } = useStatsCharts();
+  const [period, setPeriod] = useState("6");
+
+  const handlePeriodChange = (value: string) => {
+    setPeriod(value);
+    refetchMonthlyViews(parseInt(value));
+  };
 
   if (loading) {
     return (
@@ -40,9 +51,30 @@ export function StatsSection() {
     );
   }
 
+  // Calculate total views (properties + projects)
+  const totalViews = (stats?.totalViews || 0) + (stats?.totalProjectViews || 0);
+  const totalViewsThisMonth = (stats?.viewsThisMonth || 0) + (stats?.projectViewsThisMonth || 0);
+
   return (
     <div className="space-y-4">
-      <h2 className="font-serif text-2xl text-[#1C4B2E]">Estadísticas</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="font-serif text-2xl text-[#1C4B2E]">Estadísticas</h2>
+        <div className="flex items-center gap-3">
+          <select
+            value={period}
+            onChange={(e) => handlePeriodChange(e.target.value)}
+            className="h-10 w-[180px] rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="3">Últimos 3 meses</option>
+            <option value="6">Últimos 6 meses</option>
+            <option value="12">Último año</option>
+          </select>
+          <Button variant="outline" size="sm">
+            <Download className="size-4 mr-2" />
+            Exportar
+          </Button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="rounded-2xl border shadow-md">
@@ -67,7 +99,7 @@ export function StatsSection() {
                   {stats?.activeProjects || 0}
                 </div>
               </div>
-              <CheckCircle2 className="size-6 text-[#1C4B2E]" />
+              <Building className="size-6 text-[#1C4B2E]" />
             </div>
           </CardContent>
         </Card>
@@ -77,7 +109,7 @@ export function StatsSection() {
               <div>
                 <div className="text-sm text-[#6B7280]">Visualizaciones totales</div>
                 <div className="text-2xl font-semibold text-[#1C4B2E]">
-                  {stats?.totalViews?.toLocaleString() || 0}
+                  {totalViews.toLocaleString()}
                 </div>
               </div>
               <Eye className="size-6 text-[#1C4B2E]" />
@@ -90,7 +122,7 @@ export function StatsSection() {
               <div>
                 <div className="text-sm text-[#6B7280]">Visualizaciones este mes</div>
                 <div className="text-2xl font-semibold text-[#1C4B2E]">
-                  {stats?.viewsThisMonth?.toLocaleString() || 0}
+                  {totalViewsThisMonth.toLocaleString()}
                 </div>
               </div>
               <TrendingUp className="size-6 text-[#1C4B2E]" />
@@ -99,11 +131,21 @@ export function StatsSection() {
         </Card>
       </div>
 
+      {/* Charts section */}
+      <ViewsTrendChart
+        data={monthlyViews}
+        loading={chartsLoading}
+        title={`Tendencia de visualizaciones - ${period === "3" ? "3 meses" : period === "12" ? "1 año" : "6 meses"}`}
+      />
+
       {/* Property-specific view statistics */}
       {propertyViews.length > 0 && (
         <Card className="rounded-2xl border shadow-md">
           <CardHeader>
-            <CardTitle className="font-serif">Visualizaciones por propiedad</CardTitle>
+            <CardTitle className="font-serif flex items-center gap-2">
+              <BarChart3 className="size-5" />
+              Visualizaciones por propiedad
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -135,11 +177,14 @@ export function StatsSection() {
         </Card>
       )}
 
-      {/* Project-specific statistics */}
+      {/* Project-specific view statistics */}
       {projectViews.length > 0 && (
         <Card className="rounded-2xl border shadow-md">
           <CardHeader>
-            <CardTitle className="font-serif">Proyectos publicados</CardTitle>
+            <CardTitle className="font-serif flex items-center gap-2">
+              <Building className="size-5" />
+              Visualizaciones por proyecto
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -154,9 +199,9 @@ export function StatsSection() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="size-4 text-green-500" />
+                    <Eye className="size-4 text-gray-400" />
                     <span className="font-semibold text-[#1C4B2E]">
-                      Activo
+                      {project.views_count || 0}
                     </span>
                   </div>
                 </div>
@@ -170,22 +215,6 @@ export function StatsSection() {
           </CardContent>
         </Card>
       )}
-
-      {/* Placeholder for future chart */}
-      <Card className="rounded-2xl border shadow-md">
-        <CardHeader>
-          <CardTitle className="font-serif">Tendencia de visualizaciones</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[200px] w-full rounded-xl bg-gradient-to-br from-[#1C4B2E]/5 to-[#1C4B2E]/10 flex items-center justify-center">
-            <div className="text-center text-[#6B7280]">
-              <TrendingUp className="size-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Gráfico de tendencias próximamente</p>
-              <p className="text-xs mt-1">Instala Recharts para visualizar datos históricos</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

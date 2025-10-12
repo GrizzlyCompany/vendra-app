@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
 import { useAuth } from "@/hooks/useAuth";
+import { useToastContext } from "@/components/ToastProvider";
 import { ShareMenu } from "@/components/ShareMenu";
 
 // Force dynamic rendering for this page
@@ -66,26 +67,72 @@ interface Owner {
   role: string | null;
 }
 
+// Add this function to track project views
+const trackProjectView = async (projectId: string) => {
+  try {
+    // Get current user session
+    const { data: session } = await supabase.auth.getSession();
+    const viewerId = session.session?.user?.id || null;
+
+    // Get client information
+    const userAgent = navigator.userAgent;
+    const referrer = document.referrer || null;
+
+    // Generate session ID (simple implementation)
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Insert view record
+    const { error: viewError } = await supabase
+      .from("project_views")
+      .insert({
+        project_id: projectId,
+        viewer_id: viewerId,
+        user_agent: userAgent,
+        referrer: referrer,
+        session_id: sessionId,
+      });
+
+    if (viewError) {
+      console.error('Error tracking project view:', viewError);
+    } else {
+      // Increment view count using the database function
+      const { error: incrementError } = await supabase.rpc('increment_project_views', {
+        project_id: projectId
+      });
+
+      if (incrementError) {
+        console.error('Error incrementing project view count:', incrementError);
+      }
+    }
+  } catch (error) {
+    console.error('Error in trackProjectView:', error);
+  }
+};
+
 export default function ProjectDetails({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
+  const { id } = resolvedParams;
   const [project, setProject] = useState<Project | null>(null);
   const [owner, setOwner] = useState<Owner | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('descripcion');
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [viewTracked, setViewTracked] = useState(false);
+  const viewTrackedRef = useRef(false);
   const router = useRouter();
   const descriptionRef = useRef<HTMLDivElement>(null);
   const specificationsRef = useRef<HTMLDivElement>(null);
   const plansRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
   const { user: currentUser } = useAuth();
+  // Add a ref to ensure the function is only called once
+  const trackProjectViewRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
         setLoading(true);
-        const { id } = resolvedParams;
         
         // Fetch project data
         const { data, error } = await supabase
@@ -100,6 +147,17 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
         }
         
         setProject(data as Project);
+        
+        // Track project view only once, using multiple safeguards
+        if (!viewTracked && !viewTrackedRef.current) {
+          viewTrackedRef.current = true;
+          // Use the ref to ensure the function is only called once even if there are rapid re-renders
+          if (!trackProjectViewRef.current) {
+            trackProjectViewRef.current = trackProjectView(id);
+          }
+          await trackProjectViewRef.current;
+          setViewTracked(true);
+        }
         
         // Load constructor public profile
         try {
@@ -120,7 +178,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     };
 
     fetchProject();
-  }, [resolvedParams]);
+  }, [id, viewTracked]);
 
   const scrollToSection = (section: string) => {
     setActiveTab(section);
