@@ -38,7 +38,7 @@ export default function AboutPage() {
                   Nuestra Misión
                 </h2>
                 <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-                  Transformar la experiencia inmobiliaria en Chile, haciendo que publicar y encontrar propiedades sea simple, transparente y accesible para todos.
+                  Transformar la experiencia inmobiliaria, haciendo que publicar y encontrar propiedades sea simple, transparente y accesible para todos.
                 </p>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
