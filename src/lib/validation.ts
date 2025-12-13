@@ -1,0 +1,145 @@
+import { z } from 'zod';
+
+// Base validation schemas
+export const PropertySchema = z.object({
+  id: z.string().uuid('Invalid property ID'),
+  title: z.string().min(3, 'Title must be at least 3 characters').max(100, 'Title is too long'),
+  description: z.string().nullable().optional(),
+  price: z.number().positive('Price must be positive').max(999999999, 'Price is too high'),
+  location: z.string().min(2, 'Location must be at least 2 characters').max(100, 'Location is too long'),
+  images: z.array(z.string().url('Invalid image URL')).nullable(),
+  owner_id: z.string().uuid('Invalid owner ID'),
+  type: z.string().nullable().optional(),
+  currency: z.string().length(3, 'Currency must be 3 characters').default('USD').optional(),
+  address: z.string().nullable().optional(),
+  bedrooms: z.number().int().positive().nullable().optional(),
+  bathrooms: z.number().int().positive().nullable().optional(),
+  area: z.number().positive().nullable().optional(),
+  features: z.array(z.string()).nullable().optional(),
+  inserted_at: z.string().datetime(),
+  updated_at: z.string().datetime().optional(),
+});
+
+export const UserSchema = z.object({
+  id: z.string().uuid('Invalid user ID'),
+  email: z.string().email('Invalid email address'),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long').nullable().optional(),
+  bio: z.string().max(500, 'Bio is too long').nullable().optional(),
+  role: z.enum(['comprador', 'vendedor_agente', 'empresa_constructora'], {
+    message: 'Invalid user role'
+  }).nullable().optional(),
+  avatar_url: z.string().url('Invalid avatar URL').nullable().optional(),
+  subscription_active: z.boolean().default(false).nullable().optional(),
+  rating: z.number().min(0).max(5).nullable().optional(),
+  reviews_count: z.number().int().min(0).nullable().optional(),
+  inserted_at: z.string().datetime().nullable().optional(),
+  updated_at: z.string().datetime().nullable().optional(),
+});
+
+export const ProjectSchema = z.object({
+  id: z.string().uuid('Invalid project ID'),
+  project_name: z.string().min(3, 'Project name must be at least 3 characters').max(100, 'Project name is too long'),
+  city_province: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  images: z.array(z.string().url('Invalid image URL')).nullable(),
+  unit_price_range: z.string().nullable().optional(),
+  owner_id: z.string().uuid('Invalid owner ID'),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime().optional(),
+});
+
+// Form validation schemas
+export const PropertyFormSchema = z.object({
+  title: z.string().min(3, 'Title must be at least 3 characters').max(100, 'Title is too long'),
+  description: z.string().max(1000, 'Description is too long').optional(),
+  price: z.number().positive('Price must be positive').max(999999999, 'Price is too high'),
+  location: z.string().min(2, 'Location must be at least 2 characters').max(100, 'Location is too long'),
+  type: z.string().optional(),
+  currency: z.string().length(3, 'Currency must be 3 characters').default('USD').optional(),
+  address: z.string().max(200, 'Address is too long').optional(),
+  bedrooms: z.number().int().positive().max(20, 'Too many bedrooms').optional(),
+  bathrooms: z.number().int().positive().max(20, 'Too many bathrooms').optional(),
+  area: z.number().positive().max(10000, 'Area is too large').optional(),
+  features: z.array(z.string().max(50, 'Feature name is too long')).max(20, 'Too many features').optional(),
+});
+
+export const LoginFormSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+export const SignupFormSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain uppercase, lowercase, and number'),
+  role: z.enum(['comprador', 'vendedor_agente', 'empresa_constructora'], {
+    message: 'Please select a valid role'
+  }),
+});
+
+export const SearchFiltersSchema = z.object({
+  query: z.string().max(100, 'Search query is too long').optional(),
+  minPrice: z.number().positive().optional(),
+  maxPrice: z.number().positive().optional(),
+  location: z.string().max(100, 'Location is too long').optional(),
+  type: z.string().max(50, 'Type is too long').optional(),
+  bedrooms: z.number().int().positive().max(20).optional(),
+  bathrooms: z.number().int().positive().max(20).optional(),
+}).refine(data => {
+  if (data.minPrice && data.maxPrice) {
+    return data.minPrice <= data.maxPrice;
+  }
+  return true;
+}, {
+  message: 'Minimum price cannot be greater than maximum price',
+  path: ['minPrice']
+});
+
+// API Response validation
+export const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
+  z.object({
+    data: dataSchema.nullable(),
+    error: z.string().nullable(),
+    loading: z.boolean(),
+  });
+
+// Export types inferred from schemas
+export type PropertyFormData = z.infer<typeof PropertyFormSchema>;
+export type LoginFormData = z.infer<typeof LoginFormSchema>;
+export type SignupFormData = z.infer<typeof SignupFormSchema>;
+export type SearchFiltersData = z.infer<typeof SearchFiltersSchema>;
+
+// Validation helper functions
+export const validateProperty = (data: unknown) => PropertySchema.safeParse(data);
+export const validateUser = (data: unknown) => UserSchema.safeParse(data);
+export const validateProject = (data: unknown) => ProjectSchema.safeParse(data);
+export const validatePropertyForm = (data: unknown) => PropertyFormSchema.safeParse(data);
+export const validateLoginForm = (data: unknown) => LoginFormSchema.safeParse(data);
+export const validateSignupForm = (data: unknown) => SignupFormSchema.safeParse(data);
+export const validateSearchFilters = (data: unknown) => SearchFiltersSchema.safeParse(data);
+
+// Safe validation wrapper for runtime data
+export function safeValidate<T>(
+  schema: z.ZodSchema<T>,
+  data: unknown,
+  context = 'Data validation'
+): { success: true; data: T } | { success: false; error: string } {
+  try {
+    const result = schema.safeParse(data);
+    
+    if (result.success) {
+      return { success: true, data: result.data };
+    } else {
+      const errorMessage = result.error.issues
+        .map((err: any) => `${err.path.join('.')}: ${err.message}`)
+        .join(', ');
+      
+      console.warn(`${context} failed:`, errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  } catch (error) {
+    console.error(`${context} error:`, error);
+    return { success: false, error: 'Validation failed unexpectedly' };
+  }
+}
