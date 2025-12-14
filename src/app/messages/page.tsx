@@ -172,12 +172,43 @@ function MessagesContent() {
         // This should load regardless of whether there's a targetId
         const loadConversations = async () => {
           try {
-            // First, get all messages (sent and received) ordered by creation time
+            // First, get the admin user ID
+            let adminUserId: string | null = null;
+            try {
+              const { data: adminProfile } = await supabase
+                .from('public_profiles')
+                .select('id')
+                .eq('email', 'admin@vendra.com')
+                .maybeSingle();
+              if (adminProfile) {
+                adminUserId = adminProfile.id;
+              }
+            } catch (e) {
+              console.warn('Could not fetch admin profile:', e);
+            }
+
+            // Get all messages (sent and received) ordered by creation time
             const { data: allMessages } = await supabase
               .from('messages')
-              .select('id, sender_id, recipient_id, content, created_at')
+              .select('id, sender_id, recipient_id, content, created_at, case_id, case_status, conversation_type')
               .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
               .order('created_at', { ascending: false });
+
+            // Check if user has an open case with admin
+            let hasOpenAdminCase = false;
+            let latestAdminCaseId: string | null = null;
+            if (adminUserId) {
+              const adminMessages = (allMessages ?? []).filter(m =>
+                (m.sender_id === adminUserId || m.recipient_id === adminUserId) &&
+                m.conversation_type === 'user_to_admin' &&
+                m.case_id
+              );
+              if (adminMessages.length > 0) {
+                // Get the latest case
+                latestAdminCaseId = adminMessages[0].case_id;
+                hasOpenAdminCase = adminMessages[0].case_status !== 'closed';
+              }
+            }
 
             // Group messages by conversation partner and get the latest message for each
             const conversationsMap: Record<string, {
@@ -189,6 +220,19 @@ function MessagesContent() {
 
             (allMessages ?? []).forEach((message) => {
               const otherId = message.sender_id === uid ? message.recipient_id : message.sender_id;
+
+              // For admin conversations: 
+              // - Only show if there's an open case
+              // - Only use messages from the latest case
+              if (adminUserId && otherId === adminUserId) {
+                if (!hasOpenAdminCase) {
+                  return; // Skip admin if no open case
+                }
+                if (latestAdminCaseId && message.case_id !== latestAdminCaseId) {
+                  return; // Skip messages from old cases
+                }
+              }
+
               // Only keep the most recent message for each conversation
               if (!conversationsMap[otherId]) {
                 conversationsMap[otherId] = {
