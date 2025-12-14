@@ -1,0 +1,507 @@
+-- -------------------------------------------------------------
+-- Vendra - Esquema refactorizado (idempotente) - 2025
+-- Tabla principal: public.users
+-- Mantiene public.public_profiles como vista pública sincronizada
+-- -------------------------------------------------------------
+
+-- 0) Safety note: run as service_role or via SQL editor with sufficient rights.
+
+-- 1) Extensions (single declaration)
+create extension if not exists pgcrypto;
+
+-- 2) Utility: set_updated_at function (single)
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+-- create trigger template if not exists (we attach per table below)
+
+-- 3) public.users (perfil principal)
+CREATE TABLE IF NOT EXISTS public.users (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email text,
+  name text,
+  bio text,
+  role text NOT NULL DEFAULT 'comprador',
+  avatar_url text,
+  phone text,
+  subscription_active boolean DEFAULT false,
+  rating numeric,
+  reviews_count integer DEFAULT 0,
+  inserted_at timestamptz DEFAULT now(),
+  updated_at timestamptz
+);
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- Ensure role constraint exists
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_role_check') THEN
+    ALTER TABLE public.users
+      ADD CONSTRAINT users_role_check CHECK (role IN ('comprador','vendedor_agente','empresa_constructora'));
+  END IF;
+END $$;
+
+-- add columns idempotently if missing (in case migrating from older schema)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='users' AND column_name='rnc'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN rnc text;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='users' AND column_name='website'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN website text;
+  END IF;
+END $$;
+
+-- Triggers: updated_at for users
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname='trg_users_set_updated_at'
+  ) THEN
+    CREATE TRIGGER trg_users_set_updated_at
+      BEFORE UPDATE ON public.users
+      FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- 3.1) RLS policies for users
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='users' AND policyname='users_select_own'
+  ) THEN
+    CREATE POLICY users_select_own ON public.users
+      FOR SELECT TO authenticated USING (id = auth.uid());
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='users' AND policyname='users_insert_own'
+  ) THEN
+    CREATE POLICY users_insert_own ON public.users
+      FOR INSERT TO authenticated WITH CHECK (id = auth.uid());
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='users' AND policyname='users_update_own'
+  ) THEN
+    CREATE POLICY users_update_own ON public.users
+      FOR UPDATE TO authenticated USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+  END IF;
+END $$;
+
+-- 3.2) handle_new_user trigger: sync from auth.users -> public.users
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  user_name text;
+  user_role text;
+BEGIN
+  user_name := COALESCE(NULLIF(trim(NEW.raw_user_meta_data->>'name'), ''), split_part(COALESCE(NEW.email,'user'), '@', 1));
+  IF NEW.raw_user_meta_data->>'role' IN ('comprador','vendedor_agente','empresa_constructora') THEN
+    user_role := NEW.raw_user_meta_data->>'role';
+  ELSE
+    user_role := 'comprador';
+  END IF;
+
+  INSERT INTO public.users (id, email, name, role, avatar_url, subscription_active)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.email, ''),
+    user_name,
+    user_role,
+    NEW.raw_user_meta_data->>'avatar_url',
+    false
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = COALESCE(EXCLUDED.email, public.users.email),
+    name = COALESCE(EXCLUDED.name, public.users.name),
+    avatar_url = COALESCE(EXCLUDED.avatar_url, public.users.avatar_url),
+    updated_at = now();
+
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Don't fail auth transaction; log as warning
+  RAISE WARNING 'handle_new_user: % %', NEW.id, SQLERRM;
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='on_auth_user_created') THEN
+    CREATE TRIGGER on_auth_user_created
+      AFTER INSERT ON auth.users
+      FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+  END IF;
+END $$;
+
+-- 4) public.public_profiles: tabla pública sincronizada (para mostrar perfiles)
+CREATE TABLE IF NOT EXISTS public.public_profiles (
+  id uuid PRIMARY KEY,
+  name text,
+  email text,
+  bio text,
+  avatar_url text,
+  role text,
+  inserted_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  banner_url text
+);
+
+ALTER TABLE public.public_profiles ENABLE ROW LEVEL SECURITY;
+
+-- Policies: public read
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='public_profiles' AND policyname='public_profiles_select_public'
+  ) THEN
+    CREATE POLICY public_profiles_select_public ON public.public_profiles FOR SELECT USING (TRUE);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='public_profiles' AND policyname='public_profiles_insert_own'
+  ) THEN
+    CREATE POLICY public_profiles_insert_own ON public.public_profiles FOR INSERT TO authenticated WITH CHECK (id = auth.uid());
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='public_profiles' AND policyname='public_profiles_update_own'
+  ) THEN
+    CREATE POLICY public_profiles_update_own ON public.public_profiles FOR UPDATE TO authenticated USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+  END IF;
+END $$;
+
+-- Trigger: sync public_profiles from users
+CREATE OR REPLACE FUNCTION public.sync_public_profile()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    DELETE FROM public.public_profiles WHERE id = OLD.id;
+    RETURN OLD;
+  ELSE
+    INSERT INTO public.public_profiles (id, name, email, bio, avatar_url, role, inserted_at, updated_at)
+    VALUES (NEW.id, NEW.name, NEW.email, NEW.bio, NEW.avatar_url, NEW.role, COALESCE(NEW.inserted_at, now()), now())
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      email = EXCLUDED.email,
+      bio = EXCLUDED.bio,
+      avatar_url = EXCLUDED.avatar_url,
+      role = EXCLUDED.role,
+      updated_at = now();
+    RETURN NEW;
+  END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_users_sync_public_profile_upsert') THEN
+    CREATE TRIGGER trg_users_sync_public_profile_upsert
+      AFTER INSERT OR UPDATE ON public.users
+      FOR EACH ROW EXECUTE FUNCTION public.sync_public_profile();
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_users_sync_public_profile_delete') THEN
+    CREATE TRIGGER trg_users_sync_public_profile_delete
+      AFTER DELETE ON public.users
+      FOR EACH ROW EXECUTE FUNCTION public.sync_public_profile();
+  END IF;
+END $$;
+
+-- 5) public.properties (unificada, con RLS y índices)
+CREATE TABLE IF NOT EXISTS public.properties (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  price numeric NOT NULL,
+  currency text DEFAULT 'USD',
+  address text,
+  location text NOT NULL,
+  images text[] DEFAULT '{}',
+  owner_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  type text,
+  bedrooms integer,
+  bathrooms integer,
+  area numeric,
+  features text[] DEFAULT '{}',
+  status text DEFAULT 'active' CHECK (status IN ('active','inactive','sold','rented')),
+  is_published boolean DEFAULT true,
+  inserted_at timestamptz DEFAULT now(),
+  updated_at timestamptz
+);
+
+ALTER TABLE public.properties ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_properties_set_updated_at') THEN
+    CREATE TRIGGER trg_properties_set_updated_at
+      BEFORE UPDATE ON public.properties
+      FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- Policies: public read feed; insert/update/delete by authenticated owner (with extra checks if needed)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='properties' AND policyname='properties_public_read'
+  ) THEN
+    CREATE POLICY properties_public_read ON public.properties FOR SELECT USING (is_published = true);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='properties' AND policyname='properties_insert_owner'
+  ) THEN
+    CREATE POLICY properties_insert_owner ON public.properties
+      FOR INSERT TO authenticated WITH CHECK (owner_id = auth.uid());
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='properties' AND policyname='properties_update_owner'
+  ) THEN
+    CREATE POLICY properties_update_owner ON public.properties
+      FOR UPDATE TO authenticated USING (owner_id = auth.uid()) WITH CHECK (owner_id = auth.uid());
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='properties' AND policyname='properties_delete_owner'
+  ) THEN
+    CREATE POLICY properties_delete_owner ON public.properties
+      FOR DELETE TO authenticated USING (owner_id = auth.uid());
+  END IF;
+END $$;
+
+-- Indexes recommended
+CREATE INDEX IF NOT EXISTS idx_properties_location ON public.properties(location);
+CREATE INDEX IF NOT EXISTS idx_properties_price ON public.properties(price);
+CREATE INDEX IF NOT EXISTS idx_properties_owner ON public.properties(owner_id);
+CREATE INDEX IF NOT EXISTS idx_properties_inserted_at ON public.properties(inserted_at DESC);
+
+-- 6) saved_properties (bookmarks)
+CREATE TABLE IF NOT EXISTS public.saved_properties (
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  property_id uuid REFERENCES public.properties(id) ON DELETE CASCADE,
+  created_at timestamptz DEFAULT now(),
+  PRIMARY KEY (user_id, property_id)
+);
+
+ALTER TABLE public.saved_properties ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='saved_properties' AND policyname='saved_select_own'
+  ) THEN
+    CREATE POLICY saved_select_own ON public.saved_properties FOR SELECT TO authenticated USING (user_id = auth.uid());
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='saved_properties' AND policyname='saved_insert_own'
+  ) THEN
+    CREATE POLICY saved_insert_own ON public.saved_properties FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='saved_properties' AND policyname='saved_delete_own'
+  ) THEN
+    CREATE POLICY saved_delete_own ON public.saved_properties FOR DELETE TO authenticated USING (user_id = auth.uid());
+  END IF;
+END $$;
+
+-- 7) reviews / user_reviews (fusionada)
+CREATE TABLE IF NOT EXISTS public.user_reviews (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  target_user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  reviewer_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  rating smallint NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz
+);
+
+ALTER TABLE public.user_reviews ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_user_reviews_set_updated_at') THEN
+    CREATE TRIGGER trg_user_reviews_set_updated_at
+      BEFORE UPDATE ON public.user_reviews
+      FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- RLS: anyone can read reviews if needed (adjustable), only authenticated can insert and reviewer must be auth.uid()
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_reviews' AND policyname='user_reviews_public_read') THEN
+    CREATE POLICY user_reviews_public_read ON public.user_reviews FOR SELECT USING (TRUE);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_reviews' AND policyname='user_reviews_insert_auth') THEN
+    CREATE POLICY user_reviews_insert_auth ON public.user_reviews FOR INSERT TO authenticated WITH CHECK (reviewer_user_id = auth.uid());
+  END IF;
+END $$;
+
+-- Helper: update aggregate counts on users (optional trigger)
+CREATE OR REPLACE FUNCTION public.refresh_user_review_counts()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  -- Recalculate simple aggregates (could be optimized)
+  UPDATE public.users
+  SET
+    reviews_count = COALESCE((SELECT COUNT(*) FROM public.user_reviews ur WHERE ur.target_user_id = NEW.target_user_id), 0),
+    rating = COALESCE((SELECT ROUND(AVG(rating)::numeric,2) FROM public.user_reviews ur WHERE ur.target_user_id = NEW.target_user_id), NULL)
+  WHERE id = NEW.target_user_id;
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_refresh_user_review_counts') THEN
+    CREATE TRIGGER trg_refresh_user_review_counts
+      AFTER INSERT OR UPDATE OR DELETE ON public.user_reviews
+      FOR EACH ROW EXECUTE FUNCTION public.refresh_user_review_counts();
+  END IF;
+END $$;
+
+-- 8) projects (constructoras)
+CREATE TABLE IF NOT EXISTS public.projects (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_name text NOT NULL,
+  short_description text,
+  category text,
+  address text,
+  city_province text,
+  zone_sector text,
+  project_status text,
+  delivery_date date,
+  units_count int,
+  images text[] DEFAULT '{}',
+  owner_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  owner_role text DEFAULT 'empresa_constructora',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz
+);
+
+ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_projects_set_updated_at') THEN
+    CREATE TRIGGER trg_projects_set_updated_at
+      BEFORE UPDATE ON public.projects
+      FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- Policies for projects
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='projects' AND policyname='projects_public_read') THEN
+    CREATE POLICY projects_public_read ON public.projects FOR SELECT USING (TRUE);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='projects' AND policyname='projects_insert_owner') THEN
+    CREATE POLICY projects_insert_owner ON public.projects FOR INSERT TO authenticated WITH CHECK (owner_id = auth.uid() AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'empresa_constructora'));
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='projects' AND policyname='projects_update_owner') THEN
+    CREATE POLICY projects_update_owner ON public.projects FOR UPDATE TO authenticated USING (owner_id = auth.uid()) WITH CHECK (owner_id = auth.uid());
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_projects_owner ON public.projects(owner_id);
+
+-- 9) Storage buckets idempotent creation (use Supabase Storage API / dashboard also)
+-- Insert buckets into storage.buckets if not exist (some hosts disallow direct inserts; adjust if necessary)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'avatars') THEN
+    INSERT INTO storage.buckets (id, name, public) VALUES ('avatars','avatars', true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'property-images') THEN
+    INSERT INTO storage.buckets (id, name, public) VALUES ('property-images','property-images', true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'banners') THEN
+    INSERT INTO storage.buckets (id, name, public) VALUES ('banners','banners', true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'kyc-docs') THEN
+    INSERT INTO storage.buckets (id, name, public) VALUES ('kyc-docs','kyc-docs', false);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'legal-docs') THEN
+    INSERT INTO storage.buckets (id, name, public) VALUES ('legal-docs','legal-docs', false);
+  END IF;
+END $$;
+
+-- Storage policies (objects table)
+DO $$
+BEGIN
+  -- avatars: read public, insert/update/delete by owner
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'objects_avatars_select_public' AND schemaname = 'storage' AND tablename = 'objects') THEN
+    CREATE POLICY objects_avatars_select_public ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'objects_avatars_insert_own' AND schemaname = 'storage' AND tablename = 'objects') THEN
+    CREATE POLICY objects_avatars_insert_own ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars' AND owner = auth.uid());
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'objects_avatars_update_own' AND schemaname = 'storage' AND tablename = 'objects') THEN
+    CREATE POLICY objects_avatars_update_own ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars' AND owner = auth.uid()) WITH CHECK (bucket_id = 'avatars' AND owner = auth.uid());
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'objects_avatars_delete_own' AND schemaname = 'storage' AND tablename = 'objects') THEN
+    CREATE POLICY objects_avatars_delete_own ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars' AND owner = auth.uid());
+  END IF;
+
+  -- property-images: public read
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'property_images_public_read' AND schemaname = 'storage' AND tablename = 'objects') THEN
+    CREATE POLICY property_images_public_read ON storage.objects FOR SELECT USING (bucket_id = 'property-images');
+  END IF;
+
+  -- kyc-docs: private per-owner
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'objects_kyc_select_own' AND schemaname = 'storage' AND tablename = 'objects') THEN
+    CREATE POLICY objects_kyc_select_own ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'kyc-docs' AND owner = auth.uid());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'objects_kyc_insert_own' AND schemaname = 'storage' AND tablename = 'objects') THEN
+    CREATE POLICY objects_kyc_insert_own ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'kyc-docs' AND owner = auth.uid());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'objects_kyc_delete_own' AND schemaname = 'storage' AND tablename = 'objects') THEN
+    CREATE POLICY objects_kyc_delete_own ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'kyc-docs' AND owner = auth.uid());
+  END IF;
+END $$;
+
+-- 10) Backfill: insert existing auth.users into public.users if missing
+DO $$
+BEGIN
+  INSERT INTO public.users (id, email, name, role, avatar_url, subscription_active, inserted_at)
+  SELECT u.id, u.email, COALESCE(u.raw_user_meta_data->>'name', split_part(COALESCE(u.email,''),'@',1)), 
+         COALESCE(u.raw_user_meta_data->>'role','comprador'), u.raw_user_meta_data->>'avatar_url', false, now()
+  FROM auth.users u
+  LEFT JOIN public.users pu ON pu.id = u.id
+  WHERE pu.id IS NULL;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Backfill public.users failed: %', SQLERRM;
+END $$;
+
+-- 11) Optional: tidy up duplicates / legacy objects (manual review recommended)
+-- (No destructive statements here — run manual cleanup separately if desired.)
+
+-- END OF SCRIPT

@@ -1,0 +1,327 @@
+@import "tailwindcss";
+
+/* csslint ignore:start */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* Map fonts from next/font variables */
+  --font-sans: var(--font-pt-sans);
+  --font-serif: var(--font-playfair);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* csslint ignore:end */
+
+:root {
+  --radius: 1rem;
+  /* More rounded premium feel */
+  /* Premium Palette: Emerald, Gold, Sand */
+  --background: hsl(40, 20%, 97%);
+  /* Cream/Warm White */
+  --foreground: hsl(150, 30%, 15%);
+  /* Deep Jungle Green */
+
+  --card: hsl(40, 20%, 99%);
+  --card-foreground: hsl(150, 30%, 15%);
+
+  --popover: hsl(40, 20%, 99%);
+  --popover-foreground: hsl(150, 30%, 15%);
+
+  --primary: hsl(152, 45%, 20%);
+  /* Deep Luxury Emerald */
+  --primary-foreground: hsl(40, 20%, 97%);
+
+  --secondary: hsl(42, 35%, 55%);
+  /* Muted Gold */
+  --secondary-foreground: hsl(150, 30%, 15%);
+
+  --muted: hsl(150, 10%, 90%);
+  --muted-foreground: hsl(150, 10%, 40%);
+
+  --accent: hsl(42, 45%, 92%);
+  /* Gold tint */
+  --accent-foreground: hsl(150, 30%, 15%);
+
+  --destructive: hsl(0, 60%, 45%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+
+  --border: hsl(150, 15%, 85%);
+  --input: hsl(150, 15%, 85%);
+  --ring: hsl(152, 45%, 20%);
+
+  /* Chart Colors preserved/adapted */
+  --chart-1: hsl(152, 45%, 20%);
+  --chart-2: hsl(42, 35%, 50%);
+  --chart-3: hsl(150, 20%, 40%);
+  --chart-4: hsl(40, 30%, 70%);
+  --chart-5: hsl(150, 10%, 60%);
+
+  --sidebar: hsl(152, 45%, 15%);
+  /* Dark Sidebar */
+  --sidebar-foreground: hsl(40, 20%, 97%);
+  --sidebar-primary: hsl(42, 35%, 55%);
+  /* Gold Highlight */
+  --sidebar-primary-foreground: hsl(152, 45%, 15%);
+  --sidebar-accent: hsl(152, 40%, 20%);
+  --sidebar-accent-foreground: hsl(40, 20%, 97%);
+  --sidebar-border: hsl(152, 40%, 20%);
+  --sidebar-ring: hsl(42, 35%, 55%);
+}
+
+.dark {
+  /* Enforce Bone White Theme even in Dark Mode */
+  --background: hsl(40, 20%, 97%);
+  /* Cream/Warm White */
+  --foreground: hsl(150, 30%, 15%);
+  /* Deep Jungle Green */
+
+  --card: hsl(40, 20%, 99%);
+  --card-foreground: hsl(150, 30%, 15%);
+
+  --popover: hsl(40, 20%, 99%);
+  --popover-foreground: hsl(150, 30%, 15%);
+
+  --primary: hsl(152, 45%, 20%);
+  /* Deep Luxury Emerald */
+  --primary-foreground: hsl(40, 20%, 97%);
+
+  --secondary: hsl(42, 35%, 55%);
+  /* Muted Gold */
+  --secondary-foreground: hsl(150, 30%, 15%);
+
+  --muted: hsl(150, 10%, 90%);
+  --muted-foreground: hsl(150, 10%, 40%);
+
+  --accent: hsl(42, 45%, 92%);
+  /* Gold tint */
+  --accent-foreground: hsl(150, 30%, 15%);
+
+  --destructive: hsl(0, 60%, 45%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+
+  --border: hsl(150, 15%, 85%);
+  --input: hsl(150, 15%, 85%);
+  --ring: hsl(152, 45%, 20%);
+
+  /* Sidebar also follows light theme */
+  --sidebar: hsl(152, 45%, 15%);
+  /* Keep Sidebar Dark for contrast? Or match light theme sidebar? User said "bug of dark mode", implying general page background. */
+  --sidebar-foreground: hsl(40, 20%, 97%);
+  --sidebar-primary: hsl(42, 35%, 55%);
+  --sidebar-primary-foreground: hsl(152, 45%, 15%);
+  --sidebar-accent: hsl(152, 40%, 20%);
+  --sidebar-accent-foreground: hsl(40, 20%, 97%);
+  --sidebar-border: hsl(152, 40%, 20%);
+  --sidebar-ring: hsl(42, 35%, 55%);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-serif), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    letter-spacing: -0.025em;
+  }
+
+  /* Premium Selection Style */
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* Native App Feel Overrides */
+  * {
+    -webkit-tap-highlight-color: transparent; /* Remove blue tap box on mobile */
+    touch-action: manipulation; /* Improve touch response */
+  }
+
+  /* Hide scrollbars for premium native look but keep functionality */
+  /* For Webkit (Chrome, Safari) */
+  ::-webkit-scrollbar {
+    display: none;
+    width: 0px;
+    background: transparent;
+  }
+  
+  /* For Firefox */
+  html {
+    scrollbar-width: none;
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+
+  /* Disable text selection on UI elements for app-like feel */
+  /* Enable class 'select-text' for content that should be copyable */
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Re-enable selection for inputs and specific content areas */
+  input, textarea, [contenteditable="true"], .select-text {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Mobile bottom navigation spacing */
+@media (max-width: 767px) {
+  .mobile-bottom-safe {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @supports (padding: max(0px)) {
+    .mobile-bottom-safe {
+      padding-bottom: max(6rem, calc(6rem + env(safe-area-inset-bottom, 0px)));
+    }
+  }
+
+  .mobile-top-safe {
+    padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+  }
+
+  .mobile-horizontal-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-bottom-safe {
+    padding-bottom: 2.5rem;
+  }
+
+  .mobile-top-safe {
+    padding-top: 1rem;
+  }
+
+  .mobile-horizontal-safe {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* Contenedor central reutilizable */
+.app-container {
+  max-width: 1600px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .app-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Splash Screen */
+.splash-screen {
+  background-color: var(--background);
+}
+
+.splash-screen .splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
+
+.splash-screen .splash-logo {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+  font-family: var(--font-serif);
+}
+
+.splash-screen .splash-subtitle {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--muted-foreground);
+}
+
+.splash-screen .splash-loading {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: var(--primary);
+}
+
+@media (min-width: 768px) {
+  .splash-screen .splash-logo {
+    font-size: 3rem;
+    line-height: 1;
+  }
+
+  .splash-screen .splash-subtitle {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+
+  .splash-screen .splash-loading {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+}

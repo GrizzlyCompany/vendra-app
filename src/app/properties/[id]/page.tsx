@@ -1,0 +1,266 @@
+"use client";
+
+import { useState, useEffect, use } from "react";
+import { supabase } from "@/lib/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { notFound, useRouter } from "next/navigation";
+import Link from "next/link";
+import { PropertyGallery } from "@/features/properties/components/PropertyGallery";
+import { OwnerCard } from "@/features/properties/components/OwnerCard";
+import { Button } from "@/components/ui/button";
+import { MapPin, Home, Castle, Ruler, Bath, Bed, Heart, ArrowLeft, Share2, Star, ShieldCheck, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useFavorites } from "@/features/properties/hooks/useFavorites";
+import type { Property } from "@/types";
+import { DetailPageTransition, DetailSection, DetailBackButton } from "@/components/transitions/DetailPageTransition";
+import { useToastContext } from "@/components/ToastProvider";
+import { ShareMenu } from "@/components/ShareMenu";
+
+export default function PropertyDetails({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  const router = useRouter();
+  const [property, setProperty] = useState<Property | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [propertyId, setPropertyId] = useState<string | null>(null);
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const [isToggling, setIsToggling] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+
+  useEffect(() => {
+    async function loadProperty() {
+      try {
+        setLoading(true);
+        const { id } = resolvedParams;
+        setPropertyId(id);
+
+        const { data, error } = await supabase
+          .from("properties")
+          .select("id,title,description,price,location,address,images,type,owner_id,currency,inserted_at,bedrooms,bathrooms,area")
+          .eq("id", id)
+          .single();
+
+        if (error || !data) {
+          notFound();
+          return;
+        }
+
+        setProperty(data as Property);
+        await trackPropertyView(id);
+      } catch (error) {
+        console.error('Error loading property:', error);
+        notFound();
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProperty();
+  }, [resolvedParams]);
+
+  const trackPropertyView = async (propertyId: string) => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const viewerId = session.session?.user?.id || null;
+      const userAgent = navigator.userAgent;
+      const referrer = document.referrer || null;
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      const { error: viewError } = await supabase
+        .from("property_views")
+        .insert({
+          property_id: propertyId,
+          viewer_id: viewerId,
+          user_agent: userAgent,
+          referrer: referrer,
+          session_id: sessionId,
+        });
+
+      if (!viewError) {
+        await supabase.rpc('increment_property_views', { property_id: propertyId });
+      }
+    } catch (error) {
+      // Silent fail for analytics
+    }
+  };
+
+  const handleFavoriteClick = async () => {
+    if (!propertyId || isToggling) return;
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session?.user) {
+      router.push('/login');
+      return;
+    }
+    setIsToggling(true);
+    try {
+      await toggleFavorite(propertyId);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          <p className="text-muted-foreground font-serif text-lg">Cargando experiencia...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!property) return null;
+
+  const images: string[] = property.images ?? [];
+  const currencyCode: string = property.currency ?? "USD";
+  const price = new Intl.NumberFormat("en-US", { style: "currency", currency: currencyCode, maximumFractionDigits: 0 }).format(property.price);
+
+  const toTitleCase = (str: string) => str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+  // Features logic
+  const features = [
+    { icon: <Bed className="size-5" />, label: `${property.bedrooms || '-'} Habs`, sub: 'Dormitorios' },
+    { icon: <Bath className="size-5" />, label: `${property.bathrooms || '-'} Baños`, sub: 'Completos' },
+    { icon: <Ruler className="size-5" />, label: `${property.area || '-'} m²`, sub: 'Construidos' },
+    { icon: <Castle className="size-5" />, label: property.type || 'Propiedad', sub: 'Tipo' },
+  ];
+
+  return (
+    <DetailPageTransition className="min-h-screen bg-background pb-20">
+
+      {/* 1. Immersive Header (Breadcrumbs & Actions) */}
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border/40">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-7xl">
+          <Link href="/main" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group">
+            <div className="p-2 rounded-full bg-secondary/20 group-hover:bg-primary/10 transition-colors">
+              <ArrowLeft className="size-4" />
+            </div>
+            <span className="font-medium hidden sm:inline-block">Volver al listado</span>
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setShowShareMenu(true)} className="rounded-full hover:bg-secondary/20 hover:text-primary">
+              <Share2 className="size-5" />
+            </Button>
+            <Button
+              variant={isFavorite(propertyId || '') ? "default" : "outline"}
+              size="sm"
+              onClick={handleFavoriteClick}
+              disabled={isToggling}
+              className={`rounded-full gap-2 ${isFavorite(propertyId || '') ? "bg-red-500 hover:bg-red-600 text-white border-red-500" : "hover:text-red-500 border-border"}`}
+            >
+              <Heart className={`size-4 ${isFavorite(propertyId || '') ? "fill-current" : ""}`} />
+              <span className="hidden sm:inline">{isFavorite(propertyId || '') ? "Guardado" : "Guardar"}</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-6 max-w-7xl space-y-8">
+
+        {/* 2. Gallery Section */}
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <PropertyGallery images={images} />
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+
+          {/* 3. Main Content (Left Column) */}
+          <div className="lg:col-span-8 space-y-10">
+
+            {/* Header Info */}
+            <div className="space-y-4 border-b border-border/40 pb-8">
+              <div className="flex flex-wrap gap-2 items-center text-sm text-primary font-medium tracking-wide uppercase">
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-0 rounded-full px-3">{property.type || "Propiedad"}</Badge>
+                <span>•</span>
+                <span className="flex items-center gap-1"><MapPin className="size-4" /> {property.location}</span>
+                <span>•</span>
+                <span className="flex items-center gap-1"><Clock className="size-4" /> Hace 2 días</span>
+              </div>
+              <h1 className="font-serif text-4xl md:text-5xl text-foreground font-medium leading-tight">{toTitleCase(property.title)}</h1>
+              <p className="text-xl text-muted-foreground font-light">{property.address || property.location}</p>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {features.map((f, i) => (
+                <div key={i} className="bg-secondary/10 rounded-2xl p-5 flex flex-col items-center justify-center text-center gap-2 border border-secondary/20 hover:border-primary/20 transition-colors cursor-default group">
+                  <div className="text-primary/70 group-hover:text-primary transition-colors p-2 bg-white rounded-full shadow-sm">
+                    {f.icon}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-lg">{f.label}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">{f.sub}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Full Description */}
+            <div className="prose prose-lg max-w-none text-muted-foreground leading-relaxed font-light">
+              <h3 className="text-foreground font-serif text-2xl mb-4">Sobre esta propiedad</h3>
+              <p className="whitespace-pre-line">{property.description || "Sin descripción detallada."}</p>
+            </div>
+
+            {/* Amenities List */}
+            <div>
+              <h3 className="text-foreground font-serif text-2xl mb-6">Amenidades y Características</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
+                {["Piscina Privada", "Seguridad 24/7", "Jardines", "Garaje Doble", "Terraza Panorámica", "Cocina Gourmet"].map((item) => (
+                  <div key={item} className="flex items-center gap-3 text-muted-foreground">
+                    <div className="text-primary"><ShieldCheck className="size-5" /></div>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Sticky Sidebar (Right Column) */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="sticky top-24 space-y-6">
+              {/* Price & Contact Card */}
+              <Card className="rounded-3xl border border-border shadow-xl overflow-hidden bg-white/80 dark:bg-card/40 backdrop-blur-xl">
+                <div className="p-6 md:p-8 space-y-6">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Precio de venta</p>
+                    <p className="font-serif text-4xl font-bold text-primary">{price}</p>
+                  </div>
+
+                  <div className="h-px bg-border/50" />
+
+                  <div className="space-y-4">
+                    <Button className="w-full h-12 rounded-xl text-lg font-medium shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90">
+                      Contactar Agente
+                    </Button>
+                    <Button variant="outline" className="w-full h-12 rounded-xl text-lg border-2 hover:bg-secondary/20 hover:text-foreground hover:border-primary/30">
+                      Agendar Visita
+                    </Button>
+                  </div>
+
+                  <div className="text-center text-xs text-muted-foreground pt-2">
+                    Protección al comprador garantizada por Vendra
+                  </div>
+                </div>
+              </Card>
+
+              {/* Agent Mini Profile */}
+              <div className="bg-secondary/10 rounded-3xl p-6 border border-secondary/20">
+                <OwnerCard ownerId={property.owner_id} />
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {property && (
+        <ShareMenu
+          property={property}
+          isOpen={showShareMenu}
+          onClose={() => setShowShareMenu(false)}
+        />
+      )}
+    </DetailPageTransition>
+  );
+}
