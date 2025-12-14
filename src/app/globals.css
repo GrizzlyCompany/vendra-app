@@ -184,8 +184,10 @@
 
   /* Native App Feel Overrides */
   * {
-    -webkit-tap-highlight-color: transparent; /* Remove blue tap box on mobile */
-    touch-action: manipulation; /* Improve touch response */
+    -webkit-tap-highlight-color: transparent;
+    /* Remove blue tap box on mobile */
+    touch-action: manipulation;
+    /* Improve touch response */
   }
 
   /* Hide scrollbars for premium native look but keep functionality */
@@ -195,11 +197,12 @@
     width: 0px;
     background: transparent;
   }
-  
+
   /* For Firefox */
   html {
     scrollbar-width: none;
-    -ms-overflow-style: none; /* IE/Edge */
+    -ms-overflow-style: none;
+    /* IE/Edge */
   }
 
   /* Disable text selection on UI elements for app-like feel */
@@ -208,11 +211,21 @@
     -webkit-user-select: none;
     user-select: none;
   }
-  
+
   /* Re-enable selection for inputs and specific content areas */
-  input, textarea, [contenteditable="true"], .select-text {
+  input,
+  textarea,
+  [contenteditable="true"],
+  .select-text {
     -webkit-user-select: text;
     user-select: text;
+  }
+
+  /* Utility to hide bottom nav on mobile chat view */
+  body.hide-bottom-nav #bottom-nav {
+    transform: translateY(200%);
+    opacity: 0;
+    pointer-events: none;
   }
 }
 

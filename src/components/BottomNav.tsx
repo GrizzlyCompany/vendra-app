@@ -74,10 +74,11 @@ export function BottomNav() {
   };
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 pointer-events-none flex justify-center pb-safe mobile-bottom-safe">
+    <div className="fixed bottom-0 inset-x-0 z-50 pointer-events-none flex justify-center pb-[env(safe-area-inset-bottom)] lg:hidden">
       <nav
+        id="bottom-nav"
         aria-label="Navegación inferior"
-        className="pointer-events-auto mx-4 mb-4 bg-white/80 dark:bg-black/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 rounded-full overflow-hidden"
+        className="pointer-events-auto mx-4 mb-1 bg-white/80 dark:bg-black/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 rounded-full overflow-hidden transition-transform duration-300"
       >
         <ul className="flex items-center justify-between px-2 py-1 gap-1 min-w-[320px] max-w-md mx-auto">
           {items.map(({ href, label, Icon }) => {
@@ -99,7 +100,7 @@ export function BottomNav() {
                       transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                     />
                   )}
-                  
+
                   <span className="relative z-10 flex flex-col items-center gap-1">
                     <Icon className={cn("h-5 w-5 transition-transform duration-300", active && "scale-110")} /> {/* Removed fill for cleaner look, adjust if filled icons desired */}
                     {/* Optional: Hide label on active for simpler look, or keep small */}

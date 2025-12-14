@@ -799,7 +799,7 @@ function MessagesContent() {
       <div className="lg:hidden w-full relative [&_*]:!touch-manipulation flex flex-col h-[100dvh] overflow-hidden bg-background">
         <AnimatePresence mode="wait">
           {(!targetId && !loading) || (isMobileView && !targetId) ? (
-            <div className="h-full p-4 pt- safe-area-top">
+            <div className="h-full p-0 pt-[env(safe-area-inset-top)]">
               <ConversationList
                 key="conversation-list"
                 conversations={conversations}

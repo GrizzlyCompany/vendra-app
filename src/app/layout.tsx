@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Playfair_Display, PT_Sans } from "next/font/google";
 import "./globals.css";
@@ -5,7 +6,7 @@ import { Navbar } from "@/components/Navbar";
 import AuthenticatedBottomNav from "@/components/AuthenticatedBottomNav";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/ToastProvider";
-import { SupabaseStatus } from "@/components/debug/SupabaseStatus";
+
 import { ClientLayout } from "@/components/ClientLayout";
 import { SplashScreenWrapper } from "@/components/SplashScreenWrapper";
 
@@ -80,7 +81,7 @@ export default function RootLayout({
             {/* Bottom nav visible solo para usuarios autenticados (y ya responsiva con md:hidden) */}
             <AuthenticatedBottomNav />
             {/* Debug component for development */}
-            <SupabaseStatus />
+
           </ToastProvider>
         </ErrorBoundary>
       </body>

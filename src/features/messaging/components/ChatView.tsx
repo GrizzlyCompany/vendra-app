@@ -51,6 +51,17 @@ export function ChatView({
     }
   }, [messages.length, target?.id, listRef]);
 
+  // Hide Bottom Navigation on Mobile when ChatView is active
+  useEffect(() => {
+    // Add class to body
+    document.body.classList.add('hide-bottom-nav');
+
+    // Cleanup: remove class when component unmounts (user leaves chat)
+    return () => {
+      document.body.classList.remove('hide-bottom-nav');
+    };
+  }, []);
+
   return (
     <motion.div
       key="chat-view"
@@ -133,7 +144,7 @@ export function ChatView({
         className="flex-1 overflow-y-auto px-6 py-4 min-w-0 scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/30 scrollbar-thumb-rounded-full"
         ref={listRef}
         style={{
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))'
+          paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))'
         }}
       >
         <div className="space-y-4">

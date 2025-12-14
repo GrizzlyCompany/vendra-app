@@ -646,7 +646,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="min-h-[calc(100dvh-64px)] bg-background px-4 sm:px-6 py-8 sm:py-12 mobile-bottom-safe mobile-horizontal-safe">
+    <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-6 py-8 sm:py-12 mobile-bottom-safe mobile-horizontal-safe">
       {/* Mobile Header with "Perfil" and back button - visible only on mobile/tablet */}
       <DetailBackButton className="lg:hidden mb-6 sticky top-0 bg-background/95 backdrop-blur-sm z-30 py-2">
         <div className="flex items-center justify-between w-full">
@@ -678,7 +678,7 @@ export default function ProfilePage() {
         <div className="relative mb-24 sm:mb-28">
           {/* Banner */}
           <div
-            className="h-48 sm:h-64 rounded-[2rem] shadow-xl overflow-hidden relative group"
+            className="h-56 sm:h-72 rounded-[2rem] shadow-xl overflow-hidden relative group"
             style={{
               backgroundImage: bannerUrl ? `url(${bannerUrl})` : undefined,
               backgroundSize: 'cover',
@@ -706,8 +706,8 @@ export default function ProfilePage() {
           </div>
 
           {/* Avatar & Info Floating Card */}
-          <div className="absolute -bottom-16 sm:-bottom-20 left-0 right-0 px-4 sm:px-8 flex justify-center">
-            <div className="bg-background/90 backdrop-blur-xl border border-white/40 shadow-2xl rounded-3xl p-4 sm:p-6 flex flex-col sm:flex-row items-center sm:items-end gap-4 max-w-3xl w-full mx-auto">
+          <div className="absolute -bottom-20 sm:-bottom-24 left-0 right-0 px-1 sm:px-8 flex justify-center">
+            <div className="bg-background/95 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-center sm:items-end gap-3 sm:gap-4 max-w-3xl w-full mx-auto">
 
               {/* Avatar */}
               <div className="relative -mt-16 sm:-mt-20 shrink-0">
@@ -833,8 +833,8 @@ export default function ProfilePage() {
 
         {/* Content Tabs - Minimalist Pill Style */}
         <Tabs defaultValue="listed" className="w-full">
-          <div className="flex justify-center mb-8">
-            <TabsList className="bg-secondary/10 p-1 rounded-full h-auto inline-flex shadow-inner">
+          <div className="flex justify-center mb-8 overflow-x-auto pb-2 scrollbar-hide px-4 -mx-4">
+            <TabsList className="bg-secondary/10 p-1 rounded-full h-auto inline-flex shadow-inner min-w-max">
               <TabsTrigger className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300" value="listed">
                 <Building className="mr-2 h-4 w-4" /> Mis Propiedades
               </TabsTrigger>
