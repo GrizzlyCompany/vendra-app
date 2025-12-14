@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       url: req.url,
       headers: Object.fromEntries(req.headers.entries())
     });
-    
+
     // Check if it's a POST request
     if (req.method !== "POST") {
       console.log('Method not allowed:', req.method);
@@ -65,39 +65,39 @@ Deno.serve(async (req) => {
 
     // Validate required fields
     const { title, description, category, userEmail, userName, userId } = body;
-    
+
     if (!title || !description || !category || !userEmail || !userName || !userId) {
       console.error('Missing required fields:', { title, description, category, userEmail, userName, userId });
       return new Response(
-        JSON.stringify({ 
-          error: "Missing required fields", 
+        JSON.stringify({
+          error: "Missing required fields",
           received: { title: !!title, description: !!description, category: !!category, userEmail: !!userEmail, userName: !!userName, userId: !!userId },
           details: { title, category, userEmail, userName }
         }),
         { headers: { "Content-Type": "application/json", ...corsHeaders }, status: 400 }
       );
     }
-    
+
     console.log('Processing report:', { title, category, userEmail, userName });
-    
+
     // Get environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const adminEmail = Deno.env.get('ADMIN_EMAIL') || 'admin@vendra.com';
-    
+
     console.log('Environment variables:', { adminEmail });
-    
+
     // Create Supabase client with service role key for admin operations
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
+
     // Get admin user ID
     const { data: adminUser, error: adminError } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('email', adminEmail)
       .single();
-    
+
     if (adminError || !adminUser) {
       console.error('Admin user not found:', adminError);
       // Try to find any user with admin-like role as fallback
@@ -107,11 +107,11 @@ Deno.serve(async (req) => {
         .or('email.like.%@admin.com,email.like.%@vendra.com')
         .limit(1)
         .single();
-      
+
       if (fallbackError || !fallbackAdmin) {
         console.error('No fallback admin user found');
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             message: 'Report received but admin user not configured',
             details: 'Please contact system administrator to set up admin user',
             received: { title, category, userEmail, userName }
@@ -123,37 +123,37 @@ Deno.serve(async (req) => {
         // Continue with fallback admin
         await sendReportMessage(supabaseAdmin, fallbackAdmin.id, { title, description, category, userEmail, userName, userId });
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             message: 'Report received and sent to fallback admin via messages',
             received: { title, category, userEmail, userName }
           }),
-          { 
-            headers: { 
+          {
+            headers: {
               "Content-Type": "application/json",
               ...corsHeaders
-            }, 
-            status: 200 
+            },
+            status: 200
           }
         );
       }
     }
-    
+
     // Send message to admin with report details
     await sendReportMessage(supabaseAdmin, adminUser.id, { title, description, category, userEmail, userName, userId });
-    
+
     console.log('Message sent to admin successfully');
-    
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         message: 'Report received and sent to admin via messages',
         received: { title, category, userEmail, userName }
       }),
-      { 
-        headers: { 
+      {
+        headers: {
           "Content-Type": "application/json",
           ...corsHeaders
-        }, 
-        status: 200 
+        },
+        status: 200
       }
     );
   } catch (error: any) {
@@ -163,17 +163,17 @@ Deno.serve(async (req) => {
       name: error.name
     });
     return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error', 
+      JSON.stringify({
+        error: 'Internal server error',
         details: error.message,
         stack: error.stack
       }),
-      { 
-        headers: { 
+      {
+        headers: {
           "Content-Type": "application/json",
           ...corsHeaders
-        }, 
-        status: 500 
+        },
+        status: 500
       }
     );
   }
@@ -185,6 +185,10 @@ async function sendReportMessage(supabaseAdmin: any, adminId: string, reportData
 
   console.log('Creating new report message:', { userId, adminId });
 
+  // Generate unique case_id for this report
+  const caseId = crypto.randomUUID();
+  console.log('Generated case_id:', caseId);
+
   // Create the message content for the report
   const messageContent = `
 🆕 NUEVO REPORTE RECIBIDO 🆕
@@ -193,15 +197,14 @@ Categoría: ${category}
 Título: ${title}
 Descripción: ${description}
 
-📋 Este mensaje ha sido enviado como un nuevo reporte. Si había una conversación previa cerrada, se ha reabierto automáticamente.
+📋 Este mensaje ha sido enviado como un nuevo reporte.
 
 🔄 Para continuar la conversación, utiliza el sistema de mensajes normalmente.
   `;
 
-  console.log('Inserting report message...');
+  console.log('Inserting report message with case_id...');
 
-  // Insert the new report message
-  // The database trigger will automatically reopen any closed conversations
+  // Insert the new report message with case_id
   const { data, error: insertError } = await supabaseAdmin
     .from('messages')
     .insert({
@@ -209,9 +212,10 @@ Descripción: ${description}
       recipient_id: adminId,
       content: messageContent,
       conversation_type: 'user_to_admin',
-      case_status: 'open'
+      case_status: 'open',
+      case_id: caseId
     })
-    .select('id, created_at')
+    .select('id, created_at, case_id')
     .single();
 
   if (insertError) {
@@ -219,5 +223,6 @@ Descripción: ${description}
     throw new Error(`Failed to create report message: ${insertError.message}`);
   }
 
-  console.log('✅ Report message created successfully:', data?.id);
+  console.log('✅ Report message created successfully:', data?.id, 'case_id:', data?.case_id);
+  return { messageId: data?.id, caseId: data?.case_id };
 }

@@ -378,13 +378,57 @@ function MessagesContent() {
           });
         }
 
-        // Initial fetch (thread both directions)
-        const { data, error } = await supabase
+        // Check if this is an admin conversation
+        let isAdminConversation = false;
+        let adminUserId = null;
+        let latestCaseId = null;
+
+        try {
+          const { data: adminProfile } = await supabase
+            .from('public_profiles')
+            .select('id')
+            .eq('email', 'admin@vendra.com')
+            .maybeSingle();
+
+          if (adminProfile && adminProfile.id === targetId) {
+            isAdminConversation = true;
+            adminUserId = adminProfile.id;
+
+            // Get the latest case_id for this user's conversation with admin
+            const { data: latestCase } = await supabase
+              .from('messages')
+              .select('case_id, case_status')
+              .or(`sender_id.eq.${me},recipient_id.eq.${me}`)
+              .eq('conversation_type', 'user_to_admin')
+              .not('case_id', 'is', null)
+              .order('created_at', { ascending: false })
+              .limit(1);
+
+            if (latestCase && latestCase.length > 0) {
+              latestCaseId = latestCase[0].case_id;
+              if (!cancelled) {
+                setIsClosedConversation(latestCase[0].case_status === 'closed');
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Could not check admin status:', error);
+        }
+
+        // Initial fetch - filter by case_id for admin conversations
+        let query = supabase
           .from("messages")
-          .select("id,sender_id,recipient_id,content,created_at,read_at")
+          .select("id,sender_id,recipient_id,content,created_at,read_at,case_status,case_id")
           .in('sender_id', [me, targetId])
           .in('recipient_id', [me, targetId])
           .order("created_at", { ascending: true });
+
+        // For admin conversations, filter by the latest case_id
+        if (isAdminConversation && latestCaseId) {
+          query = query.eq('case_id', latestCaseId);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
         if (cancelled) return;
         setMessages((data ?? []) as Message[]);

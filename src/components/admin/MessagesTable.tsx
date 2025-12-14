@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +16,9 @@ import {
   AlertCircle,
   Mail,
   CheckCircle,
-  XCircle
+  XCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useToastContext } from '@/components/ToastProvider'
@@ -27,7 +29,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { CustomSelect } from '@/components/ui/custom-select'
 import { ConversationDetail } from './ConversationDetail'
+import { useConfirmationDialog } from '@/components/ui/confirmation-dialog'
 
 interface Conversation {
   id: string;
@@ -62,6 +66,7 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const { error: showError, success: showSuccess } = useToastContext()
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
+  const { confirm, ConfirmationDialogComponent } = useConfirmationDialog()
 
   const itemsPerPage = 20
 
@@ -92,11 +97,7 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
   const handleCloseCase = async (conversationId: string, userId: string) => {
     try {
       setActionLoading(conversationId);
-
-      // Get the current session
       const { data: { session } } = await supabase.auth.getSession();
-
-      // Call the admin-close-case function using fetch directly
       const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-close-case`, {
         method: 'POST',
         headers: {
@@ -111,18 +112,12 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
-      const data = await response.json();
-
-      showSuccess('Caso cerrado exitosamente. El usuario no podrá seguir chateando sobre este caso.');
-
-      // Refresh conversations to show updated status
+      showSuccess('Caso cerrado exitosamente');
       await fetchConversations();
-
       onRefreshStats?.();
     } catch (err) {
       console.error('Error closing case:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      showError('Error al cerrar el caso: ' + errorMessage);
+      showError('Error al cerrar el caso');
     } finally {
       setActionLoading(null);
     }
@@ -131,11 +126,7 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
   const handleReopenCase = async (conversationId: string, userId: string) => {
     try {
       setActionLoading(conversationId);
-
-      // Get the current session
       const { data: { session } } = await supabase.auth.getSession();
-
-      // Call the admin-reopen-case function using fetch directly
       const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-reopen-case`, {
         method: 'POST',
         headers: {
@@ -150,33 +141,23 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
-      const data = await response.json();
-
-      showSuccess('Caso reabierto exitosamente. El usuario puede seguir chateando sobre este caso.');
-
-      // Refresh conversations to show updated status
+      showSuccess('Caso reabierto exitosamente');
       await fetchConversations();
-
       onRefreshStats?.();
     } catch (err) {
       console.error('Error reopening case:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      showError('Error al reabrir el caso: ' + errorMessage);
+      showError('Error al reabrir el caso');
     } finally {
       setActionLoading(null);
     }
   };
 
-  // Filtered and paginated conversations
   const filteredConversations = useMemo(() => {
     return conversations.filter(conversation => {
       const matchesSearch = conversation.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          conversation.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          conversation.last_message.content.toLowerCase().includes(searchTerm.toLowerCase())
-
-      // Show all conversations by default, but allow filtering by status
+        conversation.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conversation.last_message.content.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesStatus = statusFilter === 'all' || conversation.case_status === statusFilter
-
       return matchesSearch && matchesStatus
     })
   }, [conversations, searchTerm, statusFilter])
@@ -198,11 +179,8 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
     if (diffDays <= 7) return `Hace ${diffDays - 1} días`
 
     return date.toLocaleDateString('es-DO', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     })
   }
 
@@ -222,28 +200,13 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
     setCurrentPage(1)
   }, [searchTerm, statusFilter])
 
-  // If a conversation is selected, show the detail view
   if (selectedConversation) {
-    // Validate that the selected conversation ID is valid
-    const isValidConversationId = selectedConversation && 
-                                  typeof selectedConversation === 'string' && 
-                                  selectedConversation.length > 0;
-    
-    if (!isValidConversationId) {
-      // If invalid, go back to the list
-      setSelectedConversation(null);
-      showError('ID de conversación no válido');
-      return null;
-    }
-    
     return (
-      <div className="h-full flex flex-col">
-        <div className="flex-1 overflow-hidden">
-          <ConversationDetail 
-            conversationId={selectedConversation} 
-            onBack={() => setSelectedConversation(null)} 
-          />
-        </div>
+      <div className="h-full flex flex-col bg-white/70 backdrop-blur-xl rounded-xl border border-white/20 overflow-hidden shadow-sm">
+        <ConversationDetail
+          conversationId={selectedConversation}
+          onBack={() => setSelectedConversation(null)}
+        />
       </div>
     )
   }
@@ -251,20 +214,22 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-white/20 shadow-sm">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Conversaciones de Soporte</h2>
-          <p className="text-gray-600">Gestión de casos y mensajería de usuarios</p>
+          <h2 className="text-2xl font-serif font-bold text-gray-900">Conversaciones</h2>
+          <div className="flex items-center gap-2 mt-1">
+            <Badge variant="secondary" className="bg-white/80">{filteredConversations.length} casos</Badge>
+            <p className="text-sm text-gray-500">Soporte y Mensajería</p>
+          </div>
         </div>
-        <Button onClick={fetchConversations} variant="outline">
+        <Button onClick={fetchConversations} variant="outline" className="bg-white/50 hover:bg-white shadow-sm">
           <Filter className="h-4 w-4 mr-2" />
           Actualizar
         </Button>
       </div>
 
-      {/* Error State */}
       {error && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-200 bg-red-50/50 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <AlertCircle className="h-5 w-5 text-red-500" />
@@ -272,12 +237,7 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
                 <h3 className="font-semibold text-red-800">Error de carga</h3>
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
-              <Button
-                onClick={fetchConversations}
-                variant="outline"
-                size="sm"
-                className="border-red-300 text-red-700 hover:bg-red-100"
-              >
+              <Button onClick={fetchConversations} variant="outline" size="sm" className="border-red-300">
                 Reintentar
               </Button>
             </div>
@@ -286,253 +246,190 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
       )}
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros y Búsqueda
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Buscar por usuario, email o contenido..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+      <div className="bg-white/70 backdrop-blur-xl p-4 rounded-xl border border-white/40 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+          <Filter className="h-4 w-4" />
+          <span>Filtros y Búsqueda</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="md:col-span-2">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-primary transition-colors" />
+              <Input
+                placeholder="Buscar por usuario, email o contenido..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-white/50 border-gray-200 focus:bg-white transition-all duration-300"
+              />
             </div>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Filtrar por estado del caso"
-            >
-              <option value="all">Todos los casos</option>
-              <option value="open">Casos abiertos</option>
-              <option value="closed">Casos cerrados</option>
-              <option value="resolved">Casos resueltos</option>
-            </select>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Conversations List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Conversaciones ({filteredConversations.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="h-6 w-16" />
-                  </div>
+          <div className="md:col-span-2">
+            <CustomSelect
+              icon={Filter}
+              label="Estado del Caso"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { value: 'all', label: 'Todos los casos' },
+                { value: 'open', label: 'Casos abiertos' },
+                { value: 'closed', label: 'Casos cerrados' },
+                { value: 'resolved', label: 'Casos resueltos' }
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-xl overflow-hidden shadow-sm">
+        {loading ? (
+          <div className="p-4 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 p-4 border rounded-lg bg-white/50">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
-              ))}
+              </div>
+            ))}
+          </div>
+        ) : paginatedConversations.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="h-20 w-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="h-10 w-10 text-gray-400" />
             </div>
-          ) : paginatedConversations.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">
-                {conversations.length === 0
-                  ? 'No hay conversaciones activas'
-                  : 'No se encontraron conversaciones con los filtros aplicados'
-                }
-              </p>
-              <Button 
-                onClick={fetchConversations} 
-                variant="outline" 
-                className="mt-4"
-              >
-                Recargar conversaciones
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {paginatedConversations.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  className={`flex items-center gap-4 p-4 border rounded-lg transition-colors cursor-pointer ${
-                    conversation.unread_count && conversation.unread_count > 0
-                      ? 'bg-blue-50 border-blue-200'
-                      : conversation.case_status === 'closed'
-                      ? 'bg-gray-50'
-                      : 'hover:bg-gray-50'
+            <h3 className="text-lg font-medium text-gray-900">No hay conversaciones</h3>
+            <p className="text-gray-500 max-w-sm mx-auto mt-2">
+              No se encontraron mensajes que coincidan con los filtros actuales.
+            </p>
+            <Button onClick={fetchConversations} variant="outline" className="mt-6">Recargar</Button>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {paginatedConversations.map((conversation) => (
+              <div
+                key={conversation.id}
+                onClick={() => setSelectedConversation(conversation.id)}
+                className={`group flex items-center gap-4 p-4 hover:bg-white/60 transition-all duration-200 cursor-pointer ${conversation.unread_count && conversation.unread_count > 0 ? 'bg-primary/5' : ''
                   }`}
-                  onClick={() => {
-                    // Validate conversation ID before setting it
-                    if (conversation.id && typeof conversation.id === 'string' && conversation.id.length > 0) {
-                      setSelectedConversation(conversation.id);
-                    } else {
-                      showError('ID de conversación no válido');
-                    }
-                  }}
-                >
-                  {/* User Avatar */}
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src="" alt={conversation.user_name} />
-                    <AvatarFallback className="bg-blue-100 text-blue-600">
-                      {getInitials(conversation.user_name)}
-                    </AvatarFallback>
-                  </Avatar>
+              >
+                <Avatar className="h-10 w-10 border border-white shadow-sm">
+                  <AvatarImage src="" />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 font-medium">
+                    {getInitials(conversation.user_name)}
+                  </AvatarFallback>
+                </Avatar>
 
-                  {/* Conversation Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-gray-900 truncate">
-                            {conversation.user_name}
-                          </span>
-                          <span className="text-gray-400 text-sm">
-                            ({conversation.user_email})
-                          </span>
-                          {conversation.case_status === 'closed' && (
-                            <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600">
-                              Cerrado
-                            </Badge>
-                          )}
-                          {conversation.unread_count && conversation.unread_count > 0 && (
-                            <Badge variant="outline" className="text-xs border-red-300 text-red-600">
-                              {conversation.unread_count} sin leer
-                            </Badge>
-                          )}
-                        </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-900 truncate group-hover:text-primary transition-colors">
+                        {conversation.user_name}
+                      </span>
+                      {conversation.unread_count && conversation.unread_count > 0 && (
+                        <Badge variant="default" className="h-5 px-1.5 bg-red-500 hover:bg-red-600 border-none">
+                          {conversation.unread_count} new
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-400 font-medium whitespace-nowrap">
+                      {formatDate(conversation.last_message.created_at)}
+                    </span>
+                  </div>
 
-                        <p className="text-sm text-gray-600 mb-1 truncate">
-                          {conversation.last_message.is_from_admin ? 'Tú: ' : ''}
-                          {truncateContent(conversation.last_message.content)}
-                        </p>
+                  <div className="flex items-center justify-between gap-4">
+                    <p className={`text-sm truncate flex-1 ${conversation.unread_count ? 'text-gray-900 font-medium' : 'text-gray-500'
+                      }`}>
+                      {conversation.last_message.is_from_admin && <span className="text-primary font-medium">Tú: </span>}
+                      {truncateContent(conversation.last_message.content)}
+                    </p>
 
-                        <div className="flex items-center gap-3 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatDate(conversation.last_message.created_at)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MessageSquare className="h-3 w-3" />
-                            {conversation.message_count} mensajes
-                          </span>
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      {conversation.case_status === 'open' ? (
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 rounded-md">
+                          <CheckCircle className="h-3 w-3" /> Abierto
+                        </Badge>
+                      ) : conversation.case_status === 'closed' ? (
+                        <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 gap-1 rounded-md">
+                          <XCircle className="h-3 w-3" /> Cerrado
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 rounded-md">
+                          Resuelto
+                        </Badge>
+                      )}
 
-                      <div className="ml-4 flex flex-col items-end gap-2">
-                        {conversation.case_status === 'open' ? (
-                          <Badge variant="outline" className="text-green-600 border-green-300 flex items-center gap-1">
-                            <CheckCircle className="h-3 w-3" />
-                            Abierto
-                          </Badge>
-                        ) : conversation.case_status === 'closed' ? (
-                          <Badge variant="secondary" className="text-gray-600 flex items-center gap-1">
-                            <XCircle className="h-3 w-3" />
-                            Cerrado
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-blue-600 border-blue-300 flex items-center gap-1">
-                            Resuelto
-                          </Badge>
-                        )}
-
-                        {conversation.case_status === 'open' ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Acciones del Caso</DropdownMenuLabel>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  if (confirm(`¿Estás seguro de que quieres cerrar el caso con ${conversation.user_name}? Una vez cerrado, el usuario no podrá seguir chateando sobre este caso.`)) {
-                                    handleCloseCase(conversation.id, conversation.user_id);
-                                  }
-                                }}
-                                className="gap-2 text-orange-600 focus:text-orange-600"
-                                disabled={actionLoading === conversation.id}
-                              >
-                                <XCircle className="h-4 w-4" />
-                                {actionLoading === conversation.id ? 'Cerrando...' : 'Cerrar Caso'}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : conversation.case_status === 'closed' ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Acciones del Caso</DropdownMenuLabel>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  if (confirm(`¿Estás seguro de que quieres reabrir el caso con ${conversation.user_name}? El usuario podrá seguir chateando sobre este caso.`)) {
-                                    handleReopenCase(conversation.id, conversation.user_id);
-                                  }
-                                }}
-                                className="gap-2 text-green-600 focus:text-green-600"
-                                disabled={actionLoading === conversation.id}
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                                {actionLoading === conversation.id ? 'Reabriendo...' : 'Reabrir Caso'}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : null}
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 group-hover:text-gray-700">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          {conversation.case_status === 'open' ? (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                confirm(
+                                  'Cerrar Caso',
+                                  `¿Cerrar caso con ${conversation.user_name}? El usuario no podrá responder.`,
+                                  () => handleCloseCase(conversation.id, conversation.user_id),
+                                  { type: 'danger', confirmText: 'Cerrar Caso' }
+                                )
+                              }}
+                              className="gap-2 text-red-600 focus:text-red-700 cursor-pointer"
+                              disabled={actionLoading === conversation.id}
+                            >
+                              <XCircle className="h-4 w-4" />
+                              Cerrar Caso
+                            </DropdownMenuItem>
+                          ) : conversation.case_status === 'closed' ? (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                confirm(
+                                  'Reabrir Caso',
+                                  `¿Reabrir caso con ${conversation.user_name}?`,
+                                  () => handleReopenCase(conversation.id, conversation.user_id),
+                                  { type: 'info', confirmText: 'Reabrir' }
+                                )
+                              }}
+                              className="gap-2 text-green-600 focus:text-green-700 cursor-pointer"
+                              disabled={actionLoading === conversation.id}
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              Reabrir Caso
+                            </DropdownMenuItem>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
+          </div>
+        )}
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <p className="text-sm text-gray-500">
-                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredConversations.length)} de {filteredConversations.length} conversaciones
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Siguiente
-                    </Button>
-                  </div>
-                </div>
-              )}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 bg-white/30 backdrop-blur-sm border-t border-white/20">
+            <p className="text-xs text-gray-500">
+              Página {currentPage} de {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </div>
 
+      <ConfirmationDialogComponent />
     </div>
   )
 }

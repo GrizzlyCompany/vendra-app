@@ -47,9 +47,9 @@ serve(async (req) => {
 
     // Check if user has admin access
     const isAdmin = user.email === 'admin@vendra.com' ||
-                    user.email?.endsWith('@admin.com') ||
-                    user.email?.endsWith('@vendra.com') ||
-                    false
+      user.email?.endsWith('@admin.com') ||
+      user.email?.endsWith('@vendra.com') ||
+      false
 
     if (!isAdmin) {
       return new Response(
@@ -119,7 +119,7 @@ serve(async (req) => {
       console.error('Error closing case - Query 1:', updateError1)
       console.error('Error closing case - Query 2:', updateError2)
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'Failed to close case',
           details: `Query 1: ${updateError1.message}, Query 2: ${updateError2.message}`
         }),
@@ -128,6 +128,35 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
+    }
+
+    // Get the case_id from the most recent message in this conversation
+    const { data: latestMessage } = await supabaseClient
+      .from('messages')
+      .select('case_id')
+      .or(`and(sender_id.eq.${adminUserId},recipient_id.eq.${user_id}),and(sender_id.eq.${user_id},recipient_id.eq.${adminUserId})`)
+      .eq('conversation_type', 'user_to_admin')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    // Send closing message to user
+    const { error: closingMsgError } = await supabaseClient
+      .from('messages')
+      .insert({
+        sender_id: adminUserId,
+        recipient_id: user_id,
+        content: '✅ Tu caso ha sido resuelto y cerrado. Si tienes otra inquietud, puedes crear un nuevo reporte en la sección de Reportes. ¡Gracias por contactarnos!',
+        conversation_type: 'user_to_admin',
+        case_status: 'closed',
+        case_id: latestMessage?.case_id || null,
+        closed_at: new Date().toISOString(),
+        closed_by: adminUserId
+      })
+
+    if (closingMsgError) {
+      console.warn('Warning: Could not send closing message:', closingMsgError)
+      // Don't fail the request, just log the warning
     }
 
     // Combine results
@@ -153,7 +182,7 @@ serve(async (req) => {
     console.error('Error name:', error?.name)
     console.error('Error message:', error?.message)
     console.error('Error stack:', error?.stack)
-    
+
     // Try to get more details about the error
     let errorMessage = 'Unknown error'
     if (error instanceof Error) {
@@ -163,9 +192,9 @@ serve(async (req) => {
     } else if (error && typeof error === 'object') {
       errorMessage = JSON.stringify(error)
     }
-    
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Internal server error',
         details: errorMessage,
         name: error?.name,
