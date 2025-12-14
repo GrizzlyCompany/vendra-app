@@ -4,10 +4,9 @@ import { notFound, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState, use, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import {
   MapPin,
   CheckCircle,
@@ -19,12 +18,14 @@ import {
   Building,
   ChevronLeft,
   ChevronRight,
-  Share2
+  Share2,
+  Maximize2,
+  ArrowRight
 } from "lucide-react";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { useToastContext } from "@/components/ToastProvider";
 import { ShareMenu } from "@/components/ShareMenu";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic';
@@ -70,18 +71,12 @@ interface Owner {
 // Add this function to track project views
 const trackProjectView = async (projectId: string) => {
   try {
-    // Get current user session
     const { data: session } = await supabase.auth.getSession();
     const viewerId = session.session?.user?.id || null;
-
-    // Get client information
     const userAgent = navigator.userAgent;
     const referrer = document.referrer || null;
-
-    // Generate session ID (simple implementation)
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Insert view record
     const { error: viewError } = await supabase
       .from("project_views")
       .insert({
@@ -92,17 +87,8 @@ const trackProjectView = async (projectId: string) => {
         session_id: sessionId,
       });
 
-    if (viewError) {
-      console.error('Error tracking project view:', viewError);
-    } else {
-      // Increment view count using the database function
-      const { error: incrementError } = await supabase.rpc('increment_project_views', {
-        project_id: projectId
-      });
-
-      if (incrementError) {
-        console.error('Error incrementing project view count:', incrementError);
-      }
+    if (!viewError) {
+      await supabase.rpc('increment_project_views', { project_id: projectId });
     }
   } catch (error) {
     console.error('Error in trackProjectView:', error);
@@ -116,28 +102,21 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const [owner, setOwner] = useState<Owner | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('descripcion');
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [viewTracked, setViewTracked] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const viewTrackedRef = useRef(false);
   const router = useRouter();
-  const descriptionRef = useRef<HTMLDivElement>(null);
-  const specificationsRef = useRef<HTMLDivElement>(null);
-  const plansRef = useRef<HTMLDivElement>(null);
-  const locationRef = useRef<HTMLDivElement>(null);
   const { user: currentUser } = useAuth();
-  // Add a ref to ensure the function is only called once
   const trackProjectViewRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
         setLoading(true);
-
-        // Fetch project data
         const { data, error } = await supabase
           .from("projects")
-          .select("id,project_name,description_title,short_description,category,address,city_province,zone_sector,project_status,delivery_date,units_count,floors,land_size,built_areas,unit_types,size_range,price_range,quantity_per_type,amenities,images,promo_video,plans,unit_price_range,payment_methods,partner_bank,owner_id,created_at")
+          .select("*")
           .eq("id", id)
           .single();
 
@@ -148,10 +127,8 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
         setProject(data as Project);
 
-        // Track project view only once, using multiple safeguards
         if (!viewTracked && !viewTrackedRef.current) {
           viewTrackedRef.current = true;
-          // Use the ref to ensure the function is only called once even if there are rapid re-renders
           if (!trackProjectViewRef.current) {
             trackProjectViewRef.current = trackProjectView(id);
           }
@@ -159,7 +136,6 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
           setViewTracked(true);
         }
 
-        // Load constructor public profile
         try {
           const { data: pp } = await supabase
             .from("public_profiles")
@@ -180,53 +156,19 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     fetchProject();
   }, [id, viewTracked]);
 
-  const scrollToSection = (section: string) => {
-    setActiveTab(section);
-    let ref;
-    switch (section) {
-      case 'descripcion':
-        ref = descriptionRef;
-        break;
-      case 'especificaciones':
-        ref = specificationsRef;
-        break;
-      case 'planos':
-        ref = plansRef;
-        break;
-      case 'ubicacion':
-        ref = locationRef;
-        break;
-      default:
-        return;
-    }
-
-    if (ref.current) {
-      ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-  const handleShare = () => {
-    setShowShareMenu(true);
-  };
-
   if (loading) {
     return (
-      <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-10 mobile-bottom-safe">
-        <div className="container mx-auto max-w-6xl space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-              <Skeleton className="aspect-video w-full" />
-            </div>
-            <div className="md:col-span-1 space-y-4">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-          </div>
-          <div className="space-y-6">
-            <Skeleton className="h-40 w-full" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <main className="min-h-screen bg-background pb-safe-bottom">
+        <Skeleton className="h-[60vh] w-full bg-muted/50" />
+        <div className="container max-w-7xl mx-auto px-4 py-12 space-y-8">
+          <Skeleton className="h-12 w-2/3 max-w-xl" />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div className="lg:col-span-8 space-y-6">
               <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+            <div className="lg:col-span-4">
+              <Skeleton className="h-96 w-full rounded-3xl" />
             </div>
           </div>
         </div>
@@ -234,418 +176,270 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     );
   }
 
-  if (error) {
+  if (error || !project) {
     return (
-      <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-10 mobile-bottom-safe">
-        <div className="container mx-auto max-w-6xl">
-          <Card className="rounded-2xl border shadow-md">
-            <CardHeader>
-              <CardTitle className="font-serif text-xl text-red-500">Error</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-foreground">{error}</p>
-              <Button onClick={() => router.back()} className="mt-4">
-                Go Back
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    );
-  }
-
-  if (!project) {
-    notFound();
-    return null;
-  }
-
-  const images: string[] = project.images ?? [];
-  const title: string = project.project_name;
-  const location: string = project.city_province || project.address || "";
-
-  // Format price range with commas
-  const formatPrice = (price: string | null): string => {
-    if (!price) return "Consultar";
-
-    // Extract numbers from price string and format with commas
-    const numberMatch = price.match(/[\d,]+/);
-    if (numberMatch) {
-      const numberString = numberMatch[0].replace(/,/g, '');
-      const number = parseInt(numberString, 10);
-      if (!isNaN(number)) {
-        return price.replace(numberMatch[0], number.toLocaleString('en-US'));
-      }
-    }
-    return price;
-  };
-
-  const priceRange: string | null = project.unit_price_range ?? project.price_range ?? null;
-  const formattedPriceRange = formatPrice(priceRange);
-
-  // Image gallery component
-  const ImageGallery = () => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-
-    const nextImage = () => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
-    };
-
-    const prevImage = () => {
-      setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
-    };
-
-    if (images.length === 0) {
-      return (
-        <div className="bg-muted rounded-lg h-[300px] sm:h-[500px] flex items-center justify-center">
-          <span className="text-muted-foreground">No images available</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-8 sm:mb-12 h-[300px] sm:h-[500px]">
-        {/* Main image */}
-        <div className="col-span-2 row-span-2 relative">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={images[currentIndex]}
-            alt={"Main view of " + title}
-            className="w-full h-full object-cover rounded-lg shadow-lg"
-          />
-          {images.length > 1 && (
-            <>
-              <button
-                onClick={prevImage}
-                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-background/70 hover:bg-background rounded-full p-1.5 sm:p-2 shadow-md"
-                aria-label="Previous image"
-              >
-                <ChevronLeft className="h-4 w-4 sm:h-6 sm:w-6 text-foreground" />
-              </button>
-              <button
-                onClick={nextImage}
-                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-background/70 hover:bg-background rounded-full p-1.5 sm:p-2 shadow-md"
-                aria-label="Next image"
-              >
-                <ChevronRight className="h-4 w-4 sm:h-6 sm:w-6 text-foreground" />
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Thumbnails - hidden on mobile, shown on sm and up */}
-        <div className="hidden sm:grid sm:col-span-2 sm:grid-cols-2 sm:gap-2">
-          {images.slice(1, 5).map((img, index) => (
-            <div key={index} className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={img}
-                alt={"View " + (index + 2) + " of " + title}
-                className="w-full h-full object-cover rounded-lg shadow-lg"
-              />
-            </div>
-          ))}
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <p className="text-destructive font-serif text-xl">Error al cargar el proyecto</p>
+          <Button onClick={() => router.back()}>Volver</Button>
         </div>
       </div>
     );
-  };
+  }
+
+  const images = project.images ?? [];
+  const currentImage = images[activeImageIndex] || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop";
 
   return (
-    <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 sm:py-6 mobile-bottom-safe">
-      {/* Mobile Header - visible only on mobile/tablet */}
-      <DetailBackButton className="lg:hidden mb-4">
-        <div className="flex items-center justify-between w-full">
-          {/* Back Button */}
-          <Button
-            asChild
-            variant="ghost"
-            size="icon"
-            className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-8 h-8 border border-border/30 hover:border-border/50 transition-all duration-200"
-          >
+    <main className="min-h-screen bg-background pb-20 mobile-bottom-safe">
+
+      {/* Mobile Sticky Header */}
+      <DetailBackButton className="lg:hidden sticky top-0 bg-background/0 z-40 pt-safe-top transition-all duration-300">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Button asChild variant="secondary" size="icon" className="rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md text-white border-none shadow-lg w-10 h-10">
             <Link href="/projects">
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-5 h-5" />
             </Link>
           </Button>
-
-          {/* Center Title */}
-          <h1 className="text-base font-medium text-foreground truncate mx-2">
-            Proyecto
-          </h1>
-
-          {/* Share Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleShare}
-            className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-8 h-8 border border-border/30 hover:border-border/50 transition-all duration-200"
-          >
-            <Share2 className="w-4 h-4" />
+          <Button variant="secondary" size="icon" onClick={() => setShowShareMenu(true)} className="rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md text-white border-none shadow-lg w-10 h-10">
+            <Share2 className="w-5 h-5" />
           </Button>
         </div>
       </DetailBackButton>
 
-      {/* Desktop Back Button - visible only on desktop */}
-      <DetailBackButton className="hidden lg:block mb-4">
-        <Button
-          asChild
-          variant="ghost"
-          size="icon"
-          className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 w-8 h-8 border border-border/30 hover:border-border/50 transition-all duration-200"
-        >
+      {/* Desktop Navigation */}
+      <nav className="hidden lg:flex fixed top-4 left-6 z-50">
+        <Button asChild variant="outline" className="rounded-full bg-white/80 hover:bg-white backdrop-blur-md border shadow-sm px-6 gap-2">
           <Link href="/projects">
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4" /> Volver a Proyectos
           </Link>
         </Button>
-      </DetailBackButton>
+      </nav>
 
-      <div className="container mx-auto max-w-6xl">
-        {/* Project header */}
-        <div className="mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">{title}</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1 flex items-center">
-            <MapPin className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            {location}
-          </p>
+      {/* Hero Section - Immersive Gallery */}
+      <section className="relative h-[65vh] md:h-[75vh] w-full overflow-hidden bg-black/5 group">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeImageIndex}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7 }}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${currentImage})` }}
+          />
+        </AnimatePresence>
+
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30 pointer-events-none" />
+
+        {/* Gallery Controls */}
+        {images.length > 1 && (
+          <div className="absolute bottom-6 right-6 flex gap-2 z-20">
+            <Button
+              size="icon"
+              variant="outline"
+              className="rounded-full bg-black/20 text-white border-white/20 hover:bg-white hover:text-black backdrop-blur-md h-12 w-12 transition-all"
+              onClick={() => setActiveImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="outline"
+              className="rounded-full bg-black/20 text-white border-white/20 hover:bg-white hover:text-black backdrop-blur-md h-12 w-12 transition-all"
+              onClick={() => setActiveImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
+
+        {/* Hero Content */}
+        <div className="absolute bottom-0 left-0 p-6 md:p-12 md:pb-16 w-full max-w-5xl">
+          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {project.project_status && (
+                <Badge className="bg-primary/90 hover:bg-primary text-white border-none px-3 py-1 text-xs uppercase tracking-wider shadow-lg backdrop-blur-md">
+                  {project.project_status}
+                </Badge>
+              )}
+              {project.category && (
+                <Badge variant="outline" className="text-white border-white/40 bg-black/10 backdrop-blur-md px-3 py-1 text-xs uppercase tracking-wider">
+                  {project.category}
+                </Badge>
+              )}
+            </div>
+            <h1 className="font-serif text-4xl md:text-5xl lg:text-7xl font-bold text-white text-shadow-lg leading-tight mb-2">
+              {project.project_name}
+            </h1>
+            <p className="text-white/90 text-lg md:text-xl font-light flex items-center gap-2 max-w-2xl text-shadow-sm">
+              <MapPin className="w-5 h-5 text-primary-foreground" />
+              {project.city_province || project.address}
+            </p>
+          </motion.div>
         </div>
+      </section>
 
-        {/* Image gallery */}
-        <div className="relative z-0">
-          <ImageGallery />
-        </div>
+      {/* Main Content Layout */}
+      <div className="container max-w-[1600px] mx-auto px-4 md:px-8 -mt-8 md:-mt-12 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
 
-        {/* Add more spacing to ensure tabs are visible and not covered by gallery */}
-        <div className="pt-6"></div>
+          {/* Detailed Content (Left Col) */}
+          <div className="lg:col-span-8 space-y-12 pb-12">
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Main content */}
-          <div className="lg:col-span-2">
-            {/* Tabs navigation - improved for mobile */}
-            <div className="border-b border-border mb-4 sm:mb-6 mt-3 sm:mt-4 overflow-x-auto">
-              <nav aria-label="Tabs" className="flex space-x-3 sm:space-x-6 min-w-max">
-                <button
-                  onClick={() => scrollToSection('descripcion')}
-                  className={"whitespace-nowrap py-1.5 sm:py-2 px-1 border-b-2 font-medium text-xs sm:text-sm " + (activeTab === 'descripcion' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}
-                >
-                  Descripción
-                </button>
-                <button
-                  onClick={() => scrollToSection('especificaciones')}
-                  className={"whitespace-nowrap py-1.5 sm:py-2 px-1 border-b-2 font-medium text-xs sm:text-sm " + (activeTab === 'especificaciones' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}
-                >
-                  Especificaciones
-                </button>
-                <button
-                  onClick={() => scrollToSection('planos')}
-                  className={"whitespace-nowrap py-1.5 sm:py-2 px-1 border-b-2 font-medium text-xs sm:text-sm " + (activeTab === 'planos' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}
-                >
-                  Planos
-                </button>
-                <button
-                  onClick={() => scrollToSection('ubicacion')}
-                  className={"whitespace-nowrap py-1.5 sm:py-2 px-1 border-b-2 font-medium text-xs sm:text-sm " + (activeTab === 'ubicacion' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}
-                >
-                  Ubicación
-                </button>
-              </nav>
+            {/* Intro Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-white/50 dark:bg-black/20 backdrop-blur-xl border border-white/40 rounded-3xl shadow-lg">
+              <div className="text-center p-2 border-r border-border/50 last:border-0">
+                <span className="block text-2xl font-bold text-primary">{project.units_count || "—"}</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Unidades</span>
+              </div>
+              <div className="text-center p-2 border-r border-border/50 last:border-0">
+                <span className="block text-2xl font-bold text-primary">{project.floors || "—"}</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Niveles</span>
+              </div>
+              <div className="text-center p-2 border-r border-border/50 last:border-0">
+                <span className="block text-2xl font-bold text-primary">{project.land_size ? `${project.land_size}m²` : "—"}</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Terreno</span>
+              </div>
+              <div className="text-center p-2">
+                <span className="block text-2xl font-bold text-primary">{project.built_areas ? `${project.built_areas}m²` : "—"}</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Construcción</span>
+              </div>
             </div>
 
-            {/* Description section */}
-            <div ref={descriptionRef} className="space-y-4 sm:space-y-6" id="descripcion">
-              <h2 className="text-lg sm:text-xl font-bold text-foreground">{project.description_title || "Descripción del Proyecto"}</h2>
-              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                {project.short_description || "Sin descripción."}
+            {/* Editorial Description */}
+            <section className="prose prose-lg dark:prose-invert max-w-none">
+              <h2 className="font-serif text-3xl font-bold text-foreground mb-4">{project.description_title || "Sobre el Proyecto"}</h2>
+              <p className="text-muted-foreground leading-relaxed text-lg font-light">
+                {project.short_description || "Descubre un nuevo estándar de vida en este exclusivo desarrollo inmobiliario, diseñado pensando en cada detalle para ofrecer el máximo confort y estilo de vida."}
               </p>
-            </div>
+            </section>
 
-            {/* Specifications section */}
-            <div ref={specificationsRef} className="space-y-4 sm:space-y-6 mt-6 sm:mt-8" id="especificaciones">
-              <h2 className="text-lg sm:text-xl font-bold text-foreground">Especificaciones del Proyecto</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                {project.amenities && project.amenities.length > 0 ? (
-                  project.amenities.map((amenity, index) => (
-                    <div key={index} className="flex items-start space-x-2 sm:space-x-3">
-                      <CheckCircle className="text-primary h-4 w-4 sm:h-5 sm:w-5 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <h3 className="font-medium text-sm sm:text-base">{amenity}</h3>
-                        <p className="text-xs text-muted-foreground">Característica premium del proyecto</p>
-                      </div>
+            {/* Amenities Grid */}
+            <section>
+              <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-primary" />
+                Amenidades Exclusivas
+              </h3>
+              {project.amenities && project.amenities.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {project.amenities.map((amenity, i) => (
+                    <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-secondary/5 border border-transparent hover:border-primary/20 transition-all">
+                      <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                      <span className="text-foreground font-medium">{amenity}</span>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground">No hay especificaciones disponibles.</p>
-                )}
-              </div>
-            </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground italic">Información de amenidades pendiente.</p>
+              )}
+            </section>
 
-            {/* Plans section */}
-            <div ref={plansRef} className="space-y-4 sm:space-y-6 mt-6 sm:mt-8" id="planos">
-              <h2 className="text-lg sm:text-xl font-bold text-foreground">Planos Interactivos</h2>
-              <div className="relative w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                {project.plans && project.plans.length > 0 ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={project.plans[0]}
-                      alt="Plano del proyecto"
-                      className="w-full h-full object-contain"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                      <Button
-                        className="bg-primary text-primary-foreground px-3 py-1.5 sm:px-4 sm:py-2 rounded-md font-medium text-sm sm:text-base flex items-center space-x-1 hover:bg-primary/90"
-                        onClick={() => window.open(project.plans[0], '_blank')}
-                      >
-                        <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        <span className="text-xs sm:text-sm">Explorar plano interactivo</span>
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-muted-foreground text-sm">No hay planos disponibles.</div>
-                )}
-              </div>
-            </div>
-
-            {/* Location section */}
-            <div ref={locationRef} className="space-y-4 sm:space-y-6 mt-6 sm:mt-8" id="ubicacion">
-              <h2 className="text-lg sm:text-xl font-bold text-foreground">Ubicación del Proyecto</h2>
-              {/* Full location details */}
-              <div className="space-y-2">
-                {project.address && (
-                  <p className="text-sm text-foreground">
-                    <span className="font-medium">Dirección:</span> {project.address}
-                  </p>
-                )}
-                {project.zone_sector && (
-                  <p className="text-sm text-foreground">
-                    <span className="font-medium">Sector/Zona:</span> {project.zone_sector}
-                  </p>
-                )}
-                {project.city_province && (
-                  <p className="text-sm text-foreground">
-                    <span className="font-medium">Ciudad/Provincia:</span> {project.city_province}
-                  </p>
-                )}
-              </div>
-              <div className="w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden">
-                {/* Map placeholder - in a real app, you would integrate with Google Maps or similar */}
-                <div className="w-full h-full flex items-center justify-center bg-muted">
-                  <div className="text-center">
-                    <MapPin className="h-6 w-6 sm:h-8 sm:w-8 text-primary mx-auto mb-1 sm:mb-2" />
-                    <p className="text-muted-foreground text-xs sm:text-sm">Mapa de ubicación</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {project.address || project.zone_sector || project.city_province || "Ubicación no especificada"}
-                    </p>
+            {/* Plans preview */}
+            {project.plans && project.plans.length > 0 && (
+              <section>
+                <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
+                  <Building className="w-5 h-5 text-primary" />
+                  Planos Disponibles
+                </h3>
+                <div className="rounded-2xl overflow-hidden border border-border relative group cursor-pointer" onClick={() => window.open(project.plans?.[0], '_blank')}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={project.plans[0]} alt="Plano" className="w-full h-64 object-contain bg-white/50" />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button variant="secondary" className="gap-2">
+                      <Download className="w-4 h-4" /> Ver Plano Completo
+                    </Button>
                   </div>
                 </div>
+              </section>
+            )}
+
+            {/* Location Map Placeholder */}
+            {project.address && (
+              <section>
+                <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  Ubicación Prestigiosa
+                </h3>
+                <div className="h-64 w-full bg-muted/50 rounded-3xl border flex items-center justify-center relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=Santo+Domingo&zoom=13&size=600x300&sensor=false')] bg-cover opacity-50 grayscale group-hover:grayscale-0 transition-all duration-500" />
+                  <div className="relative z-10 text-center bg-background/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/20">
+                    <MapPin className="w-8 h-8 text-primary mx-auto mb-2" />
+                    <p className="font-medium">{project.address}</p>
+                    <p className="text-sm text-muted-foreground">{project.city_province}</p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+          </div>
+
+          {/* Sticky Sidebar (Right Col) */}
+          <div className="lg:col-span-4 relative">
+            <div className="sticky top-24 space-y-6">
+
+              {/* Price & Action Card */}
+              <div className="bg-background/80 dark:bg-black/40 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-[2rem] p-6 md:p-8 overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+
+                <div className="relative z-10">
+                  <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">Inversión desde</p>
+                  <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-6">
+                    {project.unit_price_range ? `$${project.unit_price_range}` : "Consultar Precio"}
+                  </h2>
+
+                  <div className="space-y-3">
+                    <Button className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all gap-2">
+                      <Calendar className="w-5 h-5" /> Agendar Visita Privada
+                    </Button>
+                    <Button variant="outline" className="w-full h-12 rounded-xl border-primary/20 hover:bg-primary/5 text-primary gap-2"
+                      onClick={() => project.plans?.[0] && window.open(project.plans[0], '_blank')}
+                      disabled={!project.plans?.length}
+                    >
+                      <Download className="w-5 h-5" /> Descargar Brochure
+                    </Button>
+                  </div>
+
+                  <hr className="my-6 border-border/50" />
+
+                  {/* Developer Info Mini */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-primary font-bold text-lg">
+                      {owner?.name?.charAt(0) || "C"}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground uppercase">Desarrollado por</p>
+                      <p className="font-medium truncate">{owner?.name || "Empresa Constructora"}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary/10 text-primary">
+                      <ArrowRight className="w-5 h-5" />
+                    </Button>
+                  </div>
+
+                </div>
               </div>
+
+              {/* Contact Quick Links */}
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 rounded-2xl border-white/20 bg-white/40 hover:bg-white/60 shadow-sm h-full">
+                  <Phone className="w-6 h-6 text-primary" />
+                  <span className="text-xs font-medium">Llamar</span>
+                </Button>
+                <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 rounded-2xl border-white/20 bg-white/40 hover:bg-white/60 shadow-sm h-full">
+                  <Mail className="w-6 h-6 text-primary" />
+                  <span className="text-xs font-medium">Email</span>
+                </Button>
+              </div>
+
             </div>
           </div>
 
-          {/* Sidebar - adjusted for mobile */}
-          <div className="lg:col-span-1">
-            <div className="space-y-4 sm:space-y-6 z-10 relative">
-              {/* Pricing card */}
-              <Card className="p-4 sm:p-6 rounded-lg shadow-md border">
-                <div className="mb-3 sm:mb-4">
-                  <p className="text-muted-foreground text-xs sm:text-sm">Precios desde</p>
-                  <p className="text-lg sm:text-2xl font-bold text-primary">{formattedPriceRange}</p>
-                  <span className="text-xs bg-primary/20 text-primary font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full mt-1.5 inline-block">
-                    En Venta
-                  </span>
-                </div>
-                <div className="space-y-2 sm:space-y-3">
-                  <Button className="w-full bg-primary text-primary-foreground py-1.5 sm:py-2 rounded-md font-medium text-sm sm:text-base flex items-center justify-center space-x-1.5 hover:bg-primary/90">
-                    <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span>Programar Visita</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full border-primary text-primary py-1.5 sm:py-2 rounded-md font-medium text-sm sm:text-base flex items-center justify-center space-x-1.5 hover:bg-primary/10"
-                    onClick={() => project.plans && project.plans.length > 0 && window.open(project.plans[0], '_blank')}
-                    disabled={!project.plans || project.plans.length === 0}
-                  >
-                    <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span>Descargar Folleto</span>
-                  </Button>
-                </div>
-              </Card>
-
-              {/* Developer card */}
-              <Card className="p-4 sm:p-6 rounded-lg shadow-md border">
-                <h3 className="text-base sm:text-lg font-bold mb-3">Desarrollado por</h3>
-                <div className="flex items-center space-x-2.5 sm:space-x-3">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-muted rounded-full flex items-center justify-center">
-                    <Building className="text-primary h-5 w-5 sm:h-6 sm:w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm sm:text-base font-semibold text-foreground">
-                      {owner?.name || "Constructora"}
-                    </p>
-                    {owner?.role === 'empresa_constructora' ? (
-                      currentUser && owner.id === currentUser.id ? (
-                        <Link href="/dashboard" className="text-primary hover:underline text-xs sm:text-sm">
-                          Ver mi perfil de empresa
-                        </Link>
-                      ) : (
-                        <span className="text-xs sm:text-sm text-muted-foreground">
-                          Empresa constructora
-                        </span>
-                      )
-                    ) : (
-                      <Link href={owner ? `/profile/${owner.id}` : '#'} className="text-primary hover:underline text-xs sm:text-sm">
-                        Ver perfil de la empresa
-                      </Link>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
-                  <p className="flex items-center text-muted-foreground text-xs sm:text-sm">
-                    <Phone className="mr-1.5 sm:mr-2 text-primary h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    (809) 555-1234
-                  </p>
-                  <p className="flex items-center text-muted-foreground text-xs sm:text-sm">
-                    <Mail className="mr-1.5 sm:mr-2 text-primary h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    {owner?.email || "info@constructora.com"}
-                  </p>
-                  <p className="flex items-center text-muted-foreground text-xs sm:text-sm">
-                    <Globe className="mr-1.5 sm:mr-2 text-primary h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    www.constructora.com
-                  </p>
-                </div>
-              </Card>
-
-              {/* Financial information card */}
-              <Card className="p-4 sm:p-6 rounded-lg shadow-md border">
-                <h3 className="text-base sm:text-lg font-bold mb-3">Información Financiera</h3>
-                <div className="space-y-3 sm:space-y-4">
-                  {project.payment_methods ? (
-                    <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">Formas de Pago</p>
-                      <p className="text-sm sm:text-base text-foreground">{project.payment_methods}</p>
-                    </div>
-                  ) : null}
-                  {project.partner_bank ? (
-                    <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">Banco Aliado</p>
-                      <p className="text-sm sm:text-base text-foreground">{project.partner_bank}</p>
-                    </div>
-                  ) : null}
-                  {!project.payment_methods && !project.partner_bank && (
-                    <p className="text-sm text-muted-foreground">No hay información financiera disponible.</p>
-                  )}
-                </div>
-              </Card>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Share Menu */}
-      {project && (
-        <ShareMenu
-          project={project}
-          isOpen={showShareMenu}
-          onClose={() => setShowShareMenu(false)}
-        />
+      {showShareMenu && project && (
+        <ShareMenu project={project} isOpen={showShareMenu} onClose={() => setShowShareMenu(false)} />
       )}
     </main>
   );

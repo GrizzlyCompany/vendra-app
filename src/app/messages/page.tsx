@@ -797,43 +797,50 @@ function MessagesContent() {
 
       {/* Mobile version with full-screen experience */}
       <div className="lg:hidden w-full relative [&_*]:!touch-manipulation flex flex-col h-[100dvh] overflow-hidden bg-background">
-        <AnimatePresence mode="wait">
-          {(!targetId && !loading) || (isMobileView && !targetId) ? (
-            <div className="h-full p-0 pt-[env(safe-area-inset-top)]">
-              <ConversationList
-                key="conversation-list"
-                conversations={conversations}
-                search={search}
-                setSearch={setSearch}
-                showSearchBar={showSearchBar}
-                setShowSearchBar={setShowSearchBar}
-                openConversation={openConversation}
-                targetId={targetId}
-              />
+        {(!targetId && !loading) || (isMobileView && !targetId) ? (
+          <div className="h-full p-0 pt-[env(safe-area-inset-top)]">
+            <ConversationList
+              key="conversation-list"
+              conversations={conversations}
+              search={search}
+              setSearch={setSearch}
+              showSearchBar={showSearchBar}
+              setShowSearchBar={setShowSearchBar}
+              openConversation={openConversation}
+              targetId={targetId}
+            />
+          </div>
+        ) : targetId && !loading ? (
+          <div className="h-full p-0">
+            <ChatView
+              key="chat-view"
+              target={target}
+              messages={messages}
+              me={me}
+              text={text}
+              setText={setText}
+              setIsInputFocused={setIsInputFocused}
+              onSend={onSend}
+              canSend={canSend && !isClosedConversation}
+              goBackToConversations={goBackToConversations}
+              listRef={listRef}
+              isClosedConversation={isClosedConversation}
+            />
+          </div>
+        ) : loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : error ? (
+          <div className="h-full w-full flex flex-col items-center justify-center p-6 text-center">
+            <div className="h-16 w-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="h-8 w-8 text-red-500" />
             </div>
-          ) : targetId && !loading ? (
-            <div className="h-full p-0">
-              <ChatView
-                key="chat-view"
-                target={target}
-                messages={messages}
-                me={me}
-                text={text}
-                setText={setText}
-                setIsInputFocused={setIsInputFocused}
-                onSend={onSend}
-                canSend={canSend && !isClosedConversation}
-                goBackToConversations={goBackToConversations}
-                listRef={listRef}
-                isClosedConversation={isClosedConversation}
-              />
-            </div>
-          ) : loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : null}
-        </AnimatePresence>
+            <h3 className="text-xl font-bold text-foreground mb-2">Algo salió mal</h3>
+            <p className="text-muted-foreground mb-6 max-w-xs">{error}</p>
+            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+          </div>
+        ) : null}
       </div>
     </main>
   );

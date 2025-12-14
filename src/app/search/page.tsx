@@ -25,7 +25,7 @@ function SearchContent() {
   const [error, setError] = useState<string | null>(null);
 
   const [properties, setProperties] = useState<Property[]>([]);
-  const [agents, setAgents] = useState<Array<{ id: string; name: string | null; email: string | null; role: string | null }>>([]);
+  const [agents, setAgents] = useState<Array<{ id: string; name: string | null; email: string | null; role: string | null; avatar_url: string | null }>>([]);
 
   // Initialize from URL
   useEffect(() => {
@@ -93,7 +93,7 @@ function SearchContent() {
             const like = `%${q.trim()}%`;
             const { data: aData, error: aErr } = await supabase
               .from("public_profiles")
-              .select("id,name,email,role")
+              .select("id,name,email,role,avatar_url")
               .or(`name.ilike.${like},email.ilike.${like}`)
               .limit(20);
             if (!active) return;
@@ -155,7 +155,7 @@ function SearchContent() {
       <div className="container mx-auto max-w-7xl space-y-8">
 
         {/* Type Toggle Pills */}
-        <div className="flex justify-center -mb-4 z-20 relative">
+        <div className="flex justify-center -mb-4 z-30 relative">
           <div className="bg-background/80 backdrop-blur-md rounded-full shadow-sm border border-border/50 p-1 flex gap-1">
             <button
               onClick={() => { setSearchType("property"); const p = new URLSearchParams(window.location.search); p.set("type", "property"); window.history.replaceState({}, "", `?${p}`); }}
@@ -271,8 +271,12 @@ function SearchContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {agents.map(a => (
                       <div key={a.id} onClick={() => router.push(`/profile/${a.id}`)} className="bg-background border border-border/50 rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer group">
-                        <div className="size-12 rounded-full bg-secondary/20 flex items-center justify-center text-primary font-bold text-lg group-hover:scale-110 transition-transform">
-                          {a.name?.[0]?.toUpperCase() || <User className="size-5" />}
+                        <div className="size-12 rounded-full bg-secondary/20 flex items-center justify-center text-primary font-bold text-lg group-hover:scale-110 transition-transform overflow-hidden relative">
+                          {a.avatar_url ? (
+                            <img src={a.avatar_url} alt={a.name || "Agent"} className="h-full w-full object-cover" />
+                          ) : (
+                            a.name?.[0]?.toUpperCase() || <User className="size-5" />
+                          )}
                         </div>
                         <div className="min-w-0">
                           <h3 className="font-serif font-bold text-lg truncate group-hover:text-primary transition-colors">{a.name || "Agente"}</h3>

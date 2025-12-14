@@ -32,11 +32,7 @@ export function ConversationList({
   targetId,
 }: ConversationListProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
+    <div
       className="w-full h-full flex flex-col bg-transparent lg:bg-white/50 lg:backdrop-blur-xl lg:rounded-[2rem] lg:border lg:border-white/40 lg:shadow-xl overflow-hidden"
     >
       {/* Search Header */}
@@ -140,6 +136,6 @@ export function ConversationList({
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }

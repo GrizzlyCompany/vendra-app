@@ -118,7 +118,7 @@ function MainContent() {
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
       {/* Header with logo and VENDRA text centered - visible only on mobile/tablet */}
-      <header className="lg:hidden mb-6 py-4 sticky top-0 bg-background z-10 pt-4">
+      <header className="lg:hidden mb-6 py-4 sticky top-0 bg-background z-40 pt-4">
         <div className="container mx-auto flex justify-center items-center">
           <Link href="/" className="flex items-center gap-2 text-primary" aria-label="Ir al inicio">
             <Image
