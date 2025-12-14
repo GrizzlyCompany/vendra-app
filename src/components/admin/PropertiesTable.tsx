@@ -33,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { CustomSelect } from '@/components/ui/custom-select'
 
 interface AdminProperty {
   id: string;
@@ -186,11 +187,11 @@ export function PropertiesTable({ onRefreshStats }: PropertiesTableProps) {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'inactive': return 'bg-yellow-100 text-yellow-800'
-      case 'sold': return 'bg-blue-100 text-blue-800'
-      case 'rented': return 'bg-purple-100 text-purple-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'active': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200'
+      case 'inactive': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200'
+      case 'sold': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200'
+      case 'rented': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200'
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400 border-gray-200'
     }
   }
 
@@ -217,25 +218,28 @@ export function PropertiesTable({ onRefreshStats }: PropertiesTableProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-white/20 shadow-sm">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestión de Propiedades</h2>
-          <p className="text-gray-600">Administra todas las propiedades del portal</p>
+          <h2 className="text-2xl font-serif font-bold text-gray-900">Gestión de Propiedades</h2>
+          <div className="flex items-center gap-2 mt-1">
+            <Badge variant="secondary" className="bg-white/80">{filteredProperties.length} propiedades</Badge>
+            <p className="text-sm text-gray-500">Administración general</p>
+          </div>
         </div>
-        <Button onClick={fetchProperties} variant="outline">
+        <Button onClick={fetchProperties} variant="outline" className="bg-white/50 hover:bg-white shadow-sm">
           <Filter className="h-4 w-4 mr-2" />
-          Actualizar
+          Actualizar Lista
         </Button>
       </div>
 
       {/* Error State */}
       {error && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-200 bg-red-50/50 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <AlertCircle className="h-5 w-5 text-red-500" />
               <div className="flex-1">
-                <h3 className="font-semibold text-red-800">Error de carga</h3>
+                <h3 className="font-semibold text-red-800">Error de sincronización</h3>
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
               <Button
@@ -251,351 +255,307 @@ export function PropertiesTable({ onRefreshStats }: PropertiesTableProps) {
         </Card>
       )}
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros y Búsqueda
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="lg:col-span-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Buscar por título, ubicación o agente..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+      {/* Filters (Glass Bar) */}
+      <div className="bg-white/70 backdrop-blur-xl p-4 rounded-xl border border-white/40 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+          <Filter className="h-4 w-4" />
+          <span>Filtros Avanzados</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="lg:col-span-2">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-primary transition-colors" />
+              <Input
+                placeholder="Buscar por título, ubicación o agente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-white/50 border-gray-200 focus:bg-white transition-all duration-300"
+              />
             </div>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Filtrar por estado"
-            >
-              <option value="all">Todos los estados</option>
-              {uniqueStatuses.map(status => (
-                <option key={status} value={status}>
-                  {getStatusText(status)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Filtrar por tipo"
-            >
-              <option value="all">Todos los tipos</option>
-              {uniqueTypes.map(type => (
-                <option key={type || 'null'} value={type || 'null'}>
-                  {type || 'N/A'}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={agentFilter}
-              onChange={(e) => setAgentFilter(e.target.value)}
-              className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Filtrar por agente"
-            >
-              <option value="all">Todos los agentes</option>
-              {uniqueAgents.map(agent => (
-                <option key={agent || 'null'} value={agent || 'null'}>
-                  {agent || 'Sin agente'}
-                </option>
-              ))}
-            </select>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Properties Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Propiedades ({filteredProperties.length})</CardTitle>
-            <Badge variant="outline">
-              Página {currentPage} de {totalPages || 1}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
-                  <Skeleton className="h-12 w-12 rounded-md" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="h-6 w-16" />
-                    <Skeleton className="h-4 w-12" />
-                  </div>
+          <CustomSelect
+            icon={Filter}
+            label="Estado"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: 'all', label: 'Todos los estados' },
+              ...uniqueStatuses.map(s => ({ value: s, label: getStatusText(s) }))
+            ]}
+          />
+
+          <CustomSelect
+            icon={Home}
+            label="Tipo"
+            value={typeFilter}
+            onChange={setTypeFilter}
+            options={[
+              { value: 'all', label: 'Todos los tipos' },
+              ...uniqueTypes.map(t => ({ value: t || 'null', label: t || 'N/A' }))
+            ]}
+          />
+
+          <CustomSelect
+            icon={User}
+            label="Agente"
+            value={agentFilter}
+            onChange={setAgentFilter}
+            options={[
+              { value: 'all', label: 'Todos los agentes' },
+              ...uniqueAgents.map(a => ({ value: a || 'null', label: a || 'Sin agente' }))
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* Properties List */}
+      <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-xl overflow-hidden shadow-sm">
+        {loading ? (
+          <div className="p-4 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 p-4 border rounded-lg bg-white/50">
+                <Skeleton className="h-12 w-12 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-3 w-1/4" />
                 </div>
-              ))}
+                <Skeleton className="h-8 w-24 rounded-full" />
+              </div>
+            ))}
+          </div>
+        ) : paginatedProperties.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="h-20 w-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Home className="h-10 w-10 text-gray-400" />
             </div>
-          ) : paginatedProperties.length === 0 ? (
-            <div className="text-center py-8">
-              <Home className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">
-                {properties.length === 0
-                  ? 'No hay propiedades registradas'
-                  : 'No se encontraron propiedades con los filtros aplicados'
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {paginatedProperties.map((property) => (
-                <div
-                  key={property.id}
-                  className="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  {/* Property Image */}
-                  <div className="h-12 w-12 bg-gray-200 rounded-md overflow-hidden flex-shrink-0">
-                    {property.images && property.images.length > 0 ? (
-                      <img
-                        src={property.images[0]}
-                        alt={property.title}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-gray-300 flex items-center justify-center">
-                        <Home className="h-6 w-6 text-gray-500" />
-                      </div>
-                    )}
-                  </div>
+            <h3 className="text-lg font-medium text-gray-900">No se encontraron propiedades</h3>
+            <p className="text-gray-500 max-w-sm mx-auto mt-2">
+              {properties.length === 0
+                ? 'No hay propiedades registradas en el sistema.'
+                : 'Intenta ajustar los filtros de búsqueda para ver más resultados.'
+              }
+            </p>
+            <Button
+              variant="outline"
+              className="mt-6"
+              onClick={() => {
+                setSearchTerm('')
+                setStatusFilter('all')
+                setTypeFilter('all')
+                setAgentFilter('all')
+              }}
+            >
+              Limpiar Filtros
+            </Button>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {paginatedProperties.map((property) => (
+              <div
+                key={property.id}
+                className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 hover:bg-white/60 transition-all duration-200"
+              >
+                {/* Property Image */}
+                <div className="h-16 w-16 sm:h-14 sm:w-14 bg-gray-200 rounded-xl overflow-hidden flex-shrink-0 shadow-sm border border-gray-100 group-hover:scale-105 transition-transform duration-300">
+                  {property.images && property.images.length > 0 ? (
+                    <img
+                      src={property.images[0]}
+                      alt={property.title}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+                      <Home className="h-6 w-6 text-gray-300" />
+                    </div>
+                  )}
+                </div>
 
-                  {/* Property Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 truncate">
-                          {property.title}
-                        </h3>
-                        <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
-                          <MapPin className="h-3 w-3" />
-                          <span className="truncate">
-                            {property.location}
-                            {property.address && ` • ${property.address}`}
-                          </span>
+                {/* Property Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate group-hover:text-primary transition-colors">
+                        {property.title}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 mt-1">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="truncate max-w-[200px]">{property.location}</span>
                         </div>
-                        {property.agent_name && (
-                          <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
-                            <User className="h-3 w-3" />
-                            <span>Agente: {property.agent_name}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="ml-4 text-right">
-                        <p className="font-semibold text-gray-900">
-                          {formatCurrency(property.price, property.currency)}
-                        </p>
-                        <Badge className={getStatusColor(property.status)} variant="secondary">
-                          {getStatusText(property.status)}
-                        </Badge>
                         {property.type && (
-                          <p className="text-xs text-gray-500 mt-1">{property.type}</p>
+                          <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{property.type}</span>
                         )}
+                        <span className="text-gray-300 hidden sm:inline">•</span>
+                        <span className="font-medium text-gray-700">{formatCurrency(property.price, property.currency)}</span>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem
-                        onClick={() => handleViewProperty(property)}
-                        className="gap-2"
-                      >
-                        <Eye className="h-4 w-4" />
-                        Ver detalles
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleEditProperty(property.id)}
-                        className="gap-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => {
-                          confirm(
-                            `Eliminar "${property.title}"`,
-                            `¿Estás seguro de que quieres eliminar esta propiedad? Esta acción no se puede deshacer.`,
-                            () => handleDeleteProperty(property.id),
-                            {
-                              confirmText: 'Eliminar',
-                              confirmVariant: 'destructive',
-                              type: 'danger'
-                            }
-                          )
-                        }}
-                        className="gap-2 text-red-600 focus:text-red-600"
-                        disabled={deleteLoading === property.id}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
+                    <div className="flex items-center gap-3">
+                      {property.agent_name ? (
+                        <div className="hidden md:flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-full border border-gray-100">
+                          <User className="h-3 w-3" />
+                          <span className="truncate max-w-[100px]">{property.agent_name}</span>
+                        </div>
+                      ) : (
+                        <span className="hidden md:inline-block text-xs text-gray-400 italic">Sin agente</span>
+                      )}
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <p className="text-sm text-gray-500">
-                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredProperties.length)} de {filteredProperties.length} propiedades
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Siguiente
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+                      <Badge className={`${getStatusColor(property.status)} border shadow-sm px-2.5`}>
+                        {getStatusText(property.status)}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
-              )}
+
+                {/* Actions */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-900">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={() => handleViewProperty(property)}
+                      className="gap-2 cursor-pointer"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Ver detalles
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleEditProperty(property.id)}
+                      className="gap-2 cursor-pointer"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        confirm(
+                          `Eliminar "${property.title}"`,
+                          `¿Estás seguro de que quieres eliminar esta propiedad? Esta acción no se puede deshacer.`,
+                          () => handleDeleteProperty(property.id),
+                          {
+                            confirmText: 'Eliminar',
+                            confirmVariant: 'destructive',
+                            type: 'danger'
+                          }
+                        )
+                      }}
+                      className="gap-2 text-red-600 focus:text-red-600 cursor-pointer"
+                      disabled={deleteLoading === property.id}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar Propiedad
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 bg-white/30 backdrop-blur-sm border-t border-white/20">
+            <p className="text-xs text-gray-500">
+              Página {currentPage} de {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="h-8 w-8 p-0 rounded-full"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 p-0 rounded-full"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </div>
 
       {/* Property Details Modal */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-xl border-white/20">
           <DialogHeader>
-            <DialogTitle>Detalles de Propiedad</DialogTitle>
+            <DialogTitle className="font-serif text-xl">Detalles de Propiedad</DialogTitle>
             <DialogDescription>
-              Información completa de la propiedad seleccionada
+              ID: {selectedProperty?.id}
             </DialogDescription>
           </DialogHeader>
 
           {selectedProperty && (
             <div className="space-y-6">
-              {/* Images */}
+              {/* Images Carousel Style */}
               {selectedProperty.images && selectedProperty.images.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {selectedProperty.images.slice(0, 4).map((image, index) => (
+                  <div className="col-span-2 row-span-2">
+                    <img
+                      src={selectedProperty.images[0]}
+                      alt="Main"
+                      className="w-full h-full object-cover rounded-xl shadow-sm hover:opacity-90 transition-opacity"
+                    />
+                  </div>
+                  {selectedProperty.images.slice(1, 5).map((image, index) => (
                     <img
                       key={index}
                       src={image}
-                      alt={`${selectedProperty.title} ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-md"
+                      alt={`Gallery ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-xl shadow-sm hover:opacity-90 transition-opacity"
                     />
                   ))}
                 </div>
               )}
 
-              {/* Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="font-medium text-sm text-gray-600">Título</label>
-                    <p className="text-lg font-semibold">{selectedProperty.title}</p>
-                  </div>
+              {/* Verified Badge */}
+              <div className="flex items-center justify-between">
+                <Badge className={`${getStatusColor(selectedProperty.status)} px-3 py-1 text-sm`}>
+                  {getStatusText(selectedProperty.status)}
+                </Badge>
+                <span className="text-2xl font-bold font-serif text-primary">
+                  {formatCurrency(selectedProperty.price, selectedProperty.currency)}
+                </span>
+              </div>
 
-                  <div>
-                    <label className="font-medium text-sm text-gray-600">Precio</label>
-                    <p className="text-lg font-semibold text-blue-600">
-                      {formatCurrency(selectedProperty.price, selectedProperty.currency)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="font-medium text-sm text-gray-600">Estado</label>
-                    <div className="mt-1">
-                      <Badge className={getStatusColor(selectedProperty.status)} variant="secondary">
-                        {getStatusText(selectedProperty.status)}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="font-medium text-sm text-gray-600">Publicado</label>
-                    <p className="mt-1">{selectedProperty.is_published ? 'Sí' : 'No'}</p>
-                  </div>
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                <div className="space-y-1">
+                  <span className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Ubicación</span>
+                  <p className="font-medium text-gray-900">{selectedProperty.location}</p>
                 </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="font-medium text-sm text-gray-600">Ubicación</label>
-                    <p>{selectedProperty.location}</p>
-                    {selectedProperty.address && (
-                      <p className="text-sm text-gray-600 mt-1">{selectedProperty.address}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="font-medium text-sm text-gray-600">Tipo</label>
-                    <p>{selectedProperty.type || 'No especificado'}</p>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="font-medium text-sm text-gray-600">Habitaciones</label>
-                      <p className="text-2xl font-semibold text-orange-600">
-                        {selectedProperty.bedrooms || '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-sm text-gray-600">Baños</label>
-                      <p className="text-2xl font-semibold text-blue-600">
-                        {selectedProperty.bathrooms || '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-sm text-gray-600">Área (m²)</label>
-                      <p className="text-sm font-medium">
-                        {selectedProperty.area ? `${selectedProperty.area} m²` : '-'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {selectedProperty.agent_name && (
-                    <div>
-                      <label className="font-medium text-sm text-gray-600">Agente Asignado</label>
-                      <p>{selectedProperty.agent_name}</p>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="font-medium text-sm text-gray-600">Fecha de Creación</label>
-                    <p className="text-sm">{formatDate(selectedProperty.created_at)}</p>
-                  </div>
+                <div className="space-y-1">
+                  <span className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Tipo</span>
+                  <p className="font-medium text-gray-900">{selectedProperty.type || 'N/A'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Habitaciones</span>
+                  <p className="font-medium text-gray-900">{selectedProperty.bedrooms || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Baños</span>
+                  <p className="font-medium text-gray-900">{selectedProperty.bathrooms || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Area</span>
+                  <p className="font-medium text-gray-900">{selectedProperty.area} m²</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Agente</span>
+                  <p className="font-medium text-gray-900">{selectedProperty.agent_name || 'Sin Asignar'}</p>
                 </div>
               </div>
             </div>
@@ -603,7 +563,6 @@ export function PropertiesTable({ onRefreshStats }: PropertiesTableProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Dialog */}
       <ConfirmationDialogComponent />
     </div>
   )

@@ -74,29 +74,58 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-background font-sans mobile-bottom-safe mobile-horizontal-safe">
-      {/* Sidebar */}
+    <div className="min-h-[calc(100dvh-64px)] bg-background/50 font-sans mobile-bottom-safe mobile-horizontal-safe">
+      {/* Sidebar background visual for desktop */}
+      <div className="hidden md:block fixed inset-y-0 left-0 w-72 bg-gradient-to-br from-sidebar via-sidebar/95 to-background z-0" />
+
+      {/* Sidebar Component */}
       <Sidebar section={section} onChange={setSection} />
 
-      {/* Main content */}
-      <div className="md:pl-72 transition-all duration-300">
-        <header className="sticky top-0 z-10 border-b border-white/10 bg-background/80 backdrop-blur-md mobile-top-safe">
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-8">
-            <h1 className="font-serif text-xl lg:text-2xl text-primary">
-              {section === "mis" && "Mis Propiedades"}
-              {section === "agregar" && "Agregar Proyecto"}
-              {section === "estadisticas" && "Estadísticas"}
-              {section === "mensajes" && "Mensajes"}
-              {section === "perfil" && "Perfil"}
-            </h1>
+      {/* Main content Area */}
+      <div className="md:pl-72 transition-all duration-300 relative z-10">
+
+        {/* Sticky Header with Blur */}
+        <header className="sticky top-0 z-20 border-b border-white/5 bg-background/80 backdrop-blur-xl mobile-top-safe supports-[backdrop-filter]:bg-background/60">
+          <div className="mx-auto flex h-20 items-center justify-between px-6 lg:px-10">
+            <div className="flex flex-col">
+              <h1 className="font-serif text-2xl md:text-3xl text-foreground font-bold tracking-tight">
+                {section === "mis" && "Mis Propiedades"}
+                {section === "agregar" && "Nuevo Proyecto"}
+                {section === "estadisticas" && "Panel de Control"}
+                {section === "mensajes" && "Centro de Mensajes"}
+                {section === "perfil" && "Mi Perfil"}
+              </h1>
+              <p className="text-xs text-muted-foreground font-medium hidden md:block mt-0.5">
+                {section === "mis" && "Gestiona tu portafolio inmobiliario"}
+                {section === "agregar" && "Publica una nueva propiedad"}
+                {section === "estadisticas" && "Analiza el rendimiento de tus ventas"}
+                {section === "mensajes" && "Comunícate con tus clientes"}
+                {section === "perfil" && "Configuración de tu cuenta"}
+              </p>
+            </div>
+
+            {/* Quick Actions / Status Placeholder */}
+            <div className="hidden md:flex items-center gap-4">
+              <div className="h-9 px-4 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-2 text-xs font-semibold">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Sistema Activo
+              </div>
+            </div>
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
-          {section === "mis" && <PropertiesSection onAdd={() => setSection("agregar")} />}
-          {section === "agregar" && <DynamicAddPropertySection />}
-          {section === "estadisticas" && <DynamicStatsSection />}
-          {section === "mensajes" && <DynamicMessagesSection />}
-          {section === "perfil" && <DynamicProfileSection />}
+
+        {/* Content Body */}
+        <main className="mx-auto max-w-7xl px-4 sm:px-8 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700 mx-safe">
+          <div className="min-h-[500px]">
+            {section === "mis" && <PropertiesSection onAdd={() => setSection("agregar")} />}
+            {section === "agregar" && <DynamicAddPropertySection />}
+            {section === "estadisticas" && <DynamicStatsSection />}
+            {section === "mensajes" && <DynamicMessagesSection />}
+            {section === "perfil" && <DynamicProfileSection />}
+          </div>
         </main>
       </div>
     </div>

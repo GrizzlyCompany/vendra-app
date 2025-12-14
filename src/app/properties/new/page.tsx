@@ -47,7 +47,7 @@ export default function NewPropertyPage() {
       .split(",")
       .map((s) => s.trim())
       .filter((s) => s.length > 0),
-  [form.images]);
+    [form.images]);
 
   useEffect(() => {
     let active = true;
@@ -284,7 +284,7 @@ export default function NewPropertyPage() {
           .update({ role: "vendedor_agente" })
           .eq("id", uid)
           .neq("role", "empresa_constructora");
-      } catch {}
+      } catch { }
 
       // success
       router.replace("/profile");
@@ -302,197 +302,208 @@ export default function NewPropertyPage() {
   }
 
   return (
-    <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-8 mobile-bottom-safe">
-      <div className="mx-auto w-full max-w-4xl">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="font-serif text-2xl">Listar una Nueva Propiedad</CardTitle>
-            <p className="text-sm text-muted-foreground">Rellena los detalles a continuación para poner tu propiedad en el mercado.</p>
-          </CardHeader>
-          <CardContent className="pt-2">
-            {pendingReview && (
-              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                Tu verificación está <strong>pendiente de revisión</strong>. Puedes publicar ahora; si la verificación falla, podríamos pausar tus publicaciones.
-              </div>
-            )}
-            {error && (
-              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error}
-              </div>
-            )}
+    <main className="min-h-[calc(100dvh-64px)] bg-background px-4 sm:px-6 py-10 mobile-bottom-safe">
+      <div className="mx-auto w-full max-w-4xl space-y-8">
 
-            <form onSubmit={onSubmit} className="space-y-6">
-              {/* Título y Precio */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <label className="text-sm text-muted-foreground" htmlFor="title">Nombre de la Propiedad</label>
-                  <Input id="title" name="title" placeholder="Ej: Villa de lujo con vista al mar" value={form.title} onChange={onChange} />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1 grid gap-2">
-                      <label className="text-sm text-muted-foreground" htmlFor="price">Precio</label>
-                      <Input id="price" name="price" type="number" min="0" step="1" placeholder="3500000" value={form.price} onChange={onChange} />
-                    </div>
-                    <div className="w-28 grid gap-2">
-                      <label className="text-sm text-muted-foreground" htmlFor="currency">&nbsp;</label>
-                      <select id="currency" name="currency" value={form.currency} onChange={onChange} className="rounded-md border bg-background px-3 py-2 text-sm">
-                        <option value="USD">USD</option>
-                        <option value="DOP">DOP</option>
-                        <option value="EUR">EUR</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <div className="text-center space-y-2 mb-8">
+          <h1 className="font-serif text-3xl md:text-5xl font-bold text-foreground">Listar Propiedad</h1>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Completa los detalles para presentar tu propiedad al mundo.</p>
+        </div>
 
-              {/* Dirección y Ubicación */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <label className="text-sm text-muted-foreground" htmlFor="address">Dirección Completa</label>
-                  <Input id="address" name="address" placeholder="123 Rodeo Drive, Beverly Hills, CA" value={form.address} onChange={onChange} />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-muted-foreground" htmlFor="location">Ubicación</label>
-                  <Input id="location" name="location" placeholder="Beverly Hills" value={form.location} onChange={onChange} />
-                </div>
-              </div>
+        <form onSubmit={onSubmit} className="space-y-8">
 
-              {/* Tipo, Dormitorios, Baños */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="grid gap-2">
-                  <label className="text-sm text-muted-foreground" htmlFor="type">Tipo de Propiedad</label>
-                  <Select id="type" name="type" value={form.type} onChange={onChange}>
-                    <option value="">Seleccionar</option>
-                    <option value="Casa">Casa</option>
-                    <option value="Apartamento">Apartamento</option>
-                    <option value="Comercial">Comercial</option>
-                    <option value="Terreno">Terreno</option>
-                    <option value="Villa">Villa</option>
-                  </Select>
+          {/* Status Banners */}
+          {(pendingReview || error) && (
+            <div className="space-y-4">
+              {pendingReview && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-sm text-amber-800 backdrop-blur-sm">
+                  Tu verificación está <strong>pendiente de revisión</strong>. Puedes publicar ahora; si la verificación falla, podríamos pausar tus publicaciones.
                 </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-muted-foreground" htmlFor="bedrooms">Dormitorios</label>
-                  <Input id="bedrooms" name="bedrooms" type="number" min="0" placeholder="4" value={form.bedrooms} onChange={onChange} />
+              )}
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 text-sm text-red-700 backdrop-blur-sm">
+                  {error}
                 </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-muted-foreground" htmlFor="bathrooms">Baños</label>
-                  <Input id="bathrooms" name="bathrooms" type="number" min="0" placeholder="3" value={form.bathrooms} onChange={onChange} />
-                </div>
-              </div>
+              )}
+            </div>
+          )}
 
-              {/* Área y Características */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <label className="text-sm text-muted-foreground" htmlFor="area">Área (m²)</label>
-                  <Input id="area" name="area" placeholder="600" value={form.area} onChange={onChange} />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-muted-foreground" htmlFor="features">Características</label>
-                  <Input id="features" name="features" placeholder="Swimming Pool, Garage, Ocean view" value={form.features} onChange={onChange} />
-                  <span className="text-xs text-muted-foreground">Lista separada por comas.</span>
-                </div>
+          {/* Basic Info */}
+          <Card className="border-border/40 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+              <CardTitle className="font-serif text-xl">Información Básica</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+              <div className="col-span-1 md:col-span-2 grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="title">Título</label>
+                <Input id="title" name="title" className="h-11 font-serif text-lg bg-transparent" placeholder="Ej: Villa de lujo con vista al mar" value={form.title} onChange={onChange} />
               </div>
-
-              {/* Descripción */}
               <div className="grid gap-2">
-                <label className="text-sm text-muted-foreground" htmlFor="description">Descripción</label>
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="price">Precio</label>
+                <div className="flex gap-2">
+                  <Input id="price" name="price" className="h-11 bg-transparent" type="number" min="0" step="1" placeholder="0" value={form.price} onChange={onChange} />
+                  <select id="currency" name="currency" value={form.currency} onChange={onChange} className="w-24 rounded-md border bg-background px-3 text-sm focus:ring-2 focus:ring-ring focus:outline-none">
+                    <option value="USD">USD</option>
+                    <option value="DOP">DOP</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="type">Tipo</label>
+                <Select id="type" name="type" className="h-11 bg-transparent" value={form.type} onChange={onChange}>
+                  <option value="">Seleccionar...</option>
+                  <option value="Casa">Casa</option>
+                  <option value="Apartamento">Apartamento</option>
+                  <option value="Comercial">Comercial</option>
+                  <option value="Terreno">Terreno</option>
+                  <option value="Villa">Villa</option>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Location */}
+          <Card className="border-border/40 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+              <CardTitle className="font-serif text-xl">Ubicación</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+              <div className="col-span-1 md:col-span-2 grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="address">Dirección Exacta</label>
+                <Input id="address" name="address" className="h-11 bg-transparent" placeholder="123 Calle Principal..." value={form.address} onChange={onChange} />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="location">Sector / Ciudad</label>
+                <Input id="location" name="location" className="h-11 bg-transparent" placeholder="Ej. Piantini" value={form.location} onChange={onChange} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Details */}
+          <Card className="border-border/40 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+              <CardTitle className="font-serif text-xl">Detalles y Características</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6">
+              <div className="grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="bedrooms">Habitaciones</label>
+                <Input id="bedrooms" name="bedrooms" type="number" min="0" className="h-11 bg-transparent" placeholder="0" value={form.bedrooms} onChange={onChange} />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="bathrooms">Baños</label>
+                <Input id="bathrooms" name="bathrooms" type="number" min="0" className="h-11 bg-transparent" placeholder="0" value={form.bathrooms} onChange={onChange} />
+              </div>
+              <div className="col-span-2 grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="area">Área (m²)</label>
+                <Input id="area" name="area" className="h-11 bg-transparent" placeholder="Ej. 150" value={form.area} onChange={onChange} />
+              </div>
+              <div className="col-span-2 md:col-span-4 grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="features">Características Adicionales (Separadas por comas)</label>
+                <Input id="features" name="features" className="h-11 bg-transparent" placeholder="Piscina, Gimnasio, Balcón..." value={form.features} onChange={onChange} />
+              </div>
+              <div className="col-span-2 md:col-span-4 grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="description">Descripción</label>
                 <textarea
                   id="description"
                   name="description"
-                  className="min-h-[140px] rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                  placeholder="Describe la propiedad..."
+                  className="min-h-[140px] rounded-md border bg-transparent px-3 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 resize-y"
+                  placeholder="Describe lo que hace única a esta propiedad..."
                   value={form.description}
                   onChange={onChange}
                 />
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Fotos grid */}
-              <div className="grid gap-2">
-                <div className="text-sm text-muted-foreground">Fotos ({totalPhotos}/5)</div>
-                <span className="text-xs text-muted-foreground">Gestiona las imágenes de tu propiedad. Puedes añadir hasta 5 fotos.</span>
-
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
-                  {filePreviews.map((src, i) => (
-                    <div key={`fp-${i}`} className="relative group aspect-square">
-                      <img src={src} alt={`preview-${i}`} className="h-full w-full object-cover rounded-md" />
-                      <button
-                        type="button"
-                        onClick={() => removeFileAt(i)}
-                        className="absolute -top-2 -right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label="Eliminar imagen"
-                        title="Eliminar imagen"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {typedPreviewUrls.map((src, i) => (
-                    <div key={`tp-${i}`} className="relative group aspect-square">
-                      <img src={src} alt={`url-${i}`} className="h-full w-full object-cover rounded-md" />
-                      <button
-                        type="button"
-                        onClick={() => removeTypedUrl(src)}
-                        className="absolute -top-2 -right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label="Eliminar imagen"
-                        title="Eliminar imagen"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {canAddMore && (
-                    <div
-                      className={`group aspect-square rounded-md border-2 border-dashed grid place-items-center text-center cursor-pointer hover:bg-muted transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${isDragging ? 'bg-muted/50' : ''}`}
-                      onClick={openFilePicker}
-                      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                      onDragLeave={() => setIsDragging(false)}
-                      onDrop={(e) => { e.preventDefault(); setIsDragging(false); onDropFiles(e.dataTransfer.files); }}
-                      role="button"
-                      aria-label="Añadir fotos"
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFilePicker(); } }}
+          {/* Media */}
+          <Card className="border-border/40 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/30 border-b border-border/40 pb-4 flex flex-row items-center justify-between">
+              <CardTitle className="font-serif text-xl">Galería de Fotos</CardTitle>
+              <span className="text-xs font-medium text-muted-foreground bg-background px-2 py-1 rounded-full border border-border">{totalPhotos}/5</span>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                {filePreviews.map((src, i) => (
+                  <div key={`fp-${i}`} className="relative group aspect-square rounded-xl overflow-hidden shadow-sm border border-border/50">
+                    <img src={src} alt={`preview-${i}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <button
+                      type="button"
+                      onClick={() => removeFileAt(i)}
+                      className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/50 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
                     >
-                      <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-                      <div className="text-xs text-muted-foreground mt-1">Añadir Fotos</div>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+
+                {typedPreviewUrls.map((src, i) => (
+                  <div key={`tp-${i}`} className="relative group aspect-square rounded-xl overflow-hidden shadow-sm border border-border/50">
+                    <img src={src} alt={`url-${i}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <button
+                      type="button"
+                      onClick={() => removeTypedUrl(src)}
+                      className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/50 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+
+                {canAddMore && (
+                  <div
+                    className={`aspect-square rounded-xl border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/30 transition-all hover:border-primary/50 group focus-visible:ring-2 ring-primary ${isDragging ? 'bg-primary/5 border-primary' : ''}`}
+                    onClick={openFilePicker}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); onDropFiles(e.dataTransfer.files); }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFilePicker(); } }}
+                  >
+                    <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                      <Upload className="h-5 w-5 text-primary" />
                     </div>
-                  )}
-                </div>
-
-                {/* Hidden input for selecting more images */}
-                <input
-                  ref={fileInputRef}
-                  id="fileImages"
-                  name="fileImages"
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => onDropFiles(e.target.files)}
-                  className="sr-only"
-                />
+                    <span className="text-xs font-medium text-muted-foreground">Subir Foto</span>
+                  </div>
+                )}
               </div>
 
-              {/* URLs opcionales */}
-              <div className="grid gap-2 hidden">
-                <label className="text-sm text-muted-foreground" htmlFor="images">Imágenes (URLs, separadas por coma)</label>
-                <Input id="images" name="images" placeholder="https://... , https://..." value={form.images} onChange={onChange} />
-              </div>
+              {/* Hidden input for selecting more images */}
+              <input
+                ref={fileInputRef}
+                id="fileImages"
+                name="fileImages"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => onDropFiles(e.target.files)}
+                className="sr-only"
+              />
 
-              {/* Previews moved above in unified grid with add tile */}
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={saving || uploading} className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90">
-                  {saving || uploading ? "Publicando…" : "Listar Propiedad"}
-                </Button>
-                <Button type="button" variant="outline" asChild className="w-full sm:w-auto">
-                  <Link href="/profile">Cancelar</Link>
-                </Button>
+              {/* Optional URL input hidden by default but functional if needed via state */}
+              <div className="hidden">
+                <Input id="images" name="images" value={form.images} onChange={onChange} />
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* Action Footer */}
+          <div className="flex flex-col-reverse sm:flex-row items-center gap-4 pt-4">
+            <Button type="button" variant="ghost" asChild className="w-full sm:w-auto text-muted-foreground hover:text-foreground">
+              <Link href="/profile">Cancelar y Volver</Link>
+            </Button>
+            <Button type="submit" disabled={saving || uploading} size="lg" className="w-full sm:w-auto ml-auto bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-8 shadow-lg shadow-primary/20 transition-all active:scale-95">
+              {saving || uploading ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Procesando...
+                </>
+              ) : "Publicar Propiedad"}
+            </Button>
+          </div>
+
+        </form>
       </div>
     </main>
   );

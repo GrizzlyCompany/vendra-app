@@ -415,32 +415,47 @@ interface MetricCardProps {
 }
 
 function MetricCard({ title, value, icon, description, trend, loading }: MetricCardProps) {
+  const isPositive = trend.includes('+') || trend.includes('Estable');
+
   return (
-    <Card className="relative overflow-hidden">
-      <CardContent className="p-6">
+    <Card className="relative overflow-hidden border-none shadow-lg bg-white dark:bg-card group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+      {/* Decorative gradient background */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/5 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-colors" />
+
+      <CardContent className="p-6 relative z-10">
         {loading ? (
           <div className="space-y-4">
-            <Skeleton className="h-8 w-8 rounded-lg" />
-            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <Skeleton className="h-8 w-24" />
             <div className="space-y-2">
-              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-20" />
             </div>
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between">
-              <div className="text-blue-600">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
                 {icon}
               </div>
-              <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+              <Badge
+                variant="outline"
+                className={`
+                    border-none px-2.5 py-0.5 rounded-full font-medium
+                    ${isPositive ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'}
+                `}
+              >
                 {trend}
               </Badge>
             </div>
-            <div className="mt-4">
-              <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
-              <p className="text-sm font-medium text-gray-500 mt-1">{title}</p>
-              <p className="text-sm text-gray-400 mt-1">{description}</p>
+
+            <div className="space-y-1">
+              <h3 className="text-3xl font-bold text-foreground font-serif tracking-tight">{value}</h3>
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[11px]">{title}</p>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <p className="text-xs text-muted-foreground line-clamp-1">{description}</p>
             </div>
           </>
         )}

@@ -225,271 +225,336 @@ export function AddPropertySection() {
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="rounded-2xl border shadow-md">
-        <CardHeader>
-          <CardTitle className="font-serif text-xl">Nuevo proyecto</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-8" onSubmit={onSubmit}>
-            {/* 1. Información General */}
-            <section className="space-y-4">
-              <h3 className="font-serif text-lg text-[#1C4B2E]">1. Información General</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="grid gap-2 sm:col-span-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="projectName">Nombre del proyecto</label>
-                  <Input id="projectName" name="projectName" value={form.projectName} onChange={onChange} placeholder='Ej: "Residencial Vendra Towers"' />
-                </div>
-                <div className="grid gap-2 sm:col-span-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="descriptionTitle">Título de la descripción</label>
-                  <Input id="descriptionTitle" name="descriptionTitle" value={form.descriptionTitle} onChange={onChange} placeholder='Ej: "Vive en la Cima del Lujo Urbano"' />
-                </div>
-                <div className="grid gap-2 sm:col-span-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="shortDescription">Descripción breve (máx. 300)</label>
-                  <textarea id="shortDescription" name="shortDescription" maxLength={300} value={form.shortDescription} onChange={onChange} rows={3} className="rounded-md border bg-background px-3 py-2 text-sm" />
-                </div>
-                <div className="grid gap-2 sm:col-span-1">
-                  <label className="text-sm text-[#6B7280]" htmlFor="category">Categoría / Tipo de proyecto</label>
-                  <Select id="category" name="category" value={form.category} onChange={onChange}>
-                    <option value="">Seleccionar</option>
-                    <option value="Residencial">Residencial</option>
-                    <option value="Comercial">Comercial</option>
-                    <option value="Mixto">Mixto</option>
-                    <option value="Otro">Otro</option>
-                  </Select>
-                </div>
-              </div>
-            </section>
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
-            {/* 2. Ubicación */}
-            <section className="space-y-4">
-              <h3 className="font-serif text-lg text-[#1C4B2E]">2. Ubicación</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="grid gap-2 sm:col-span-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="address">Dirección</label>
-                  <Input id="address" name="address" value={form.address} onChange={onChange} placeholder="Calle, número, referencia" />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="cityProvince">Ciudad / Provincia</label>
-                  <Input id="cityProvince" name="cityProvince" value={form.cityProvince} onChange={onChange} />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="zoneSector">Zona / Sector</label>
-                  <Input id="zoneSector" name="zoneSector" value={form.zoneSector} onChange={onChange} />
-                </div>
-              </div>
-            </section>
+      <div className="text-center space-y-2 mb-8">
+        <h2 className="font-serif text-3xl font-bold text-foreground">Crear Nuevo Proyecto</h2>
+        <p className="text-muted-foreground text-sm max-w-lg mx-auto">Completa la información detallada para presentar tu desarrollo inmobiliario al mercado.</p>
+      </div>
 
-            {/* 3. Características del Proyecto */}
-            <section className="space-y-4">
-              <h3 className="font-serif text-lg text-[#1C4B2E]">3. Características del Proyecto</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="grid gap-2 sm:col-span-1">
-                  <label className="text-sm text-[#6B7280]" htmlFor="projectStatus">Estado del proyecto</label>
-                  <Select id="projectStatus" name="projectStatus" value={form.projectStatus} onChange={onChange}>
-                    <option value="">Seleccionar</option>
-                    <option value="En planos">En planos</option>
-                    <option value="En construcción">En construcción</option>
-                    <option value="En preventa">En preventa</option>
-                    <option value="Terminado">Terminado</option>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="deliveryDate">Fecha estimada de entrega</label>
-                  <Input type="date" id="deliveryDate" name="deliveryDate" value={form.deliveryDate} onChange={onChange} />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="unitsCount">Cantidad de unidades</label>
-                  <Input type="number" min="0" id="unitsCount" name="unitsCount" value={form.unitsCount} onChange={onChange} placeholder="Ej: 120" />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="floors">Niveles / pisos</label>
-                  <Input type="number" min="0" id="floors" name="floors" value={form.floors} onChange={onChange} />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="landSize">Tamaño del terreno (m²)</label>
-                  <Input type="number" min="0" id="landSize" name="landSize" value={form.landSize} onChange={onChange} />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="builtAreas">Áreas construidas (m²)</label>
-                  <Input type="number" min="0" id="builtAreas" name="builtAreas" value={form.builtAreas} onChange={onChange} />
-                </div>
-              </div>
-            </section>
+      <form className="space-y-8" onSubmit={onSubmit}>
 
-            {/* 4. Detalles de las Unidades */}
-            <section className="space-y-4">
-              <h3 className="font-serif text-lg text-[#1C4B2E]">4. Detalles de las Unidades</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="grid gap-2 sm:col-span-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="unitTypes">Tipos de unidades disponibles</label>
-                  <textarea id="unitTypes" name="unitTypes" value={form.unitTypes} onChange={onChange} rows={2} className="rounded-md border bg-background px-3 py-2 text-sm" placeholder="Ej: Apts. 2 y 3 hab, locales, oficinas" />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="sizeRange">Rango de tamaños (m²)</label>
-                  <Input id="sizeRange" name="sizeRange" value={form.sizeRange} onChange={onChange} placeholder="Ej: 60–180 m²" />
-                </div>
-                <div className="grid gap-2 sm:col-span-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="quantityPerType">Cantidad disponible por tipo de unidad</label>
-                  <textarea id="quantityPerType" name="quantityPerType" value={form.quantityPerType} onChange={onChange} rows={2} className="rounded-md border bg-background px-3 py-2 text-sm" placeholder="Ej: 40 apts 2H, 60 apts 3H, 10 locales" />
-                </div>
-              </div>
-            </section>
+        {/* State Feedback */}
+        {(error || success) && (
+          <div className={`p-4 rounded-xl border flex items-center gap-3 backdrop-blur-md shadow-sm ${error ? 'bg-red-500/10 border-red-500/20 text-red-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
+            <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${error ? 'bg-red-100 dark:bg-red-900/30' : 'bg-emerald-100 dark:bg-emerald-900/30'}`}>
+              {error ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+              )}
+            </div>
+            <p className="font-medium text-sm">{error || success}</p>
+          </div>
+        )}
 
-            {/* 5. Amenidades y Servicios */}
-            <section className="space-y-4">
-              <h3 className="font-serif text-lg text-[#1C4B2E]">5. Amenidades y Servicios</h3>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {[
-                  "Piscina",
-                  "Gimnasio",
-                  "Lobby",
-                  "Área social",
-                  "Parque infantil",
-                  "Seguridad 24/7",
-                  "Parqueo techado",
-                ].map((a) => (
-                  <label key={a} className="flex items-center gap-2 text-sm text-[#1C4B2E]">
-                    <input
-                      type="checkbox"
-                      checked={form.amenities.has(a)}
-                      onChange={() => toggleAmenity(a)}
-                    />
-                    {a}
-                  </label>
+        {/* 1. Información General */}
+        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+          <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
+              Información General
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid gap-2 md:col-span-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="projectName">Nombre del proyecto</label>
+              <Input id="projectName" name="projectName" value={form.projectName} onChange={onChange} placeholder='Ej: "Residencial Vendra Towers"' className="h-11 bg-background/50" />
+            </div>
+            <div className="grid gap-2 md:col-span-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="descriptionTitle">Título Publicitario</label>
+              <Input id="descriptionTitle" name="descriptionTitle" value={form.descriptionTitle} onChange={onChange} placeholder='Ej: "Vive en la Cima del Lujo Urbano"' className="h-11 bg-background/50" />
+            </div>
+            <div className="grid gap-2 md:col-span-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="shortDescription">Descripción Breve</label>
+              <textarea
+                id="shortDescription"
+                name="shortDescription"
+                maxLength={300}
+                value={form.shortDescription}
+                onChange={onChange}
+                rows={3}
+                className="rounded-md border bg-background/50 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
+                placeholder="Describe los puntos clave que hacen único a este proyecto..."
+              />
+              <div className="text-xs text-right text-muted-foreground">{form.shortDescription.length}/300</div>
+            </div>
+            <div className="grid gap-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="category">Categoría</label>
+              <div className="relative">
+                <Select id="category" name="category" value={form.category} onChange={onChange} className="h-11 bg-background/50">
+                  <option value="">Seleccionar Tipo...</option>
+                  <option value="Residencial">Residencial</option>
+                  <option value="Comercial">Comercial</option>
+                  <option value="Mixto">Mixto</option>
+                  <option value="Turístico">Turístico</option>
+                  <option value="Otro">Otro</option>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 2. Ubicación */}
+        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+          <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
+              Ubicación
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid gap-2 md:col-span-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="address">Dirección Exacta</label>
+              <Input id="address" name="address" value={form.address} onChange={onChange} placeholder="Ej: Av. Winston Churchill #123" className="h-11 bg-background/50 icon-map" />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="cityProvince">Ciudad / Provincia</label>
+              <Input id="cityProvince" name="cityProvince" value={form.cityProvince} onChange={onChange} placeholder="Ej: Santo Domingo" className="h-11 bg-background/50" />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="zoneSector">Sector / Zona</label>
+              <Input id="zoneSector" name="zoneSector" value={form.zoneSector} onChange={onChange} placeholder="Ej: Piantini" className="h-11 bg-background/50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 3. Detalles Técnicos */}
+        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+          <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
+              Detalles del Proyecto
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid gap-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="projectStatus">Estado de Obra</label>
+              <Select id="projectStatus" name="projectStatus" value={form.projectStatus} onChange={onChange} className="h-11 bg-background/50">
+                <option value="">Seleccionar...</option>
+                <option value="En planos">En planos</option>
+                <option value="En construcción">En construcción</option>
+                <option value="En preventa">En preventa</option>
+                <option value="Terminado">Terminado</option>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-foreground/80 font-medium" htmlFor="deliveryDate">Fecha de Entrega</label>
+              <Input type="date" id="deliveryDate" name="deliveryDate" value={form.deliveryDate} onChange={onChange} className="h-11 bg-background/50" />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-foreground/80 font-medium" htmlFor="unitsCount">Total Unidades</label>
+              <Input type="number" min="0" id="unitsCount" name="unitsCount" value={form.unitsCount} onChange={onChange} placeholder="0" className="h-11 bg-background/50" />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-foreground/80 font-medium" htmlFor="floors">Niveles / Pisos</label>
+              <Input type="number" min="0" id="floors" name="floors" value={form.floors} onChange={onChange} placeholder="0" className="h-11 bg-background/50" />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-foreground/80 font-medium" htmlFor="landSize">Terreno (m²)</label>
+              <Input type="number" min="0" id="landSize" name="landSize" value={form.landSize} onChange={onChange} placeholder="0" className="h-11 bg-background/50" />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-foreground/80 font-medium" htmlFor="builtAreas">Constr. Total (m²)</label>
+              <Input type="number" min="0" id="builtAreas" name="builtAreas" value={form.builtAreas} onChange={onChange} placeholder="0" className="h-11 bg-background/50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4. Unidades & Distribución */}
+        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+          <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">4</span>
+              Unidades & Distribución
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid gap-2 md:col-span-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="unitTypes">Tipos de Unidades</label>
+              <textarea id="unitTypes" name="unitTypes" value={form.unitTypes} onChange={onChange} rows={2} className="rounded-md border bg-background/50 px-3 py-2 text-sm resize-none" placeholder="Describe brevemente los tipos (ej: Apts estudio, 2 habs, Penthouses...)" />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="sizeRange">Rango Metrajes (m²)</label>
+              <Input id="sizeRange" name="sizeRange" value={form.sizeRange} onChange={onChange} placeholder="Ej: 85 - 240 m²" className="h-11 bg-background/50" />
+            </div>
+            <div className="grid gap-2 md:col-span-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="quantityPerType">Cantidad por Tipo</label>
+              <textarea id="quantityPerType" name="quantityPerType" value={form.quantityPerType} onChange={onChange} rows={2} className="rounded-md border bg-background/50 px-3 py-2 text-sm resize-none" placeholder="Ej: 20 Unidades Tipo A, 15 Tipo B..." />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 5. Amenidades */}
+        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+          <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">5</span>
+              Amenidades
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {[
+                "Piscina Inifinity", "Gimnasio Equipado", "Lobby Climatizado", "Terraza Social", "Area BBQ",
+                "Parque Infantil", "Seguridad 24/7", "Parqueo Techado", "Planta Eléctrica", "Ascensor",
+                "Cine", "Coworking", "Pet Friendly"
+              ].map((a) => (
+                <label key={a} className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all duration-200 ${form.amenities.has(a) ? "bg-primary/5 border-primary/40 shadow-sm" : "bg-background/50 border-transparent hover:bg-muted"}`}>
+                  <div className={`h-5 w-5 rounded border flex items-center justify-center ${form.amenities.has(a) ? "bg-primary border-primary text-white" : "border-muted-foreground/30 bg-background"}`}>
+                    {form.amenities.has(a) && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={form.amenities.has(a)}
+                    onChange={() => toggleAmenity(a)}
+                    className="hidden"
+                  />
+                  <span className={`text-sm font-medium ${form.amenities.has(a) ? "text-primary" : "text-muted-foreground"}`}>{a}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="pt-4 border-t border-border/40">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground block mb-3">Otras Amenidades</label>
+              <div className="flex gap-2 mb-3">
+                <Input
+                  type="text"
+                  value={form.customAmenity}
+                  onChange={handleCustomAmenityChange}
+                  placeholder="Escribe una amenidad personalizada..."
+                  className="h-11 flex-1 bg-background/50"
+                />
+                <Button type="button" onClick={addCustomAmenity} variant="secondary" className="px-6">
+                  Agregar
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {Array.from(form.amenities).filter(a => ![
+                  "Piscina Inifinity", "Gimnasio Equipado", "Lobby Climatizado", "Terraza Social", "Area BBQ",
+                  "Parque Infantil", "Seguridad 24/7", "Parqueo Techado", "Planta Eléctrica", "Ascensor",
+                  "Cine", "Coworking", "Pet Friendly"
+                ].includes(a)).map((amenity) => (
+                  <div key={amenity} className="flex items-center bg-secondary/50 text-secondary-foreground border border-secondary rounded-full px-3 py-1 text-sm pl-4">
+                    <span className="mr-2">{amenity}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeCustomAmenity(amenity)}
+                      className="h-5 w-5 rounded-full flex items-center justify-center hover:bg-black/10 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
                 ))}
               </div>
-              
-              {/* Custom amenities input */}
-              <div className="mt-4">
-                <label className="text-sm text-[#6B7280] block mb-2">Agregar amenidad personalizada</label>
-                <div className="flex gap-2">
-                  <Input 
-                    type="text" 
-                    value={form.customAmenity} 
-                    onChange={handleCustomAmenityChange} 
-                    placeholder="Ej: Spa, Sala de juegos, etc." 
-                    className="flex-1" 
-                  />
-                  <Button type="button" onClick={addCustomAmenity} className="bg-[#1C4B2E] text-white hover:bg-[#163c25]">
-                    Agregar
-                  </Button>
-                </div>
-                
-                {/* Display added custom amenities */}
-                {Array.from(form.amenities).filter(a => ![
-                  "Piscina",
-                  "Gimnasio",
-                  "Lobby",
-                  "Área social",
-                  "Parque infantil",
-                  "Seguridad 24/7",
-                  "Parqueo techado",
-                ].includes(a)).length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-sm text-[#6B7280] mb-2">Amenidades personalizadas agregadas:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {Array.from(form.amenities).filter(a => ![
-                        "Piscina",
-                        "Gimnasio",
-                        "Lobby",
-                        "Área social",
-                        "Parque infantil",
-                        "Seguridad 24/7",
-                        "Parqueo techado",
-                      ].includes(a)).map((amenity) => (
-                        <div key={amenity} className="flex items-center bg-muted rounded-full px-3 py-1 text-sm">
-                          <span className="mr-2">{amenity}</span>
-                          <button 
-                            type="button" 
-                            onClick={() => removeCustomAmenity(amenity)}
-                            className="text-destructive hover:text-destructive/80"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 6. Multimedia */}
+        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+          <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">6</span>
+              Galería Multimedia
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-4">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground block">Renderings & Fotos (Máx 5)</label>
+              <div className="bg-muted/10 rounded-xl p-6 border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
+                <ImageSelector
+                  onImagesChange={setImagesFiles}
+                  maxImages={5}
+                  label="Arrastra imágenes aquí o haz clic para seleccionar"
+                  id="imagesFiles"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              <div className="grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="promoVideo">Link de Video (YouTube/Vimeo)</label>
+                <Input id="promoVideo" name="promoVideo" value={form.promoVideo} onChange={onChange} placeholder="https://..." className="h-11 bg-background/50" />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="plansFiles">Planos (PDF/Imagen)</label>
+                <input
+                  id="plansFiles"
+                  name="plansFiles"
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setPlansFiles(e.target.files)}
+                  className="file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20 text-sm text-muted-foreground cursor-pointer"
+                />
+                {(plansFiles?.length || 0) > 0 && (
+                  <div className="text-xs text-primary font-medium mt-1">✓ {plansFiles!.length} archivos seleccionados</div>
                 )}
               </div>
-            </section>
-
-            {/* 6. Galería */}
-            <section className="space-y-4">
-              <h3 className="font-serif text-lg text-[#1C4B2E]">6. Galería</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2 grid gap-2">
-                  <ImageSelector 
-                    onImagesChange={setImagesFiles}
-                    maxImages={5}
-                    label="Imágenes principales"
-                    id="imagesFiles"
-                  />
-                </div>
-                <div className="grid gap-2 sm:col-span-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="promoVideo">Video promocional (YouTube/Vimeo)</label>
-                  <Input id="promoVideo" name="promoVideo" value={form.promoVideo} onChange={onChange} placeholder="https://…" />
-                </div>
-                <div className="sm:col-span-2 grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="plansFiles">Planos arquitectónicos (opcional)</label>
-                  <input
-                    id="plansFiles"
-                    name="plansFiles"
-                    type="file"
-                    multiple
-                    accept="image/*,application/pdf"
-                    onChange={(e) => setPlansFiles(e.target.files)}
-                    className="file:mr-3 file:rounded-md file:border file:px-3 file:py-2 file:text-sm file:bg-secondary file:text-secondary-foreground rounded-md border bg-background px-3 py-2 text-sm"
-                  />
-                  {(plansFiles?.length || 0) > 0 && (
-                    <div className="text-xs text-muted-foreground">{plansFiles!.length} archivo(s) de plano seleccionados</div>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {/* 7. Información Financiera */}
-            <section className="space-y-4">
-              <h3 className="font-serif text-lg text-[#1C4B2E]">7. Información Financiera</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="unitPriceRange">Rango de precios por unidad</label>
-                  <Input id="unitPriceRange" name="unitPriceRange" value={form.unitPriceRange} onChange={onChange} placeholder="Ej: 120,000–350,000" />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="currency">Moneda</label>
-                  <Select id="currency" name="currency" value={form.currency} onChange={onChange}>
-                    <option value="USD">USD</option>
-                    <option value="DOP">DOP</option>
-                    <option value="EUR">EUR</option>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="paymentMethods">Formas de pago</label>
-                  <Input id="paymentMethods" name="paymentMethods" value={form.paymentMethods} onChange={onChange} placeholder="Contado, financiamiento, fideicomiso…" />
-                </div>
-                <div className="grid gap-2 sm:col-span-2">
-                  <label className="text-sm text-[#6B7280]" htmlFor="partnerBank">Banco aliado / fideicomiso (si aplica)</label>
-                  <Input id="partnerBank" name="partnerBank" value={form.partnerBank} onChange={onChange} placeholder="Nombre del banco / fideicomiso" />
-                </div>
-              </div>
-            </section>
-
-            {error && (
-              <div className="text-sm text-red-600">{error}</div>
-            )}
-            {success && (
-              <div className="text-sm text-green-600">{success}</div>
-            )}
-            <div className="pt-2">
-              <Button type="submit" disabled={saving || uploading} className="bg-[#1C4B2E] text-white hover:bg-[#163c25]">
-                {saving || uploading ? "Publicando…" : "Publicar"}
-              </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* 7. Finanzas */}
+        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+          <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+            <CardTitle className="font-serif text-xl flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">7</span>
+              Inversión & Finanzas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid gap-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="unitPriceRange">Rango de Precios</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input id="unitPriceRange" name="unitPriceRange" value={form.unitPriceRange} onChange={onChange} placeholder="120,000 – 350,000" className="h-11 bg-background/50 pl-7" />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="currency">Moneda</label>
+              <Select id="currency" name="currency" value={form.currency} onChange={onChange} className="h-11 bg-background/50">
+                <option value="USD">USD (Dólares)</option>
+                <option value="DOP">DOP (Pesos)</option>
+                <option value="EUR">EUR (Euros)</option>
+              </Select>
+            </div>
+            <div className="grid gap-2 md:col-span-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="paymentMethods">Plan de Pagos / Métodos</label>
+              <Input id="paymentMethods" name="paymentMethods" value={form.paymentMethods} onChange={onChange} placeholder="Ej: Reserva 5%, Separación 10%..." className="h-11 bg-background/50" />
+            </div>
+            <div className="grid gap-2 md:col-span-2">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="partnerBank">Fideicomiso / Banco Aliado</label>
+              <Input id="partnerBank" name="partnerBank" value={form.partnerBank} onChange={onChange} placeholder="Ej: Fiduciaria Banreservas" className="h-11 bg-background/50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 pb-12">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:w-auto h-12 px-8 rounded-full border-2 hover:bg-muted"
+            onClick={() => window.history.back()}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={saving || uploading}
+            className="w-full sm:w-auto h-12 px-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25 text-lg font-medium transition-all active:scale-95"
+          >
+            {saving || uploading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                {uploading ? "Subiendo archivos..." : "Guardando..."}
+              </span>
+            ) : "Publicar Proyecto"}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

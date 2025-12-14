@@ -13,6 +13,7 @@ interface DropdownMenuTriggerProps {
 interface DropdownMenuContentProps {
   align?: string
   children: React.ReactNode
+  className?: string
 }
 
 interface DropdownMenuItemProps {
@@ -38,7 +39,7 @@ const DropdownContext = React.createContext<{
 
 export const DropdownMenu: React.FC<DropdownMenuProps> = ({ children }) => {
   const [isOpen, setIsOpen] = React.useState(false)
-  
+
   // Close dropdown when clicking outside
   React.useEffect(() => {
     const handleClickOutside = () => {
@@ -46,7 +47,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ children }) => {
         setIsOpen(false)
       }
     }
-    
+
     if (isOpen) {
       document.addEventListener("click", handleClickOutside)
       return () => {
@@ -54,12 +55,12 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ children }) => {
       }
     }
   }, [isOpen])
-  
+
   const contextValue = {
     isOpen,
     setIsOpen,
   }
-  
+
   return (
     <DropdownContext.Provider value={contextValue}>
       <div className="relative inline-block text-left">
@@ -69,32 +70,32 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ children }) => {
   )
 }
 
-export const DropdownMenuTrigger: React.FC<DropdownMenuTriggerProps> = ({ 
-  children, 
-  asChild 
+export const DropdownMenuTrigger: React.FC<DropdownMenuTriggerProps> = ({
+  children,
+  asChild
 }) => {
   const context = React.useContext(DropdownContext)
-  
+
   if (!context) {
     throw new Error("DropdownMenuTrigger must be used within DropdownMenu")
   }
-  
+
   const { setIsOpen, isOpen } = context
-  
+
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsOpen(!isOpen)
   }
-  
+
   // If asChild is true, clone the child element and add the onClick handler
   if (asChild && React.isValidElement(children)) {
     const childProps = children.props || {};
-    return React.cloneElement(children, { 
-      ...childProps, 
-      onClick: handleClick 
+    return React.cloneElement(children, {
+      ...childProps,
+      onClick: handleClick
     } as React.Attributes & { onClick?: (e: React.MouseEvent) => void })
   }
-  
+
   // Otherwise, wrap in a button
   return (
     <button onClick={handleClick} type="button">
@@ -105,23 +106,25 @@ export const DropdownMenuTrigger: React.FC<DropdownMenuTriggerProps> = ({
 
 export const DropdownMenuContent: React.FC<DropdownMenuContentProps> = ({
   align = "end",
-  children
+  children,
+  className
 }) => {
   const context = React.useContext(DropdownContext)
-  
+
   if (!context) {
     throw new Error("DropdownMenuContent must be used within DropdownMenu")
   }
-  
+
   const { isOpen } = context
-  
+
   if (!isOpen) return null
-  
+
   return (
     <div
       className={cn(
         "absolute z-50 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none",
-        align === "end" ? "right-0" : align === "start" ? "left-0" : ""
+        align === "end" ? "right-0" : align === "start" ? "left-0" : "",
+        className
       )}
       onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
     >
@@ -139,13 +142,13 @@ export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = ({
   children
 }) => {
   const context = React.useContext(DropdownContext)
-  
+
   if (!context) {
     throw new Error("DropdownMenuItem must be used within DropdownMenu")
   }
-  
+
   const { setIsOpen } = context
-  
+
   const handleClick = () => {
     if (!disabled && onClick) {
       onClick()
@@ -153,7 +156,7 @@ export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = ({
     // Close the dropdown after clicking an item
     setIsOpen(false)
   }
-  
+
   return (
     <button
       onClick={handleClick}

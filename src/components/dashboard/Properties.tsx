@@ -146,68 +146,104 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <Button onClick={onAdd} className="bg-[#1C4B2E] text-white hover:bg-[#163c25]">
-          <Plus className="mr-2 size-4" /> Agregar nueva propiedad
+    <div className="space-y-6">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xl font-serif font-bold text-foreground">Tu Portafolio</h2>
+        <Button onClick={onAdd} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6 shadow-lg shadow-primary/20 transition-all active:scale-95">
+          <Plus className="mr-2 size-4" /> Nuevo Proyecto
         </Button>
       </div>
 
       {!user ? (
-        <div className="text-center py-8 text-[#6B7280]">
+        <div className="rounded-2xl border border-dashed border-muted-foreground/25 p-12 text-center text-muted-foreground bg-muted/5">
           Debes iniciar sesión para ver tus propiedades
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {items.map((p) => (
-            <Card key={p.id} className="overflow-hidden rounded-2xl border shadow-md">
-              <div className="relative aspect-video w-full bg-muted">
-                <Link href={p.source === "project" ? `/projects/${p.id}` : `/properties/${p.id}`}>
-                  <Image
-                    src={p.images?.[0] ?? "https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1600&auto=format&fit=crop"}
-                    alt={p.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                </Link>
+            <div
+              key={p.id}
+              className="group relative h-[400px] w-full rounded-[1.5rem] overflow-hidden bg-background shadow-lg transition-all duration-500 hover:shadow-2xl hover:-translate-y-1"
+            >
+              {/* Background Image with Zoom Effect */}
+              <div className="absolute inset-0 overflow-hidden">
+                <Image
+                  src={p.images?.[0] ?? "https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1600&auto=format&fit=crop"}
+                  alt={p.title}
+                  fill
+                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-70 transition-opacity duration-300" />
               </div>
-              <CardHeader>
-                <CardTitle className="font-serif text-lg">
-                  <Link href={p.source === "project" ? `/projects/${p.id}` : `/properties/${p.id}`} className="hover:underline">
-                    {p.title}
-                  </Link>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between text-sm text-[#6B7280]">
-                  <span>{p.location}</span>
-                  <span>
-                    {typeof p.price === "number" && isFinite(p.price)
-                      ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(p.price)
-                      : (p.priceRangeText || "—")}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <Button asChild variant="outline" className="rounded-lg" size="sm">
-                    <Link href={p.source === "project" ? `/projects/${p.id}/edit` : `/properties/${p.id}/edit`}>
-                      <Edit className="mr-2 size-4" /> Editar
+
+              {/* Floating Status / Type Badge */}
+              <div className="absolute top-4 left-4 z-10 flex gap-2">
+                <span className={`px-2.5 py-1 rounded-full backdrop-blur-md text-[10px] font-bold uppercase tracking-wide border shadow-sm ${p.source === 'project' ? 'bg-primary/90 text-white border-primary/20' : 'bg-secondary/90 text-secondary-foreground border-white/20'}`}>
+                  {p.source === 'project' ? 'Proyecto' : 'Propiedad'}
+                </span>
+              </div>
+
+              {/* Action Buttons (Edit/Delete) - Top Right */}
+              <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-4 group-hover:translate-x-0">
+                <Link href={p.source === "project" ? `/projects/${p.id}/edit` : `/properties/${p.id}/edit`}>
+                  <button className="h-9 w-9 rounded-full bg-white/10 hover:bg-white text-white hover:text-black backdrop-blur-md border border-white/20 flex items-center justify-center transition-all shadow-lg" title="Editar">
+                    <Edit className="w-4 h-4" />
+                  </button>
+                </Link>
+                <button
+                  onClick={() => handleDelete(p)}
+                  className="h-9 w-9 rounded-full bg-white/10 hover:bg-red-500 text-white backdrop-blur-md border border-white/20 flex items-center justify-center transition-all shadow-lg"
+                  title="Eliminar"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Content Overlay */}
+              <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end h-full">
+                <div className="transform translate-y-2 transition-transform duration-300 group-hover:translate-y-0">
+                  <h3 className="font-serif text-2xl font-bold text-white mb-1.5 leading-tight drop-shadow-md line-clamp-2">
+                    <Link href={p.source === "project" ? `/projects/${p.id}` : `/properties/${p.id}`} className="hover:text-primary transition-colors">
+                      {p.title}
                     </Link>
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    className="rounded-lg"
-                    size="sm"
-                    onClick={() => handleDelete(p)}
-                  >
-                    <Trash2 className="mr-2 size-4" /> Eliminar
-                  </Button>
+                  </h3>
+
+                  <div className="flex items-center text-white/80 text-sm mb-4">
+                    {/* Using a simple generic icon here effectively */}
+                    <span className="truncate opacity-90">{p.location || "Sin ubicación definida"}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase tracking-wider text-white/60 font-semibold">Precio</span>
+                      <span className="text-lg font-bold text-emerald-400 shadow-black drop-shadow-sm">
+                        {typeof p.price === "number" && isFinite(p.price)
+                          ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(p.price)
+                          : (p.priceRangeText || "Consultar")}
+                      </span>
+                    </div>
+
+                    <Link href={p.source === "project" ? `/projects/${p.id}` : `/properties/${p.id}`}>
+                      <div className="flex items-center gap-1 text-sm font-medium text-white hover:text-primary transition-colors">
+                        Ver detalles
+                        {/* Simple arrow icon */}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+                      </div>
+                    </Link>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
           {items.length === 0 && (
-            <div className="text-[#6B7280]">No tienes propiedades publicadas aún.</div>
+            <div className="col-span-full py-16 text-center text-muted-foreground bg-muted/5 rounded-[2rem] border border-dashed border-muted-foreground/20">
+              <div className="mx-auto h-16 w-16 rounded-full bg-muted/20 flex items-center justify-center mb-4 text-muted-foreground">
+                <Plus className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-serif font-medium text-foreground mb-1">Aún no tienes propiedades</h3>
+              <p className="text-sm text-muted-foreground mb-6">Comienza tu viaje inmobiliario publicando tu primera propiedad o proyecto.</p>
+              <Button onClick={onAdd} variant="outline" className="rounded-full">Crear ahora</Button>
+            </div>
           )}
         </div>
       )}

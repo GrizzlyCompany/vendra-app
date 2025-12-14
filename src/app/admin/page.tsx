@@ -108,8 +108,8 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-gray-50 font-sans">
-      <div className="flex h-screen overflow-hidden">
+    <div className="min-h-[100dvh] bg-background font-sans">
+      <div className="flex h-screen overflow-hidden bg-gray-50/50 dark:bg-gray-900/50">
         {/* Sidebar */}
         <AdminSidebar
           activeSection={activeSection}
@@ -119,23 +119,35 @@ export default function AdminPage() {
         />
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Mobile Header */}
-          <div className="lg:hidden flex items-center justify-between p-4 bg-white border-b">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsMobileSidebarOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <h1 className="text-lg font-semibold">Admin Panel</h1>
-            <div></div>
-          </div>
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+
+          {/* Header (Desktop & Mobile) */}
+          <header className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-xl border-b sticky top-0 z-20">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden"
+                onClick={() => setIsMobileSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <h1 className="text-xl font-serif font-bold text-gray-800 hidden lg:block">Panel de Administración</h1>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Sistema Operativo
+              </div>
+            </div>
+          </header>
 
           {/* Content Area */}
-          <main className="flex-1 overflow-auto p-4 md:p-6">
-            {renderContent()}
+          <main className="flex-1 overflow-auto p-4 md:p-8 relative">
+            <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              {renderContent()}
+            </div>
           </main>
         </div>
       </div>
