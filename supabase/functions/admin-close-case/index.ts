@@ -90,8 +90,10 @@ serve(async (req) => {
     // Get admin user ID
     const adminUserId = user.id
 
-    // Close the conversation by updating all messages between admin and the user
-    // Using a simpler query approach to avoid potential syntax issues
+    console.log('Closing case for user:', user_id, 'by admin:', adminUserId);
+
+    // Close the conversation by updating ALL messages between admin and the user
+    // Remove conversation_type filter to ensure all messages are closed
     const { data: updatedMessages1, error: updateError1 } = await supabaseClient
       .from('messages')
       .update({
@@ -101,7 +103,8 @@ serve(async (req) => {
       })
       .eq('sender_id', adminUserId)
       .eq('recipient_id', user_id)
-      .eq('conversation_type', 'user_to_admin')
+
+    console.log('Update 1 result:', { data: updatedMessages1, error: updateError1 });
 
     const { data: updatedMessages2, error: updateError2 } = await supabaseClient
       .from('messages')
@@ -112,7 +115,8 @@ serve(async (req) => {
       })
       .eq('sender_id', user_id)
       .eq('recipient_id', adminUserId)
-      .eq('conversation_type', 'user_to_admin')
+
+    console.log('Update 2 result:', { data: updatedMessages2, error: updateError2 });
 
     // Check for errors in either query
     if (updateError1 && updateError2) {
