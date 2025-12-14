@@ -47,6 +47,8 @@ interface PropertyCardProps {
   onDelete?: (property: Property) => void;
   state?: PropertyCardState;
   className?: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: (id: string) => void;
 }
 
 /**
@@ -86,7 +88,9 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
   showEdit = false,
   onDelete,
   state = 'idle',
-  className = ''
+  className = '',
+  isFavorite,
+  onToggleFavorite
 }) {
   usePerformanceMonitor('PropertyCard');
 
@@ -148,16 +152,18 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
 
           {/* Favorite Button (Top Right) */}
           <button
-            className="absolute right-3 top-3 z-20 h-8 w-8 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white hover:bg-white hover:text-red-500 transition-colors shadow-sm group/heart"
+            className={`absolute right-3 top-3 z-20 h-8 w-8 rounded-full flex items-center justify-center transition-all shadow-sm group/heart ${isFavorite
+              ? "bg-red-500 text-white hover:bg-red-600 border-red-500"
+              : "bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white hover:text-red-500"
+              }`}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              // Prevent navigation
-              // Add favorites logic here
+              onToggleFavorite?.(property.id);
             }}
-            title="Añadir a favoritos"
+            title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
           >
-            <Heart className="h-4 w-4 transition-transform group-active/heart:scale-90" />
+            <Heart className={`h-4 w-4 transition-transform group-active/heart:scale-90 ${isFavorite ? "fill-current" : ""}`} />
           </button>
 
           {/* Type badge */}

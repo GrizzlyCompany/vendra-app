@@ -48,33 +48,14 @@ export function useUnreadMessages() {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "messages",
           filter: `recipient_id=eq.${user.id}`,
         },
-        (payload) => {
-          // When a new message is inserted for the user, increment the count
-          setUnreadCount((prev) => prev + 1);
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "messages",
-          filter: `recipient_id=eq.${user.id}`,
-        },
-        (payload) => {
-          // When a message is marked as read, decrement the count if it was previously unread
-          const oldRecord = payload.old as { read_at: string | null };
-          const newRecord = payload.new as { read_at: string | null };
-
-          // If message was unread and is now read, decrement count
-          if (!oldRecord.read_at && newRecord.read_at) {
-            setUnreadCount((prev) => Math.max(0, prev - 1));
-          }
+        () => {
+          // Verify count from server on any change to ensure accuracy
+          fetchUnreadCount();
         }
       )
       .subscribe();

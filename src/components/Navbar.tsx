@@ -22,10 +22,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { useUnreadMessages } from "@/features/messaging/hooks/useUnreadMessages";
 
 export function Navbar() {
   const { user, loading, signOut } = useAuth();
   const { avatarUrl } = useUserAvatar(user);
+  const { unreadCount } = useUnreadMessages();
   const { error: showError } = useToastContext();
   const router = useRouter();
   const pathname = usePathname();
@@ -220,7 +222,9 @@ export function Navbar() {
             <Button asChild variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors relative">
               <Link href="/messages" title="Mensajes">
                 <MessageSquare className="size-5" />
-                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 border-2 border-background"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 border-2 border-background animate-pulse"></span>
+                )}
               </Link>
             </Button>
 

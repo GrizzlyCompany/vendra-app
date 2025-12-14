@@ -115,6 +115,55 @@ function MainContent() {
     return () => { active = false; };
   }, [locationSel, priceMin, priceMax, typeSel, refresh, q]);
 
+  // Favorites logic
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [user, setUser] = useState<any>(null);
+
+  // Fetch user and favorites
+  useEffect(() => {
+    let active = true;
+    async function fetchFavorites() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active) return;
+
+      setUser(user);
+
+      if (user) {
+        const { data } = await supabase
+          .from("favorites")
+          .select("property_id")
+          .eq("user_id", user.id);
+
+        if (data && active) {
+          setFavorites(new Set(data.map(f => f.property_id)));
+        }
+      }
+    }
+    fetchFavorites();
+    return () => { active = false; };
+  }, [refresh]);
+
+  const toggleFavorite = async (propertyId: string) => {
+    if (!user) {
+      // Prompt logic if needed, or redirect
+      alert("Por favor inicia sesión para guardar favoritos");
+      return;
+    }
+
+    const newFavorites = new Set(favorites);
+    const isFav = newFavorites.has(propertyId);
+
+    if (isFav) {
+      newFavorites.delete(propertyId);
+      setFavorites(newFavorites);
+      await supabase.from("favorites").delete().eq("user_id", user.id).eq("property_id", propertyId);
+    } else {
+      newFavorites.add(propertyId);
+      setFavorites(newFavorites);
+      await supabase.from("favorites").insert({ user_id: user.id, property_id: propertyId });
+    }
+  };
+
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
       {/* Header with logo and VENDRA text centered - visible only on mobile/tablet */}
@@ -256,7 +305,12 @@ function MainContent() {
             <h2 className="mb-4 font-serif text-2xl text-foreground">Listados Destacados</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {properties.map((p) => (
-                <PropertyCard key={p.id} property={p} />
+                <PropertyCard
+                  key={p.id}
+                  property={p}
+                  isFavorite={favorites.has(p.id)}
+                  onToggleFavorite={toggleFavorite}
+                />
               ))}
               {properties.length === 0 && (
                 <div className="col-span-full text-center text-muted-foreground">
