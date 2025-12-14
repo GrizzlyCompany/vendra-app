@@ -2,16 +2,32 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useToastContext } from "@/components/ToastProvider";
 import { supabase } from "@/lib/supabase/client";
+import {
+  Send,
+  Type,
+  FileText,
+  Tag,
+  MessageSquare,
+  Sparkles,
+  AlertCircle,
+  ShieldAlert,
+  Zap,
+  Lightbulb
+} from "lucide-react";
+import Image from "next/image";
 
 export default function ReportsPage() {
   const { user, loading: authLoading } = useAuth();
   const { error: showError, success: showSuccess } = useToastContext();
   const router = useRouter();
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -26,26 +42,24 @@ export default function ReportsPage() {
     }
   }, [user, authLoading, router]);
 
-  // Show loading state while checking auth
-  if (authLoading) {
+  if (authLoading || !user) {
     return (
-      <div className="min-h-[calc(100dvh-64px)] bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Verificando autenticación...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground animate-pulse">Cargando...</p>
         </div>
       </div>
     );
   }
 
-  // If no user, component will redirect via useEffect
-  if (!user) {
-    return null;
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCategoryChange = (val: string) => {
+    setFormData(prev => ({ ...prev, category: val }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,21 +67,17 @@ export default function ReportsPage() {
     setLoading(true);
 
     try {
-      // Get the Supabase session token
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      // Prepare headers with authentication
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
 
-      // Add authorization header if token exists
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Call the send-report function directly
       const response = await fetch('https://vvuvuibcmvqxtvdadwne.supabase.co/functions/v1/send-report', {
         method: 'POST',
         headers,
@@ -82,121 +92,189 @@ export default function ReportsPage() {
       });
 
       if (!response.ok) {
-        // Try to get error details from response
-        let errorDetails = '';
-        try {
-          const errorData = await response.json();
-          errorDetails = errorData.error || errorData.message || JSON.stringify(errorData);
-          // If we have more details, include them
-          if (errorData.details) {
-            errorDetails += ` (Details: ${errorData.details})`;
-          }
-          if (errorData.stack) {
-            errorDetails += ` (Stack: ${errorData.stack})`;
-          }
-        } catch (parseError) {
-          errorDetails = `HTTP error! status: ${response.status}`;
-        }
-        throw new Error(`Server error: ${errorDetails}`);
+        throw new Error(`Server error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Report sent successfully:', data);
+      showSuccess("Reporte enviado", "Tu caso ha sido creado exitosamente.");
 
-      // Show success message
-      showSuccess("Reporte enviado correctamente", data.message || "Gracias por tu reporte. Lo revisaremos pronto y te responderemos a través del sistema de mensajes.");
-
-      // Reset form
       setFormData({
         title: "",
         description: "",
         category: "general",
       });
+
+      // Redirect to messages to see the new case
+      setTimeout(() => router.push('/messages'), 1500);
+
     } catch (err: any) {
       console.error("Error sending report:", err);
-      // Show a more user-friendly error message
-      showError(
-        "Error al enviar el reporte",
-        "Por favor intenta nuevamente más tarde. Si el problema persiste, contacta al administrador del sistema."
-      );
+      showError("Error al enviar", "Por favor intenta nuevamente.");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-[calc(100dvh-64px)] bg-background font-sans mobile-bottom-safe mobile-horizontal-safe">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6">Reportes</h1>
+  const categoryOptions = [
+    { value: "general", label: "General" },
+    { value: "bug", label: "Error Técnico" },
+    { value: "feature", label: "Solicitud de Funcionalidad" },
+    { value: "performance", label: "Rendimiento" },
+    { value: "security", label: "Seguridad" },
+  ];
 
-          <div className="bg-card rounded-lg border p-6 mb-6">
-            <p className="text-muted-foreground text-sm">
-              Tu reporte será enviado directamente al administrador del sistema a través del sistema de mensajes.
-              Podrás ver la respuesta del administrador en la sección de mensajes de tu cuenta.
+  const getCategoryIcon = (cat: string) => {
+    switch (cat) {
+      case 'bug': return AlertCircle;
+      case 'feature': return Lightbulb;
+      case 'performance': return Zap;
+      case 'security': return ShieldAlert;
+      default: return MessageSquare;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 relative overflow-hidden flex flex-col md:flex-row">
+
+      {/* Decorative Elements */}
+      <div className="absolute top-0 left-0 w-full h-[500px] bg-primary/5 blur-[120px] rounded-full -translate-y-1/2 pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[100px] rounded-full translate-y-1/3 pointer-events-none" />
+
+      {/* LEFT SIDE: Form */}
+      <div className="flex-1 flex items-center justify-center p-6 md:p-12 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="w-full max-w-lg"
+        >
+          <div className="mb-8">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl mb-4 backdrop-blur-md border border-primary/10"
+            >
+              <Sparkles className="w-6 h-6 text-primary" />
+            </motion.div>
+            <h1 className="text-4xl font-bold tracking-tight mb-3 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+              Crear Reporte
+            </h1>
+            <p className="text-muted-foreground text-lg leading-relaxed">
+              ¿Encontraste un problema o tienes una sugerencia?
+              Tu reporte creará un nuevo caso de soporte.
             </p>
           </div>
 
-          <div className="bg-card rounded-lg border p-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium mb-2">
-                  Título del reporte
-                </label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="Describe brevemente el reporte"
-                  required
-                />
-              </div>
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            className="group relative"
+          >
+            {/* Glassmorphism Card */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/60 to-white/30 dark:from-white/10 dark:to-white/5 rounded-3xl blur-[1px]" />
+            <div className="relative bg-background/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl shadow-black/5 rounded-3xl p-6 md:p-8">
 
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium mb-2">
-                  Categoría
-                </label>
-                <select
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              <form onSubmit={handleSubmit} className="space-y-6">
+
+                {/* Title Input */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
+                    Título
+                  </label>
+                  <div className="relative group/input">
+                    <div className="absolute left-3 top-3 text-muted-foreground group-focus-within/input:text-primary transition-colors">
+                      <Type className="w-5 h-5" />
+                    </div>
+                    <Input
+                      name="title"
+                      value={formData.title}
+                      onChange={handleChange}
+                      placeholder="Ej: Error al subir imagen..."
+                      className="pl-10 h-12 bg-white/50 dark:bg-black/20 border-border/50 focus:bg-background transition-all duration-300 rounded-xl"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Category Select */}
+                <div className="space-y-2">
+                  <CustomSelect
+                    icon={Tag}
+                    label="Categoría"
+                    value={formData.category}
+                    onChange={handleCategoryChange}
+                    options={categoryOptions}
+                  />
+                </div>
+
+                {/* Description Textarea */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
+                    Descripción
+                  </label>
+                  <div className="relative group/input">
+                    <div className="absolute left-3 top-3 text-muted-foreground group-focus-within/input:text-primary transition-colors">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange} // Correct type now
+                      placeholder="Describe los detalles..."
+                      rows={5}
+                      required
+                      className="w-full pl-10 pt-3 pr-3 text-sm rounded-xl border border-border/50 bg-white/50 dark:bg-black/20 focus:bg-background focus:ring-2 focus:ring-ring focus:border-input transition-all duration-300 resize-none outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:to-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 text-base font-medium"
                 >
-                  <option value="general">General</option>
-                  <option value="bug">Error técnico</option>
-                  <option value="feature">Solicitud de funcionalidad</option>
-                  <option value="performance">Problema de rendimiento</option>
-                  <option value="security">Problema de seguridad</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium mb-2">
-                  Descripción detallada
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Proporciona todos los detalles relevantes sobre el reporte..."
-                  rows={6}
-                  required
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Enviando..." : "Enviar Reporte"}
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Enviando...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span>Enviar Reporte</span>
+                      <Send className="w-4 h-4" />
+                    </div>
+                  )}
                 </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+
+              </form>
+            </div>
+          </motion.div>
+        </motion.div>
       </div>
+
+      {/* RIGHT SIDE: Image */}
+      <div className="hidden md:block w-1/2 relative">
+        <motion.div
+          initial={{ opacity: 0, scale: 1.1 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.2, ease: "easeOut" }}
+          className="absolute inset-0"
+        >
+          <Image
+            src="https://vvuvuibcmvqxtvdadwne.supabase.co/storage/v1/object/public/logo/report_image.png"
+            alt="Report Illustration"
+            fill
+            className="object-cover"
+            priority
+          />
+          {/* Overlay gradient for text readability if needed, or just aesthetic */}
+          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/10 to-background" />
+        </motion.div>
+      </div>
+
     </div>
   );
 }

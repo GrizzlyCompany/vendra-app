@@ -754,26 +754,20 @@ function MessagesContent() {
       const isAdminConversation = adminUserId && targetId === adminUserId;
 
       if (isAdminConversation) {
-        // Check conversation status
-        const response = await fetch('/functions/v1/check-conversation-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
-          },
-          body: JSON.stringify({
-            recipient_id: adminUserId,
-            conversation_type: 'user_to_admin'
-          })
-        });
+        // Check if user has an open case directly from support_cases table
+        const { data: openCase, error: caseError } = await supabase
+          .from('support_cases')
+          .select('id, status')
+          .eq('user_id', me!)
+          .eq('status', 'open')
+          .limit(1);
 
-        if (response.ok) {
-          const result = await response.json();
+        console.log('onSend - Case check:', { openCase, caseError, me });
 
-          if (result.is_closed) {
-            alert('Esta conversación ha sido cerrada. Por favor, crea un nuevo reporte si tienes otra inquietud.');
-            return;
-          }
+        // If no open case exists, block sending and show closed banner
+        if (!openCase || openCase.length === 0) {
+          setIsClosedConversation(true);
+          return;
         }
       }
 
