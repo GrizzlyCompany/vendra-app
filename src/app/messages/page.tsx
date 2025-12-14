@@ -425,7 +425,6 @@ function MessagesContent() {
         // Check if this is an admin conversation
         let isAdminConversation = false;
         let adminUserId = null;
-        let latestCaseId = null;
 
         try {
           const { data: adminProfile } = await supabase
@@ -438,41 +437,38 @@ function MessagesContent() {
             isAdminConversation = true;
             adminUserId = adminProfile.id;
 
-            // Get the latest case_id for this user's conversation with admin
-            const { data: latestCase } = await supabase
-              .from('messages')
-              .select('case_id, case_status')
-              .or(`sender_id.eq.${me},recipient_id.eq.${me}`)
-              .eq('conversation_type', 'user_to_admin')
-              .not('case_id', 'is', null)
+            // Check if user has an OPEN case in support_cases table
+            const { data: openCase } = await supabase
+              .from('support_cases')
+              .select('id, status')
+              .eq('user_id', me)
+              .eq('status', 'open')
               .order('created_at', { ascending: false })
               .limit(1);
 
-            if (latestCase && latestCase.length > 0) {
-              latestCaseId = latestCase[0].case_id;
-              if (!cancelled) {
-                setIsClosedConversation(latestCase[0].case_status === 'closed');
-              }
+            // If no open case exists, the conversation is closed
+            if (!cancelled) {
+              const hasOpenCase = openCase && openCase.length > 0;
+              setIsClosedConversation(!hasOpenCase);
+              console.log('Case status check:', {
+                hasOpenCase,
+                openCase,
+                isClosedConversation: !hasOpenCase
+              });
             }
           }
         } catch (error) {
-          console.warn('Could not check admin status:', error);
+          console.warn('Could not check case status:', error);
         }
 
-        // Initial fetch - filter by case_id for admin conversations
-        let query = supabase
+        // Initial fetch - get all messages with this target
+        const { data, error } = await supabase
           .from("messages")
-          .select("id,sender_id,recipient_id,content,created_at,read_at,case_status,case_id")
+          .select("id,sender_id,recipient_id,content,created_at,read_at")
           .in('sender_id', [me, targetId])
           .in('recipient_id', [me, targetId])
           .order("created_at", { ascending: true });
 
-        // For admin conversations, filter by the latest case_id
-        if (isAdminConversation && latestCaseId) {
-          query = query.eq('case_id', latestCaseId);
-        }
-
-        const { data, error } = await query;
         if (error) throw error;
         if (cancelled) return;
         setMessages((data ?? []) as Message[]);
