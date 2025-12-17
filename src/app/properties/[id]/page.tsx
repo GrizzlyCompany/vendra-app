@@ -16,6 +16,20 @@ import { DetailPageTransition, DetailSection, DetailBackButton } from "@/compone
 import { useToastContext } from "@/components/ToastProvider";
 import { ShareMenu } from "@/components/ShareMenu";
 
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { useCallback } from "react";
+
+const containerStyle = {
+  width: '100%',
+  height: '100%',
+  borderRadius: '1rem'
+};
+
+const defaultCenter = {
+  lat: 18.4861,
+  lng: -69.9312
+};
+
 export default function PropertyDetails({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
@@ -26,12 +40,51 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
   const [isToggling, setIsToggling] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Map state
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: ['places']
+  });
+
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [markerPos, setMarkerPos] = useState<google.maps.LatLngLiteral | null>(null);
+
+  const onLoad = useCallback(function callback(map: google.maps.Map) {
+    setMap(map);
+  }, []);
+
+  const onUnmount = useCallback(function callback(map: google.maps.Map) {
+    setMap(null);
+  }, []);
+
+  // Effect to geocode address when property loads
+  useEffect(() => {
+    if (isLoaded && property && (property.address || property.location)) {
+      const geocoder = new google.maps.Geocoder();
+      const addressToCode = property.address || property.location;
+
+      geocoder.geocode({ address: addressToCode }, (results, status) => {
+        if (status === "OK" && results && results[0]) {
+          const location = results[0].geometry.location;
+          setMarkerPos({ lat: location.lat(), lng: location.lng() });
+        }
+      });
+    }
+  }, [isLoaded, property]);
+
   useEffect(() => {
     async function loadProperty() {
       try {
         setLoading(true);
         const { id } = resolvedParams;
         setPropertyId(id);
+
+        // Fetch user
+        const { data: authData } = await supabase.auth.getUser();
+        setCurrentUserId(authData.user?.id ?? null);
 
         const { data, error } = await supabase
           .from("properties")
@@ -56,6 +109,10 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
 
     loadProperty();
   }, [resolvedParams]);
+
+
+
+
 
   const trackPropertyView = async (propertyId: string) => {
     try {
@@ -214,6 +271,38 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
                 ))}
               </div>
             </div>
+
+            {/* Location Section */}
+            <div className="pt-8">
+              <h3 className="text-foreground font-serif text-2xl mb-6">Ubicación</h3>
+              <div className="h-[400px] w-full rounded-3xl overflow-hidden border border-border shadow-sm bg-muted/20">
+                {isLoaded ? (
+                  <GoogleMap
+                    mapContainerStyle={containerStyle}
+                    center={markerPos || defaultCenter}
+                    zoom={15}
+                    onLoad={onLoad}
+                    onUnmount={onUnmount}
+                    options={{
+                      disableDefaultUI: false,
+                      streetViewControl: true,
+                      mapTypeControl: false,
+                    }}
+                  >
+                    {markerPos && <Marker position={markerPos} />}
+                  </GoogleMap>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                  </div>
+                )}
+              </div>
+              <p className="mt-4 text-muted-foreground flex items-center gap-2">
+                <MapPin className="size-4 shrink-0 text-primary" />
+                {property.address || property.location}
+              </p>
+            </div>
+
           </div>
 
           {/* 4. Sticky Sidebar (Right Column) */}
@@ -230,12 +319,25 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
                   <div className="h-px bg-border/50" />
 
                   <div className="space-y-4">
-                    <Button className="w-full h-12 rounded-xl text-lg font-medium shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90">
-                      Contactar Agente
-                    </Button>
-                    <Button variant="outline" className="w-full h-12 rounded-xl text-lg border-2 hover:bg-secondary/20 hover:text-foreground hover:border-primary/30">
-                      Agendar Visita
-                    </Button>
+                    {currentUserId !== property.owner_id ? (
+                      <>
+                        <Button className="w-full h-12 rounded-xl text-lg font-medium shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90">
+                          Contactar Agente
+                        </Button>
+                        <Button variant="outline" className="w-full h-12 rounded-xl text-lg border-2 hover:bg-secondary/20 hover:text-foreground hover:border-primary/30">
+                          Agendar Visita
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl text-center">
+                        <p className="text-primary font-medium mb-2">Eres el propietario</p>
+                        <Button variant="outline" asChild className="w-full">
+                          <Link href={`/properties/${property.id}/edit`}>
+                            Editar Propiedad
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="text-center text-xs text-muted-foreground pt-2">

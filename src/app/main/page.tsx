@@ -225,6 +225,8 @@ function MainContent() {
                       { value: "all", label: "Cualquiera" },
                       { value: "Casa", label: "Casa" },
                       { value: "Apartamento", label: "Depto" },
+                      { value: "Complejo de Aptos", label: "Complejo de Aptos" },
+                      { value: "Condominio", label: "Condominio" },
                       { value: "Terreno", label: "Terreno" },
                       { value: "Comercial", label: "Comercial" },
                       { value: "Villa", label: "Villa" }

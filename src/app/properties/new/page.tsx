@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
@@ -8,7 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Trash2, Upload } from "lucide-react";
+import { Trash2, Upload, MapPin } from "lucide-react";
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+
+const containerStyle = {
+  width: '100%',
+  height: '400px',
+  borderRadius: '0.75rem'
+};
+
+const defaultCenter = {
+  lat: 18.4861,
+  lng: -69.9312
+};
 
 // Simple helper
 const toNumber = (v: string) => {
@@ -40,6 +52,64 @@ export default function NewPropertyPage() {
   const [files, setFiles] = useState<FileList | null>(null);
   const [uploading, setUploading] = useState(false);
   const [filePreviews, setFilePreviews] = useState<string[]>([]);
+
+  // Google Maps State
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: ['places'] // Pre-load places lib if needed down the road
+  });
+
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [markerPos, setMarkerPos] = useState<google.maps.LatLngLiteral | null>(null);
+
+  const onLoad = useCallback(function callback(map: google.maps.Map) {
+    setMap(map);
+  }, []);
+
+  const onUnmount = useCallback(function callback(map: google.maps.Map) {
+    setMap(null);
+  }, []);
+
+  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setMarkerPos({ lat, lng });
+
+      // Reverse Geocoding
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === "OK" && results && results[0]) {
+          const addressComponents = results[0].address_components;
+
+          let route = "";
+          let streetNumber = "";
+          let locality = ""; // Sector/City part
+          let sublocality = "";
+          let administrative_area_level_1 = ""; // Province
+
+          for (const component of addressComponents) {
+            const types = component.types;
+            if (types.includes("route")) route = component.long_name;
+            if (types.includes("street_number")) streetNumber = component.long_name;
+            if (types.includes("locality")) locality = component.long_name;
+            if (types.includes("sublocality")) sublocality = component.long_name;
+            if (types.includes("administrative_area_level_1")) administrative_area_level_1 = component.long_name;
+          }
+
+          const formattedAddress = `${route} ${streetNumber}`.trim() || results[0].formatted_address;
+          const zone = sublocality || locality || administrative_area_level_1;
+
+          setForm(prev => ({
+            ...prev,
+            address: formattedAddress,
+            location: zone
+          }));
+        }
+      });
+    }
+  }, []);
 
   // derive typed URLs preview from the text input
   const typedPreviewUrls = useMemo(() =>
@@ -355,6 +425,8 @@ export default function NewPropertyPage() {
                   <option value="">Seleccionar...</option>
                   <option value="Casa">Casa</option>
                   <option value="Apartamento">Apartamento</option>
+                  <option value="Complejo de Aptos">Complejo de Aptos</option>
+                  <option value="Condominio">Condominio</option>
                   <option value="Comercial">Comercial</option>
                   <option value="Terreno">Terreno</option>
                   <option value="Villa">Villa</option>
@@ -368,14 +440,50 @@ export default function NewPropertyPage() {
             <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
               <CardTitle className="font-serif text-xl">Ubicación</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-              <div className="col-span-1 md:col-span-2 grid gap-2">
-                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="address">Dirección Exacta</label>
-                <Input id="address" name="address" className="h-11 bg-transparent" placeholder="123 Calle Principal..." value={form.address} onChange={onChange} />
+            <CardContent className="space-y-6 p-6">
+              {/* Google Map */}
+              <div className="w-full h-[400px] border border-border rounded-xl overflow-hidden relative">
+                {isLoaded ? (
+                  <GoogleMap
+                    mapContainerStyle={containerStyle}
+                    center={markerPos || defaultCenter}
+                    zoom={13}
+                    onLoad={onLoad}
+                    onUnmount={onUnmount}
+                    onClick={handleMapClick}
+                    options={{
+                      disableDefaultUI: false,
+                      streetViewControl: false,
+                      mapTypeControl: false,
+                    }}
+                  >
+                    {markerPos && <Marker position={markerPos} />}
+                  </GoogleMap>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-muted/20">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                      <span className="text-sm font-medium">Cargando Mapa...</span>
+                    </div>
+                  </div>
+                )}
+                {!markerPos && isLoaded && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-xs font-medium backdrop-blur-sm pointer-events-none">
+                    Toca en el mapa para ubicar la propiedad
+                  </div>
+                )}
               </div>
-              <div className="grid gap-2">
-                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="location">Sector / Ciudad</label>
-                <Input id="location" name="location" className="h-11 bg-transparent" placeholder="Ej. Piantini" value={form.location} onChange={onChange} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="col-span-1 md:col-span-2 grid gap-2">
+                  <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="address">Dirección Exacta</label>
+                  <Input id="address" name="address" className="h-11 bg-transparent" placeholder="123 Calle Principal..." value={form.address} onChange={onChange} />
+                  <p className="text-[10px] text-muted-foreground">Puedes escribirla o seleccionarla en el mapa.</p>
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="location">Sector / Ciudad</label>
+                  <Input id="location" name="location" className="h-11 bg-transparent" placeholder="Ej. Piantini" value={form.location} onChange={onChange} />
+                </div>
               </div>
             </CardContent>
           </Card>
