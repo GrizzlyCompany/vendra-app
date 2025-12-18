@@ -33,10 +33,7 @@ export function ProfileSection() {
     facebook_url: "",
     instagram_url: "",
     linkedin_url: "",
-    legal_documents: [],
-    facebook_url: "",
-    instagram_url: "",
-    linkedin_url: "",
+
     terms_accepted: false,
     banner_url: "",
   });
@@ -93,7 +90,7 @@ export function ProfileSection() {
             facebook_url: user.facebook_url,
             instagram_url: user.instagram_url,
             linkedin_url: user.linkedin_url,
-            linkedin_url: user.linkedin_url,
+
             terms_accepted: user.terms_accepted,
             banner_url: (user as any).banner_url ?? "",
           });
