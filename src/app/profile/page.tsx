@@ -9,9 +9,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { PropertyCard } from "@/features/properties/components/PropertyCard";
 import { useFavorites } from "@/features/properties/hooks/useFavorites";
 import type { Property } from "@/types";
-import { Star, Settings, Heart, CheckCircle, Building, LogOut, ChevronLeft } from "lucide-react";
+import { Star, Settings, Heart, CheckCircle, Building, LogOut, ChevronLeft, UserPen, Camera, Image, MoreVertical } from "lucide-react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
 import { syncUserRole } from "@/lib/roleUtils";
@@ -132,45 +133,46 @@ export default function ProfilePage() {
 
   const loadBanners = async () => {
     try {
+      // Predefined premium banners (Unsplash)
+      const PREDEFINED_BANNERS = [
+        { name: "Edificios Modernos", url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2670&auto=format&fit=crop" },
+        { name: "Oficina Minimalista", url: "https://images.unsplash.com/photo-1554469384-e58fac16e23a?q=80&w=2574&auto=format&fit=crop" },
+        { name: "Espacio de Trabajo", url: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2669&auto=format&fit=crop" },
+        { name: "Tecnología", url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop" },
+        { name: "Arquitectura", url: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2670&auto=format&fit=crop" },
+        { name: "Diseño Interior", url: "https://images.unsplash.com/photo-1449824913929-7b77f555872a?q=80&w=2574&auto=format&fit=crop" }
+      ];
+
+      // Fetch from Supabase storage
       const { data: files, error: listErr } = await supabase.storage
         .from('banners')
         .list('', { limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } });
-      if (listErr) {
-        console.debug('banners list error', listErr);
-        setAvailableBanners([]);
-        return;
-      }
-      const names = Array.isArray(files)
-        ? files
+
+      let storageBanners: { name: string; url: string }[] = [];
+
+      if (!listErr && files && Array.isArray(files)) {
+        const names = files
           .filter((f) => f && typeof f.name === 'string' && !f.name.endsWith('/'))
-          .map((f) => f.name)
-        : ([] as string[]);
+          .map((f) => f.name);
 
-      const items = names.map((name) => {
-        const { data: pub } = supabase.storage.from('banners').getPublicUrl(name);
-        return { name, url: pub.publicUrl };
-      });
+        storageBanners = names.map((name) => {
+          const { data: pub } = supabase.storage.from('banners').getPublicUrl(name);
+          return { name, url: pub.publicUrl };
+        });
+      }
 
-      // Verify images actually load before showing
-      const verified = await Promise.all(
-        items.map(
-          (item) =>
-            new Promise<typeof item | null>((resolve) => {
-              try {
-                const img = new Image();
-                img.onload = () => resolve(item);
-                img.onerror = () => resolve(null);
-                img.src = item.url;
-              } catch {
-                resolve(null);
-              }
-            })
-        )
-      );
-      setAvailableBanners(verified.filter(Boolean) as { name: string; url: string }[]);
+      // Combine predefined and storage banners
+      const allBanners = [...PREDEFINED_BANNERS, ...storageBanners];
+
+      setAvailableBanners(allBanners);
     } catch (e) {
       console.debug('error listing banners', e);
-      setAvailableBanners([]);
+      // Fallback to predefined if error
+      setAvailableBanners([
+        { name: "Edificios Modernos", url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2670&auto=format&fit=crop" },
+        { name: "Oficina Minimalista", url: "https://images.unsplash.com/photo-1554469384-e58fac16e23a?q=80&w=2574&auto=format&fit=crop" },
+        { name: "Espacio de Trabajo", url: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2669&auto=format&fit=crop" }
+      ]);
     }
   };
 
@@ -599,8 +601,9 @@ export default function ProfilePage() {
 
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
+      // Check if click is inside menu or button (including SVG children)
       if (editMenuRef.current?.contains(t)) return;
-      if (editBtnRef.current?.contains(t as Node)) return;
+      if (editBtnRef.current?.contains(t)) return;
       setShowEditMenu(false);
     };
 
@@ -612,16 +615,30 @@ export default function ProfilePage() {
       updatePosition();
     };
 
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", updatePosition);
+    // Use requestAnimationFrame to delay adding the listener
+    // This ensures the current click event finishes before we start listening
+    let frameId: number;
+    let listenersAdded = false;
+
+    frameId = requestAnimationFrame(() => {
+      // Double RAF to ensure we're past the current event cycle
+      frameId = requestAnimationFrame(() => {
+        window.addEventListener("mousedown", onDown);
+        window.addEventListener("keydown", onKey);
+        window.addEventListener("resize", onResize);
+        window.addEventListener("scroll", updatePosition);
+        listenersAdded = true;
+      });
+    });
 
     return () => {
-      window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", updatePosition);
+      cancelAnimationFrame(frameId);
+      if (listenersAdded) {
+        window.removeEventListener("mousedown", onDown);
+        window.removeEventListener("keydown", onKey);
+        window.removeEventListener("resize", onResize);
+        window.removeEventListener("scroll", updatePosition);
+      }
     };
   }, [showEditMenu]);
 
@@ -716,36 +733,68 @@ export default function ProfilePage() {
                   src={(avatarPreview || profile?.avatar_url) ?? null}
                   initials={initials}
                 />
-                <button
-                  onClick={() => setShowEditMenu(!showEditMenu)}
-                  ref={editBtnRef} // Anchor for menu
-                  className="absolute bottom-1 right-1 bg-primary text-white rounded-full p-1.5 shadow-md hover:bg-primary/90 hover:scale-105 transition-all"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
-                {/* Floating Settings Menu */}
-                {showEditMenu && (
-                  <div
-                    ref={editMenuRef}
-                    className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-56 rounded-xl border border-border/50 bg-background/95 backdrop-blur-md shadow-2xl z-50 overflow-hidden animate-in zoom-in-95 fade-in slide-in-from-bottom-2"
-                  >
-                    <div className="py-1">
-                      <button className="w-full text-left px-4 py-3 text-sm hover:bg-secondary/20 transition-colors flex items-center gap-2" onClick={() => { setShowEditMenu(false); setBioText(profile?.bio || ""); setShowBioEditor(true); }}>
-                        <span className="text-lg">📝</span> Editar biografía
+                <div className="absolute bottom-1 right-1 z-20">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="bg-primary text-white rounded-full p-1.5 shadow-md hover:bg-primary/90 hover:scale-105 transition-all ring-2 ring-background"
+                      >
+                        <Settings className="w-4 h-4" />
                       </button>
-                      <button className="w-full text-left px-4 py-3 text-sm hover:bg-secondary/20 transition-colors flex items-center gap-2" onClick={() => { setShowEditMenu(false); onPickAvatar(); }}>
-                        <span className="text-lg">📸</span> Cambiar foto
-                      </button>
-                      <button className="w-full text-left px-4 py-3 text-sm hover:bg-secondary/20 transition-colors flex items-center gap-2" onClick={async () => { setShowEditMenu(false); setShowBannerModal(true); await loadBanners(); }}>
-                        <span className="text-lg">🖼️</span> Cambiar portada
-                      </button>
-                      <div className="h-px bg-border/50 my-1" />
-                      <button className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2" onClick={signOut}>
-                        <span className="text-lg">🚪</span> Cerrar sesión
-                      </button>
-                    </div>
-                  </div>
-                )}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      side="top"
+                      align="end"
+                      className="w-64 p-2 rounded-2xl border border-white/20 bg-background/80 backdrop-blur-xl shadow-2xl mb-2 animate-in fade-in zoom-in-95 duration-200"
+                    >
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                        Configuración
+                      </div>
+
+                      <DropdownMenuItem
+                        onClick={() => { setBioText(profile?.bio || ""); setShowBioEditor(true); }}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-primary/10 focus:bg-primary/10 text-sm font-medium transition-colors"
+                      >
+                        <div className="p-1.5 bg-blue-100/50 text-blue-600 rounded-lg">
+                          <UserPen className="w-4 h-4" />
+                        </div>
+                        Editar biografía
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        onClick={() => onPickAvatar()}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-primary/10 focus:bg-primary/10 text-sm font-medium transition-colors"
+                      >
+                        <div className="p-1.5 bg-purple-100/50 text-purple-600 rounded-lg">
+                          <Camera className="w-4 h-4" />
+                        </div>
+                        Cambiar foto de perfil
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        onClick={async () => { setShowBannerModal(true); await loadBanners(); }}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-primary/10 focus:bg-primary/10 text-sm font-medium transition-colors"
+                      >
+                        <div className="p-1.5 bg-emerald-100/50 text-emerald-600 rounded-lg">
+                          <Image className="w-4 h-4" />
+                        </div>
+                        Cambiar banner
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator className="my-1 bg-border/40" />
+
+                      <DropdownMenuItem
+                        onClick={signOut}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-red-50 focus:bg-red-50 text-red-600 hover:text-red-700 transition-colors"
+                      >
+                        <div className="p-1.5 bg-red-100/50 text-red-600 rounded-lg">
+                          <LogOut className="w-4 h-4" />
+                        </div>
+                        Cerrar sesión
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
               {/* Info */}

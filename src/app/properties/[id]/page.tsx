@@ -12,6 +12,7 @@ import { MapPin, Home, Castle, Ruler, Bath, Bed, Heart, ArrowLeft, Share2, Star,
 import { Badge } from "@/components/ui/badge";
 import { useFavorites } from "@/features/properties/hooks/useFavorites";
 import type { Property } from "@/types";
+import { timeAgo } from "@/lib/utils";
 import { DetailPageTransition, DetailSection, DetailBackButton } from "@/components/transitions/DetailPageTransition";
 import { useToastContext } from "@/components/ToastProvider";
 import { ShareMenu } from "@/components/ShareMenu";
@@ -63,15 +64,19 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
   // Effect to geocode address when property loads
   useEffect(() => {
     if (isLoaded && property && (property.address || property.location)) {
-      const geocoder = new google.maps.Geocoder();
-      const addressToCode = property.address || property.location;
+      if (property.latitude && property.longitude) {
+        setMarkerPos({ lat: property.latitude, lng: property.longitude });
+      } else {
+        const geocoder = new google.maps.Geocoder();
+        const addressToCode = property.address || property.location;
 
-      geocoder.geocode({ address: addressToCode }, (results, status) => {
-        if (status === "OK" && results && results[0]) {
-          const location = results[0].geometry.location;
-          setMarkerPos({ lat: location.lat(), lng: location.lng() });
-        }
-      });
+        geocoder.geocode({ address: addressToCode }, (results, status) => {
+          if (status === "OK" && results && results[0]) {
+            const location = results[0].geometry.location;
+            setMarkerPos({ lat: location.lat(), lng: location.lng() });
+          }
+        });
+      }
     }
   }, [isLoaded, property]);
 
@@ -88,7 +93,7 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
 
         const { data, error } = await supabase
           .from("properties")
-          .select("id,title,description,price,location,address,images,type,owner_id,currency,inserted_at,bedrooms,bathrooms,area")
+          .select("id,title,description,price,location,address,images,type,owner_id,currency,inserted_at,bedrooms,bathrooms,area,latitude,longitude")
           .eq("id", id)
           .single();
 
@@ -232,7 +237,7 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
                 <span>•</span>
                 <span className="flex items-center gap-1"><MapPin className="size-4" /> {property.location}</span>
                 <span>•</span>
-                <span className="flex items-center gap-1"><Clock className="size-4" /> Hace 2 días</span>
+                <span className="flex items-center gap-1"><Clock className="size-4" /> {timeAgo(property.inserted_at)}</span>
               </div>
               <h1 className="font-serif text-4xl md:text-5xl text-foreground font-medium leading-tight">{toTitleCase(property.title)}</h1>
               <p className="text-xl text-muted-foreground font-light">{property.address || property.location}</p>

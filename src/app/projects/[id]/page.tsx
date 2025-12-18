@@ -22,6 +22,7 @@ import {
   Maximize2,
   ArrowRight
 } from "lucide-react";
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ShareMenu } from "@/components/ShareMenu";
@@ -57,6 +58,8 @@ interface Project {
   payment_methods: string;
   partner_bank: string;
   owner_id: string;
+  latitude?: number;
+  longitude?: number;
   created_at: string;
 }
 
@@ -109,6 +112,49 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const router = useRouter();
   const { user: currentUser } = useAuth();
   const trackProjectViewRef = useRef<Promise<void> | null>(null);
+
+  // Map state
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: ['places']
+  });
+
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [markerPos, setMarkerPos] = useState<google.maps.LatLngLiteral | null>(null);
+
+  const containerStyle = {
+    width: '100%',
+    height: '100%',
+    borderRadius: '1.5rem' // matching rounded-3xl
+  };
+
+  const defaultCenter = {
+    lat: 18.4861,
+    lng: -69.9312
+  };
+
+  const onLoad = (map: google.maps.Map) => setMap(map);
+  const onUnmount = (map: google.maps.Map) => setMap(null);
+
+  // Effect to geocode address when project loads
+  useEffect(() => {
+    if (isLoaded && project && (project.address || project.city_province)) {
+      if (project.latitude && project.longitude) {
+        setMarkerPos({ lat: project.latitude, lng: project.longitude });
+      } else {
+        const geocoder = new google.maps.Geocoder();
+        const addressToCode = `${project.address}, ${project.city_province}`;
+
+        geocoder.geocode({ address: addressToCode }, (results, status) => {
+          if (status === "OK" && results && results[0]) {
+            const location = results[0].geometry.location;
+            setMarkerPos({ lat: location.lat(), lng: location.lng() });
+          }
+        });
+      }
+    }
+  }, [isLoaded, project]);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -362,13 +408,31 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                   <MapPin className="w-5 h-5 text-primary" />
                   Ubicación Prestigiosa
                 </h3>
-                <div className="h-64 w-full bg-muted/50 rounded-3xl border flex items-center justify-center relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=Santo+Domingo&zoom=13&size=600x300&sensor=false')] bg-cover opacity-50 grayscale group-hover:grayscale-0 transition-all duration-500" />
-                  <div className="relative z-10 text-center bg-background/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/20">
-                    <MapPin className="w-8 h-8 text-primary mx-auto mb-2" />
-                    <p className="font-medium">{project.address}</p>
-                    <p className="text-sm text-muted-foreground">{project.city_province}</p>
-                  </div>
+                <div className="h-[400px] w-full rounded-3xl overflow-hidden border border-border shadow-sm bg-muted/20">
+                  {isLoaded ? (
+                    <GoogleMap
+                      mapContainerStyle={containerStyle}
+                      center={markerPos || defaultCenter}
+                      zoom={15}
+                      onLoad={onLoad}
+                      onUnmount={onUnmount}
+                      options={{
+                        disableDefaultUI: false,
+                        streetViewControl: true,
+                        mapTypeControl: false,
+                      }}
+                    >
+                      {markerPos && <Marker position={markerPos} />}
+                    </GoogleMap>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 text-center bg-background/80 backdrop-blur-md p-4 rounded-2xl border border-white/20 inline-block w-full">
+                  <p className="font-medium">{project.address}</p>
+                  <p className="text-sm text-muted-foreground">{project.city_province}</p>
                 </div>
               </section>
             )}

@@ -8,6 +8,13 @@ export interface PublicProfileData {
   bio: string | null;
   avatar_url: string | null;
   role: string | null;
+  website?: string | null;
+  phone?: string | null;
+  headquarters_address?: string | null;
+  operational_areas?: string[] | null;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  linkedin_url?: string | null;
 }
 
 export interface ProfileStats {
@@ -174,14 +181,44 @@ export function usePublicProfile(userId: string | null): UsePublicProfileReturn 
             ? fullName
             : publicProfile?.name ?? null;
 
-          setProfile({
+
+          let profileData: PublicProfileData = {
             id: publicProfile.id,
             name: displayName,
             email: publicProfile.email ?? null,
             bio: publicProfile.bio ?? null,
             avatar_url: publicProfile.avatar_url ?? null,
             role: publicProfile.role ?? null,
-          });
+          };
+
+          // Fetch additional company info from public_profiles (not users, due to RLS)
+          try {
+            const { data: extendedData, error: extendedError } = await supabase
+              .from("public_profiles")
+              .select("website, phone, headquarters_address, operational_areas, facebook_url, instagram_url, linkedin_url")
+              .eq("id", userId)
+              .maybeSingle();
+
+            console.log("DEBUG usePublicProfile - extendedData:", extendedData, "error:", extendedError);
+
+            if (extendedData) {
+              profileData = {
+                ...profileData,
+                website: extendedData.website,
+                phone: extendedData.phone,
+                headquarters_address: extendedData.headquarters_address,
+                operational_areas: extendedData.operational_areas,
+                facebook_url: extendedData.facebook_url,
+                instagram_url: extendedData.instagram_url,
+                linkedin_url: extendedData.linkedin_url,
+              };
+            }
+          } catch (e) {
+            console.error("Error fetching extended profile info:", e);
+          }
+
+          console.log("DEBUG usePublicProfile - final profileData:", profileData);
+          setProfile(profileData);
         } else {
           // No profile found even after attempts to create it
           setProfile(null);

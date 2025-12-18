@@ -11,7 +11,8 @@ interface DropdownMenuTriggerProps {
 }
 
 interface DropdownMenuContentProps {
-  align?: string
+  align?: "start" | "end" | "center"
+  side?: "top" | "bottom"
   children: React.ReactNode
   className?: string
 }
@@ -42,17 +43,21 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ children }) => {
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
+    if (!isOpen) return
+
     const handleClickOutside = () => {
-      if (isOpen) {
-        setIsOpen(false)
-      }
+      setIsOpen(false)
     }
 
-    if (isOpen) {
+    // Use setTimeout to delay adding the listener
+    // This ensures the current click event finishes before we start listening
+    const timeoutId = setTimeout(() => {
       document.addEventListener("click", handleClickOutside)
-      return () => {
-        document.removeEventListener("click", handleClickOutside)
-      }
+    }, 0)
+
+    return () => {
+      clearTimeout(timeoutId)
+      document.removeEventListener("click", handleClickOutside)
     }
   }, [isOpen])
 
@@ -106,6 +111,7 @@ export const DropdownMenuTrigger: React.FC<DropdownMenuTriggerProps> = ({
 
 export const DropdownMenuContent: React.FC<DropdownMenuContentProps> = ({
   align = "end",
+  side = "bottom",
   children,
   className
 }) => {
@@ -122,8 +128,9 @@ export const DropdownMenuContent: React.FC<DropdownMenuContentProps> = ({
   return (
     <div
       className={cn(
-        "absolute z-50 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none",
-        align === "end" ? "right-0" : align === "start" ? "left-0" : "",
+        "absolute z-50 w-56 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none",
+        side === "bottom" ? "mt-2 origin-top-right" : "bottom-full mb-2 origin-bottom-right",
+        align === "end" ? "right-0" : align === "start" ? "left-0" : "left-1/2 -translate-x-1/2",
         className
       )}
       onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside

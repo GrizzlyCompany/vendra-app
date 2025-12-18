@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
 import Link from "next/link";
 import { PropertyCard } from "@/features/properties/components/PropertyCard";
+import { ProjectCard } from "@/features/projects/components/ProjectCard";
+import { Globe, Phone, MapPin as MapPinIcon, Facebook, Instagram, Linkedin } from "lucide-react";
 
 // Custom hooks
 import { usePublicProfile } from "@/hooks/usePublicProfile";
@@ -114,6 +116,16 @@ export default function PublicProfilePage() {
     );
   }
 
+  const hasCompanyInfo = profile && (
+    profile.headquarters_address ||
+    profile.website ||
+    profile.phone ||
+    profile.facebook_url ||
+    profile.instagram_url ||
+    profile.linkedin_url ||
+    (profile.operational_areas && profile.operational_areas.length > 0)
+  );
+
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-background px-4 sm:px-6 py-8 sm:py-12 mobile-bottom-safe mobile-horizontal-safe">
 
@@ -188,10 +200,6 @@ export default function PublicProfilePage() {
                     {stats?.roleBadge ?? "Miembro"}
                   </Badge>
                 </div>
-                {/* Bio */}
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2 max-w-md mx-auto sm:mx-0">
-                  {profile?.bio || "Este usuario no ha añadido una biografía."}
-                </p>
 
                 {/* Metrics Mobile Row */}
                 <div className="flex items-center justify-center sm:justify-start gap-4 mt-3 text-sm text-foreground/80">
@@ -233,6 +241,118 @@ export default function PublicProfilePage() {
           </div>
         </div>
 
+
+
+        {/* Company Extended Info (Only for Empresa Constructora) */}
+        {profile?.role === 'empresa_constructora' && hasCompanyInfo && (
+          <div className="bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm border border-border/50 rounded-[2rem] p-6 sm:p-8 shadow-lg mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+              {/* Left Column - Contact Info */}
+              <div className="lg:col-span-4 space-y-6">
+                <div>
+                  <h3 className="font-serif text-xl font-bold mb-5 flex items-center gap-2 text-primary">
+                    <Building className="w-5 h-5" />
+                    Contacto
+                  </h3>
+
+                  <div className="space-y-4">
+                    {profile.headquarters_address && (
+                      <div className="flex items-start gap-3 group">
+                        <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
+                          <MapPinIcon className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">Ubicación</p>
+                          <p className="text-sm font-medium">{profile.headquarters_address}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {profile.website && (
+                      <div className="flex items-start gap-3 group">
+                        <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
+                          <Globe className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">Sitio Web</p>
+                          <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline">
+                            {profile.website.replace(/^https?:\/\//, '')}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {profile.phone && (
+                      <div className="flex items-start gap-3 group">
+                        <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
+                          <Phone className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">Teléfono</p>
+                          <a href={`tel:${profile.phone}`} className="text-sm font-medium hover:text-primary">
+                            {profile.phone}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Social Links */}
+                  {(profile.facebook_url || profile.instagram_url || profile.linkedin_url) && (
+                    <div className="flex gap-2 mt-6 pt-5 border-t border-border/40">
+                      {profile.facebook_url && (
+                        <a href={profile.facebook_url} target="_blank" rel="noreferrer" className="bg-background/80 hover:bg-[#1877F2] hover:text-white p-2.5 rounded-xl border border-border/40 transition-all duration-300 hover:scale-110 shadow-sm">
+                          <Facebook className="w-4 h-4" />
+                        </a>
+                      )}
+                      {profile.instagram_url && (
+                        <a href={profile.instagram_url} target="_blank" rel="noreferrer" className="bg-background/80 hover:bg-gradient-to-br hover:from-[#833AB4] hover:via-[#FD1D1D] hover:to-[#FCAF45] hover:text-white p-2.5 rounded-xl border border-border/40 transition-all duration-300 hover:scale-110 shadow-sm">
+                          <Instagram className="w-4 h-4" />
+                        </a>
+                      )}
+                      {profile.linkedin_url && (
+                        <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="bg-background/80 hover:bg-[#0A66C2] hover:text-white p-2.5 rounded-xl border border-border/40 transition-all duration-300 hover:scale-110 shadow-sm">
+                          <Linkedin className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Operational Areas */}
+                {profile.operational_areas && profile.operational_areas.length > 0 && (
+                  <div className="pt-5 border-t border-border/40">
+                    <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+                      <MapPinIcon className="w-4 h-4 text-primary" />
+                      Áreas de Operación
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.operational_areas.map((area, i) => (
+                        <Badge key={i} variant="secondary" className="rounded-full bg-primary/10 text-primary border-none px-3 py-1 text-xs font-medium">
+                          {area}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column - About */}
+              <div className="lg:col-span-8">
+                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl p-6 sm:p-8 h-full border border-primary/10">
+                  <h3 className="font-serif text-xl font-bold text-primary mb-4">Sobre Nosotros</h3>
+                  <p className="text-muted-foreground leading-relaxed text-sm sm:text-base">
+                    {profile.bio && !profile.bio.startsWith('📍')
+                      ? profile.bio
+                      : "Somos una empresa comprometida con la excelencia en el desarrollo inmobiliario. Nos especializamos en crear espacios que combinan diseño innovador, calidad de construcción y ubicaciones estratégicas para ofrecer a nuestros clientes las mejores oportunidades de inversión y vivienda."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Content Tabs - Minimalist Pill Style */}
         <Tabs defaultValue="listed" className="w-full">
           <div className="flex justify-center mb-8">
@@ -257,11 +377,9 @@ export default function PublicProfilePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                {/* TODO: Handle 'projects' if role is constructor. For now mapping properties */}
                 {profile?.role === 'empresa_constructora' ? (
-                  projects.map((proj: any) => (
-                    <div key={proj.id} className="p-4 border rounded-xl">Proyectos no implementados visualmente aún.</div>
-                    // Placeholder as ProjectCard might differ
+                  projects.map((proj: any, index: number) => (
+                    <ProjectCard key={proj.id} project={proj} index={index} />
                   ))
                 ) : (
                   properties.map((p) => (
@@ -297,6 +415,6 @@ export default function PublicProfilePage() {
           </TabsContent>
         </Tabs>
       </div>
-    </main>
+    </main >
   );
 }

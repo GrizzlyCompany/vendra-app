@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/avatar";
-import { Upload, FileText, Download, Trash2, Plus } from "lucide-react";
+import { Upload, FileText, Download, Trash2, Plus, CheckCircle } from "lucide-react";
 import { validateCompanyProfileForm, type CompanyProfileFormData } from "@/lib/validation";
 import { useToastContext } from "@/components/ToastProvider";
 import { fetchUserProfile, updateUserProfile, fetchUserRole } from "@/lib/database";
@@ -19,6 +19,7 @@ export function ProfileSection() {
   const [form, setForm] = useState<CompanyProfileFormData>({
     name: "",
     email: "",
+    bio: "",
     phone: "",
     logo_url: "",
     rnc: "",
@@ -32,8 +33,22 @@ export function ProfileSection() {
     facebook_url: "",
     instagram_url: "",
     linkedin_url: "",
+    legal_documents: [],
+    facebook_url: "",
+    instagram_url: "",
+    linkedin_url: "",
     terms_accepted: false,
+    banner_url: "",
   });
+
+  const PREDEFINED_BANNERS = [
+    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2670&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1554469384-e58fac16e23a?q=80&w=2574&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2669&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2670&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1449824913929-7b77f555872a?q=80&w=2574&auto=format&fit=crop"
+  ];
 
   const [saving, setSaving] = useState(false);
   const [uploadingDocs, setUploadingDocs] = useState(false);
@@ -64,6 +79,7 @@ export function ProfileSection() {
           setForm({
             name: user.name,
             email: user.email,
+            bio: (user as any).bio ?? "",
             phone: user.phone,
             logo_url: user.avatar_url ?? "",
             rnc: user.rnc,
@@ -77,7 +93,9 @@ export function ProfileSection() {
             facebook_url: user.facebook_url,
             instagram_url: user.instagram_url,
             linkedin_url: user.linkedin_url,
+            linkedin_url: user.linkedin_url,
             terms_accepted: user.terms_accepted,
+            banner_url: (user as any).banner_url ?? "",
           });
 
           setAvatarPreview(user.avatar_url);
@@ -127,7 +145,7 @@ export function ProfileSection() {
       const updateData = {
         name: form.name,
         email: form.email,
-        phone: form.phone,
+        bio: form.bio || null,
         avatar_url: form.logo_url,
         rnc: form.rnc,
         website: form.website || null,
@@ -144,6 +162,29 @@ export function ProfileSection() {
       };
 
       await updateUserProfile(uid, updateData);
+
+      // Sync public-facing data to public_profiles for visibility to other users
+      try {
+        await supabase
+          .from("public_profiles")
+          .update({
+            name: form.name,
+            bio: form.bio || null,
+            avatar_url: form.logo_url,
+            website: form.website || null,
+            phone: form.primary_phone || null,
+            headquarters_address: form.headquarters_address || null,
+            operational_areas: operationalAreasArray,
+            facebook_url: form.facebook_url || null,
+            instagram_url: form.instagram_url || null,
+            linkedin_url: form.linkedin_url || null,
+            banner_url: form.banner_url || null,
+          })
+          .eq("id", uid);
+      } catch (syncError) {
+        console.warn("Could not sync to public_profiles:", syncError);
+        // Don't fail the save if sync fails
+      }
 
       showSuccess("Perfil actualizado", "Los cambios en tu perfil han sido guardados exitosamente");
     } catch (err: any) {
@@ -249,51 +290,51 @@ export function ProfileSection() {
       const objectUrl = URL.createObjectURL(file);
       setAvatarPreview(objectUrl);
       setForm(prev => ({ ...prev, logo_url: objectUrl }));
-    } catch {}
-    
+    } catch { }
+
     try {
       const uid = (await supabase.auth.getSession()).data.session?.user?.id ?? null;
       if (!uid) {
         alert("No se pudo identificar al usuario. Intenta iniciar sesión nuevamente.");
         return;
       }
-      
+
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${uid}/${Date.now()}.${ext}`;
       const { data: upData, error: upErr } = await supabase.storage
         .from("avatars")
         .upload(path, file, { upsert: true, cacheControl: "3600", contentType: file.type || "image/jpeg" });
-      
+
       if (upErr) {
         alert(`Error al subir la imagen: ${upErr.message}`);
         return;
       }
-      
+
       const storedPath = upData?.path ?? path;
       const { data: pub } = supabase.storage.from("avatars").getPublicUrl(storedPath);
       const publicUrl = pub?.publicUrl ?? null;
-      
+
       if (!publicUrl) {
         alert("No se pudo obtener la URL pública del avatar.");
         return;
       }
-      
+
       const { error: updErr } = await supabase
         .from("users")
         .update({ avatar_url: publicUrl })
         .eq("id", uid);
-        
+
       if (updErr) {
         alert(`La imagen se subió pero no se pudo guardar en el perfil: ${updErr.message}`);
       }
-      
+
       // Update form with the public URL
       setForm(prev => ({ ...prev, logo_url: publicUrl }));
-      
+
       // Persist also in auth metadata as fallback source on reload
       try {
         await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
-      } catch {}
+      } catch { }
     } catch (e: any) {
       alert(`Error inesperado al subir avatar: ${e?.message ?? e}`);
     }
@@ -335,6 +376,38 @@ export function ProfileSection() {
             />
           </div>
 
+          {/* Banner Selection for All Roles */}
+          <div className="space-y-4 pt-4 border-t">
+            <label className="text-sm font-medium">Banner de Perfil</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {PREDEFINED_BANNERS.map((banner, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setForm(p => ({ ...p, banner_url: banner }))}
+                  className={`relative aspect-[3/1] rounded-lg overflow-hidden border-2 transition-all ${form.banner_url === banner
+                    ? 'border-primary ring-2 ring-primary/20'
+                    : 'border-transparent hover:border-primary/50'
+                    }`}
+                >
+                  <img
+                    src={banner}
+                    alt={`Banner option ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  {form.banner_url === banner && (
+                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                      <div className="bg-primary text-white rounded-full p-1">
+                        <CheckCircle className="w-4 h-4" />
+                      </div>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <label className="text-sm font-medium" htmlFor="name">Nombre de la empresa *</label>
@@ -367,6 +440,19 @@ export function ProfileSection() {
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="Dirección completa de la sede principal"
               />
+            </div>
+            <div className="grid gap-2 sm:col-span-2">
+              <label className="text-sm font-medium" htmlFor="bio">Biografía / Descripción de la empresa</label>
+              <textarea
+                id="bio"
+                name="bio"
+                value={form.bio}
+                onChange={onTextareaChange}
+                disabled={saving}
+                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Cuéntanos sobre tu empresa, su misión y experiencia..."
+              />
+              <p className="text-xs text-muted-foreground text-right">{form.bio?.length || 0}/1000 caracteres</p>
             </div>
             <div className="grid gap-2 sm:col-span-2">
               <label className="text-sm font-medium" htmlFor="operational_areas">Áreas de operación</label>

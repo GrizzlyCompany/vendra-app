@@ -16,6 +16,8 @@ export const PropertySchema = z.object({
   bathrooms: z.number().int().positive().nullable().optional(),
   area: z.number().positive().nullable().optional(),
   features: z.array(z.string()).nullable().optional(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
   inserted_at: z.string().datetime(),
   updated_at: z.string().datetime().optional(),
 });
@@ -72,6 +74,8 @@ export const ProjectSchema = z.object({
   payment_methods: z.string().max(200, 'Payment methods is too long').nullable().optional(),
   partner_bank: z.string().max(100, 'Partner bank is too long').nullable().optional(),
   owner_id: z.string().uuid('Invalid owner ID'),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime().optional(),
 });
@@ -126,6 +130,7 @@ export const SearchFiltersSchema = z.object({
 export const CompanyProfileFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long'),
   email: z.string().email('Invalid email address'),
+  bio: z.string().max(1000, 'Bio is too long').optional(),
   phone: z.string().max(20, 'Phone number is too long').optional(),
   logo_url: z.string().optional(),
   // Company fields
@@ -137,6 +142,7 @@ export const CompanyProfileFormSchema = z.object({
   primary_phone: z.string().max(20, 'Phone number is too long').optional(),
   secondary_phone: z.string().max(20, 'Phone number is too long').optional(),
   legal_documents: z.array(z.string().url('Invalid document URL')).optional(),
+  banner_url: z.string().optional(),
   // Social media
   facebook_url: z.string().url('Invalid Facebook URL').optional().or(z.literal('')),
   instagram_url: z.string().url('Invalid Instagram URL').optional().or(z.literal('')),
@@ -187,14 +193,14 @@ export function safeValidate<T>(
 ): { success: true; data: T } | { success: false; error: string } {
   try {
     const result = schema.safeParse(data);
-    
+
     if (result.success) {
       return { success: true, data: result.data };
     } else {
       const errorMessage = result.error.issues
         .map((err: any) => `${err.path.join('.')}: ${err.message}`)
         .join(', ');
-      
+
       console.warn(`${context} failed:`, errorMessage);
       return { success: false, error: errorMessage };
     }

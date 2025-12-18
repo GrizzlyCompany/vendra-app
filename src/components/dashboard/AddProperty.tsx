@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase/client";
 import { ImageSelector } from "@/components/dashboard/ImageSelector";
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { MapPin } from "lucide-react";
 
 export function AddPropertySection() {
   const [form, setForm] = useState({
@@ -56,6 +58,70 @@ export function AddPropertySection() {
   const [uploading, setUploading] = useState(false);
   const [imagesFiles, setImagesFiles] = useState<FileList | null>(null);
   const [plansFiles, setPlansFiles] = useState<FileList | null>(null);
+
+  // Google Maps State
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: ['places']
+  });
+
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [markerPos, setMarkerPos] = useState<google.maps.LatLngLiteral | null>(null);
+
+  const containerStyle = {
+    width: '100%',
+    height: '400px',
+    borderRadius: '0.75rem'
+  };
+
+  const defaultCenter = {
+    lat: 18.4861,
+    lng: -69.9312
+  };
+
+  const onLoad = (map: google.maps.Map) => setMap(map);
+  const onUnmount = (map: google.maps.Map) => setMap(null);
+
+  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setMarkerPos({ lat, lng });
+
+      // Reverse Geocoding
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === "OK" && results && results[0]) {
+          const addressComponents = results[0].address_components;
+          let route = "";
+          let streetNumber = "";
+          let locality = "";
+          let sublocality = "";
+          let administrative_area_level_1 = "";
+
+          for (const component of addressComponents) {
+            const types = component.types;
+            if (types.includes("route")) route = component.long_name;
+            if (types.includes("street_number")) streetNumber = component.long_name;
+            if (types.includes("locality")) locality = component.long_name;
+            if (types.includes("sublocality")) sublocality = component.long_name;
+            if (types.includes("administrative_area_level_1")) administrative_area_level_1 = component.long_name;
+          }
+
+          const formattedAddress = `${route} ${streetNumber}`.trim() || results[0].formatted_address;
+          const zone = sublocality || locality || administrative_area_level_1;
+
+          setForm(prev => ({
+            ...prev,
+            address: formattedAddress,
+            zoneSector: zone,
+            cityProvince: administrative_area_level_1
+          }));
+        }
+      });
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -209,6 +275,8 @@ export function AddPropertySection() {
         currency: form.currency || null,
         owner_id: uid,
         owner_role: ownerRole ?? null,
+        latitude: markerPos?.lat || null,
+        longitude: markerPos?.lng || null,
       } as const;
 
       const { error: insertError } = await supabase.from("projects").insert(payload);
@@ -303,18 +371,52 @@ export function AddPropertySection() {
               Ubicación
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="grid gap-2 md:col-span-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="address">Dirección Exacta</label>
-              <Input id="address" name="address" value={form.address} onChange={onChange} placeholder="Ej: Av. Winston Churchill #123" className="h-11 bg-background/50 icon-map" />
+          <CardContent className="p-6 space-y-6">
+            <div className="w-full h-[400px] border border-border rounded-xl overflow-hidden relative">
+              {isLoaded ? (
+                <GoogleMap
+                  mapContainerStyle={containerStyle}
+                  center={markerPos || defaultCenter}
+                  zoom={13}
+                  onLoad={onLoad}
+                  onUnmount={onUnmount}
+                  onClick={handleMapClick}
+                  options={{
+                    disableDefaultUI: false,
+                    streetViewControl: false,
+                    mapTypeControl: false,
+                  }}
+                >
+                  {markerPos && <Marker position={markerPos} />}
+                </GoogleMap>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-muted/20">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                    <span className="text-sm font-medium">Cargando Mapa...</span>
+                  </div>
+                </div>
+              )}
+              {!markerPos && isLoaded && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-xs font-medium backdrop-blur-sm pointer-events-none">
+                  Toca en el mapa para ubicar el proyecto
+                </div>
+              )}
             </div>
-            <div className="grid gap-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="cityProvince">Ciudad / Provincia</label>
-              <Input id="cityProvince" name="cityProvince" value={form.cityProvince} onChange={onChange} placeholder="Ej: Santo Domingo" className="h-11 bg-background/50" />
-            </div>
-            <div className="grid gap-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="zoneSector">Sector / Zona</label>
-              <Input id="zoneSector" name="zoneSector" value={form.zoneSector} onChange={onChange} placeholder="Ej: Piantini" className="h-11 bg-background/50" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid gap-2 md:col-span-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="address">Dirección Exacta</label>
+                <Input id="address" name="address" value={form.address} onChange={onChange} placeholder="Ej: Av. Winston Churchill #123" className="h-11 bg-background/50 icon-map" />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="cityProvince">Ciudad / Provincia</label>
+                <Input id="cityProvince" name="cityProvince" value={form.cityProvince} onChange={onChange} placeholder="Ej: Santo Domingo" className="h-11 bg-background/50" />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="zoneSector">Sector / Zona</label>
+                <Input id="zoneSector" name="zoneSector" value={form.zoneSector} onChange={onChange} placeholder="Ej: Piantini" className="h-11 bg-background/50" />
+              </div>
             </div>
           </CardContent>
         </Card>

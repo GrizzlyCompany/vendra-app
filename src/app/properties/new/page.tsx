@@ -339,6 +339,8 @@ export default function NewPropertyPage() {
           owner_id: uid,
           status: 'active',
           is_published: true,
+          latitude: markerPos?.lat || null,
+          longitude: markerPos?.lng || null,
         });
 
       if (insertError) {
