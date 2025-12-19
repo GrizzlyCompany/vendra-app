@@ -20,6 +20,11 @@ function MainContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { unreadCount } = useUnreadMessages();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // All locations for select
   const [allLocations, setAllLocations] = useState<string[]>([]);
@@ -165,10 +170,13 @@ function MainContent() {
   };
 
   return (
-    <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe">
+    <main
+      className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-4 py-4 mobile-bottom-safe"
+      suppressHydrationWarning
+    >
       {/* Header with logo and VENDRA text centered - visible only on mobile/tablet */}
-      <header className="lg:hidden mb-6 py-4 sticky top-0 bg-background z-40 pt-4">
-        <div className="container mx-auto flex justify-center items-center">
+      <header className="lg:hidden mb-6 py-4 sticky top-0 bg-background z-40 pt-4" suppressHydrationWarning>
+        <div className="container mx-auto flex justify-center items-center" suppressHydrationWarning>
           <Link href="/" className="flex items-center gap-2 text-primary" aria-label="Ir al inicio">
             <Image
               src="https://vvuvuibcmvqxtvdadwne.supabase.co/storage/v1/object/public/logo/logo3.png"
@@ -182,7 +190,7 @@ function MainContent() {
           </Link>
           <Link href="/messages" className="ml-auto mr-4 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors relative">
             <MessageSquare className="h-5 w-5" />
-            {unreadCount > 0 && (
+            {mounted && unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
@@ -191,17 +199,17 @@ function MainContent() {
         </div>
       </header>
 
-      <div className="container mx-auto">
+      <div className="container mx-auto" suppressHydrationWarning>
         {/* Hero + Filters */}
-        <Card className="mb-8 rounded-2xl shadow-lg overflow-visible bg-background border-0 relative before:content-[''] before:absolute before:inset-y-2 before:left-0.5 before:w-px before:bg-gradient-to-b before:from-transparent before:via-[hsl(var(--border))]/20 before:to-transparent after:content-[''] after:absolute after:inset-y-2 after:right-0.5 after:w-px after:bg-gradient-to-b after:from-transparent after:via-[hsl(var(--border))]/20 after:to-transparent">
-          <CardContent className="p-8 md:p-10">
+        <Card className="mb-8 rounded-2xl shadow-lg overflow-visible bg-background border-0 relative before:content-[''] before:absolute before:inset-y-2 before:left-0.5 before:w-px before:bg-gradient-to-b before:from-transparent before:via-[hsl(var(--border))]/20 before:to-transparent after:content-[''] after:absolute after:inset-y-2 after:right-0.5 after:w-px after:bg-gradient-to-b after:from-transparent after:via-[hsl(var(--border))]/20 after:to-transparent" suppressHydrationWarning>
+          <CardContent className="p-8 md:p-10" suppressHydrationWarning>
             <h1 className="font-serif text-4xl md:text-6xl font-bold text-primary text-center">Vende rápido. Compra feliz.</h1>
             <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">Descubre una cuidada selección de las mejores propiedades. Tu nuevo comienzo te espera.</p>
 
             {/* Minimalist Filter Bar */}
-            <div className="mt-8 relative z-20 max-w-5xl mx-auto">
-              <div className="bg-background/80 backdrop-blur-md border border-border/60 rounded-[2rem] md:rounded-full p-2 shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="flex flex-col md:flex-row md:items-center gap-2 divide-y md:divide-y-0 md:divide-x divide-border/60">
+            <div className="mt-8 relative z-20 max-w-5xl mx-auto" suppressHydrationWarning>
+              <div className="bg-background/80 backdrop-blur-md border border-border/60 rounded-[2rem] md:rounded-full p-2 shadow-sm hover:shadow-md transition-shadow duration-300" suppressHydrationWarning>
+                <div className="flex flex-col md:flex-row md:items-center gap-2 divide-y md:divide-y-0 md:divide-x divide-border/60" suppressHydrationWarning>
 
                   {/* Location */}
                   <CustomSelect
@@ -234,9 +242,9 @@ function MainContent() {
                   />
 
                   {/* Price Min */}
-                  <div className="flex-1 px-4 py-2 relative group">
+                  <div className="flex-1 px-4 py-2 relative group" suppressHydrationWarning>
                     <label className="text-[10px] uppercase tracking-wide font-bold text-muted-foreground/60 mb-0.5 block">Precio Mín</label>
-                    <div className="flex items-center">
+                    <div className="flex items-center" suppressHydrationWarning>
                       <DollarSign className="size-4 text-primary/60 mr-2" />
                       <input
                         type="number"
@@ -264,7 +272,7 @@ function MainContent() {
                   />
 
                   {/* Action Buttons */}
-                  <div className="pl-2 pr-1 py-1 flex items-center gap-2">
+                  <div className="pl-2 pr-1 py-1 flex items-center gap-2" suppressHydrationWarning>
                     {(locationSel !== "all" || typeSel !== "all" || priceMin !== "0" || priceMax !== "any") && (
                       <Button
                         variant="ghost"
@@ -293,7 +301,7 @@ function MainContent() {
         </Card>
 
         {loading && (
-          <div className="text-center text-muted-foreground">Cargando propiedades…</div>
+          <div className="text-center text-muted-foreground" suppressHydrationWarning>Cargando propiedades…</div>
         )}
 
         {error && (
@@ -315,7 +323,7 @@ function MainContent() {
                 />
               ))}
               {properties.length === 0 && (
-                <div className="col-span-full text-center text-muted-foreground">
+                <div className="col-span-full text-center text-muted-foreground" suppressHydrationWarning>
                   Ninguna propiedad coincide con tus filtros actuales.
                 </div>
               )}

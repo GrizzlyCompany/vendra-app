@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Search, ChevronLeft, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import Link from "next/link";
 
 interface Conversation {
   otherId: string;
@@ -20,6 +22,7 @@ interface ConversationListProps {
   setShowSearchBar: (show: boolean) => void;
   openConversation: (conversationId: string) => void;
   targetId: string | null;
+  onlineUsers?: Set<string>;
 }
 
 export function ConversationList({
@@ -30,13 +33,20 @@ export function ConversationList({
   setShowSearchBar,
   openConversation,
   targetId,
+  onlineUsers,
 }: ConversationListProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <div
       className="w-full h-full flex flex-col bg-transparent lg:bg-white/50 lg:backdrop-blur-xl lg:rounded-[2rem] lg:border lg:border-white/40 lg:shadow-xl overflow-hidden"
+      suppressHydrationWarning
     >
       {/* Search Header */}
-      <div className="flex items-center justify-between px-4 py-3 lg:p-4 border-b border-border/40 lg:border-black/5 bg-background/80 lg:bg-white/40 backdrop-blur-md sticky top-0 z-10 safe-area-top">
+      <div className="flex items-center justify-between px-4 py-3 lg:p-4 border-b border-border/40 lg:border-black/5 bg-background/80 lg:bg-white/40 backdrop-blur-md sticky top-0 z-10 safe-area-top" suppressHydrationWarning>
         {showSearchBar ? (
           <>
             <Button
@@ -108,6 +118,9 @@ export function ConversationList({
                       </div>
                     )}
                   </div>
+                  {onlineUsers?.has(c.otherId) && (
+                    <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 lg:h-3 lg:w-3 rounded-full border-2 border-background lg:border-white bg-emerald-500 shadow-sm ring-1 ring-black/5 animate-in fade-in zoom-in duration-300"></div>
+                  )}
                 </div>
 
                 <div className="min-w-0 flex-1 h-14 lg:h-auto flex flex-col justify-center">
@@ -116,7 +129,7 @@ export function ConversationList({
                       {c.name ?? 'Usuario'}
                     </span>
                     <span className={`text-[12px] lg:text-[10px] whitespace-nowrap ml-2 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground/80'}`}>
-                      {new Date(c.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {mounted ? new Date(c.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                   </div>
 
@@ -128,11 +141,20 @@ export function ConversationList({
             )
           })}
         {conversations.length === 0 && (
-          <div className="flex flex-col items-center justify-center pt-20 lg:pt-0 lg:h-40 text-center p-8 opacity-60">
-            <div className="h-16 w-16 lg:h-12 lg:w-12 rounded-full bg-muted lg:bg-black/5 flex items-center justify-center mb-4 lg:mb-3">
-              <Search className="h-8 w-8 lg:h-5 lg:w-5 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center pt-16 lg:pt-0 lg:min-h-[300px] text-center p-8" suppressHydrationWarning>
+            <div className="h-20 w-20 lg:h-16 lg:w-16 rounded-full bg-primary/5 flex items-center justify-center mb-6 lg:mb-4 animate-in zoom-in duration-500">
+              <div className="text-4xl grayscale opacity-40">💬</div>
             </div>
-            <p className="text-base lg:text-sm font-medium text-muted-foreground">No tienes mensajes</p>
+            <h3 className="text-xl lg:text-lg font-serif font-bold text-primary/80 mb-2">Comienza a chatear</h3>
+            <p className="text-muted-foreground text-sm max-w-xs mb-8">
+              Aún no tienes mensajes en tu bandeja. ¡Encuentra una propiedad que te guste para iniciar una conversación!
+            </p>
+            <Button
+              asChild
+              className="rounded-full px-8 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
+            >
+              <Link href="/">Explorar Propiedades</Link>
+            </Button>
           </div>
         )}
       </div>

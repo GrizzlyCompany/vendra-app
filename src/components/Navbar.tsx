@@ -34,7 +34,12 @@ export function Navbar() {
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -85,8 +90,11 @@ export function Navbar() {
   const logoLink = user ? "/main" : "/";
 
   return (
-    <header className={`${pathname === '/main' ? '' : 'hidden md:block'} sticky top-0 z-40 w-full border-b border-white/10 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-200 mobile-horizontal-safe`}>
-      <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
+    <header
+      className={`${pathname === '/main' ? '' : 'hidden md:block'} sticky top-0 z-40 w-full border-b border-white/10 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-200 mobile-horizontal-safe`}
+      suppressHydrationWarning
+    >
+      <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4" suppressHydrationWarning>
         {/* Logo */}
         <Link href={logoLink} className="flex items-center gap-2 group transition-opacity hover:opacity-90" aria-label="Ir al inicio">
           <div className="relative h-8 w-8 sm:h-10 sm:w-10 overflow-hidden rounded-lg shadow-sm">
@@ -222,7 +230,7 @@ export function Navbar() {
             <Button asChild variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors relative">
               <Link href="/messages" title="Mensajes">
                 <MessageSquare className="size-5" />
-                {unreadCount > 0 && (
+                {mounted && unreadCount > 0 && (
                   <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 border-2 border-background animate-pulse"></span>
                 )}
               </Link>
@@ -291,12 +299,13 @@ export function Navbar() {
         )}
 
         {/* Mobile: profile avatar or login (Simplified for now, can be expanded) */}
-        <div className="md:hidden flex items-center gap-3">
+        <div className="md:hidden flex items-center gap-3" suppressHydrationWarning>
           <Button
             variant="ghost"
             size="icon"
             className="text-foreground"
             onClick={() => setSearchOpen(true)}
+            suppressHydrationWarning
           >
             <Search className="size-5" />
           </Button>
@@ -306,7 +315,7 @@ export function Navbar() {
             </Button>
           ) : (
             <Link href="/profile" className="relative h-8 w-8 overflow-hidden rounded-full border border-border">
-              {avatarUrl ? (
+              {mounted && avatarUrl ? (
                 <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
               ) : (
                 <User className="h-full w-full p-1.5 text-muted-foreground" />

@@ -32,13 +32,14 @@ export function CustomSelect({
     const selectedLabel = options.find(o => o.value === value)?.label || value;
 
     return (
-        <div className="flex-1 px-4 py-2 relative group" ref={containerRef}>
+        <div className="flex-1 px-4 py-2 relative group" ref={containerRef} suppressHydrationWarning>
             <label className="text-[10px] uppercase tracking-wide font-bold text-muted-foreground/60 mb-0.5 block">{label}</label>
 
             {/* Trigger */}
             <div
                 className="flex items-center cursor-pointer"
                 onClick={() => setIsOpen(!isOpen)}
+                suppressHydrationWarning
             >
                 <Icon className="size-4 text-primary/60 mr-2 flex-shrink-0" />
                 <p className="text-sm font-medium text-foreground truncate select-none flex-1">

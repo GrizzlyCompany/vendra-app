@@ -36,6 +36,7 @@ export function SplashScreen({ onComplete, show = true }: SplashScreenProps) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
           className="fixed inset-0 z-50 splash-screen"
+          suppressHydrationWarning
         >
           <div className="splash-content">
             {/* Logo/Texto principal */}
@@ -44,6 +45,7 @@ export function SplashScreen({ onComplete, show = true }: SplashScreenProps) {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
               className="space-y-2"
+              suppressHydrationWarning
             >
               <h1 className="splash-logo font-serif font-bold tracking-tight text-primary">
                 VENDRA

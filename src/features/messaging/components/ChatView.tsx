@@ -27,6 +27,9 @@ interface ChatViewProps {
   goBackToConversations: () => void;
   listRef: RefObject<HTMLDivElement | null>;
   isClosedConversation?: boolean;
+  isOnline?: boolean;
+  subscribePush?: () => void;
+  pushPermission?: NotificationPermission;
 }
 
 export function ChatView({
@@ -41,6 +44,9 @@ export function ChatView({
   goBackToConversations,
   listRef,
   isClosedConversation = false,
+  isOnline = false,
+  subscribePush,
+  pushPermission = 'default',
 }: ChatViewProps) {
 
   // Auto-scroll to bottom whenever messages (length) change
@@ -89,7 +95,9 @@ export function ChatView({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {target?.avatar_url ? <img src={target.avatar_url} alt={target.name ?? 'Usuario'} className="h-full w-full object-cover" /> : null}
               </div>
-              <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 shadow-sm"></div>
+              {isOnline && (
+                <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 shadow-sm animate-pulse"></div>
+              )}
             </Link>
           </div>
 
@@ -97,7 +105,9 @@ export function ChatView({
             <Link href={target?.id ? `/profile/${target.id}` : '#'}>
               <div className="font-serif font-bold text-base text-foreground hover:underline decoration-primary/30 underline-offset-4">{target?.name ?? 'Usuario'}</div>
             </Link>
-            <div className="text-xs text-emerald-600 font-bold bg-emerald-100/50 px-2 py-0.5 rounded-full inline-block">En línea</div>
+            <div className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block transition-colors duration-500 ${isOnline ? 'text-emerald-600 bg-emerald-100/50' : 'text-muted-foreground/60 bg-muted/50'}`}>
+              {isOnline ? 'En línea' : 'Desconectado'}
+            </div>
           </div>
         </div>
 
@@ -135,6 +145,34 @@ export function ChatView({
                 Crear Nuevo Reporte
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Request Banner */}
+      {!isClosedConversation && pushPermission === 'default' && subscribePush && (
+        <div className="px-6 pt-4">
+          <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                <Send className="h-4 w-4" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-primary text-sm">
+                  ¿Activar notificaciones?
+                </h3>
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Recibe avisos al instante cuando te respondan.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={subscribePush}
+              className="bg-primary hover:bg-primary/90 text-white h-8 text-xs rounded-full px-4 shrink-0"
+              size="sm"
+            >
+              Activar
+            </Button>
           </div>
         </div>
       )}

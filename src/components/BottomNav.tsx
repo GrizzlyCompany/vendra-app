@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Search, PlusSquare, Briefcase, User } from "lucide-react";
@@ -20,6 +22,11 @@ export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -74,14 +81,17 @@ export function BottomNav() {
   };
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 pointer-events-none flex justify-center pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <div
+      className="fixed bottom-0 inset-x-0 z-50 pointer-events-none flex justify-center pb-[env(safe-area-inset-bottom)] lg:hidden"
+      suppressHydrationWarning
+    >
       <nav
         id="bottom-nav"
         aria-label="Navegación inferior"
         className="pointer-events-auto mx-4 mb-1 bg-white/80 dark:bg-black/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 rounded-full overflow-hidden transition-transform duration-300"
       >
-        <ul className="flex items-center justify-between px-2 py-1 gap-1 min-w-[320px] max-w-md mx-auto">
-          {items.map(({ href, label, Icon }) => {
+        <ul className="flex items-center justify-between px-2 py-1 gap-1 min-w-[320px] max-w-md mx-auto" suppressHydrationWarning>
+          {mounted && items.map(({ href, label, Icon }) => {
             const active = isNavItemActive(href, label);
 
             return (

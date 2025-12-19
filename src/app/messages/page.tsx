@@ -13,6 +13,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ConversationList } from "@/features/messaging/components/ConversationList";
 import { MessageItem } from "@/features/messaging/components/MessageItem";
 import { ChatView } from "@/features/messaging/components/ChatView";
+import { usePushNotifications } from "@/features/messaging/hooks/usePushNotifications";
+import { PUSH_CONFIG } from "@/features/messaging/config/push";
 
 interface Message {
   id: string;
@@ -48,6 +50,12 @@ function MessagesContent() {
   const params = useSearchParams();
   const targetId = params.get("to");
   const isKeyboardVisible = useKeyboardVisibility();
+  const { subscribe: subscribePush, permission: pushPermission } = usePushNotifications();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [me, setMe] = useState<string | null>(null);
   const [target, setTarget] = useState<{ id: string; name: string | null; avatar_url: string | null } | null>(null);
@@ -61,7 +69,8 @@ function MessagesContent() {
   const [search, setSearch] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isMobileView, setIsMobileView] = useState(false);
-  const [showConversationList, setShowConversationList] = useState(false); // Default to false
+  const [showConversationList, setShowConversationList] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [isClosedConversation, setIsClosedConversation] = useState(false);
   const prevMessagesLength = useRef(messages.length); // Track previous message count
@@ -159,6 +168,68 @@ function MessagesContent() {
       }
     }
   }, [isKeyboardVisible, isInputFocused]);
+
+  // Track online users using Supabase Presence
+  useEffect(() => {
+    if (!me) return;
+
+    const channel = supabase.channel("online-presence", {
+      config: {
+        presence: {
+          key: me,
+        },
+      },
+    });
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const newState = channel.presenceState();
+        console.log("Presence: Full State Sync:", newState);
+        const onlineIds = new Set(Object.keys(newState));
+        console.log("Presence: Online User IDs:", Array.from(onlineIds));
+        setOnlineUsers(onlineIds);
+      })
+      .on("presence", { event: "join" }, ({ key }) => {
+        setOnlineUsers((prev) => {
+          const next = new Set(prev);
+          next.add(key);
+          return next;
+        });
+      })
+      .on("presence", { event: "leave" }, ({ key }) => {
+        setOnlineUsers((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      })
+      .subscribe(async (status) => {
+        console.log("Presence channel status:", status);
+        if (status === "SUBSCRIBED") {
+          console.log("Tracking presence for:", me);
+          await channel.track({
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [me]);
+
+  // Request push notification permissions
+  useEffect(() => {
+    if (me) {
+      console.log("Attempting push subscription for:", me);
+      subscribePush(PUSH_CONFIG.vapidPublicKey)
+        .then(sub => {
+          if (sub) console.log("Push subscription successful");
+          else console.log("Push subscription returned no result (perm denied or already subbed)");
+        })
+        .catch(err => console.error("Push subscription error:", err));
+    }
+  }, [me, subscribePush]);
 
   // Initialize session and load conversations
   useEffect(() => {
@@ -826,18 +897,18 @@ function MessagesContent() {
   // ... (previous code)
 
   return (
-    <main className="h-[100dvh] w-full bg-background/50 lg:static lg:h-auto lg:w-auto overflow-hidden lg:overflow-visible">
+    <main className="h-[100dvh] w-full bg-background/50 lg:static lg:h-auto lg:w-auto overflow-hidden lg:overflow-visible" suppressHydrationWarning>
 
       {/* Background Decor */}
-      <div className="fixed inset-0 pointer-events-none z-[-1] hidden lg:block">
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl opacity-50" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-secondary/10 rounded-full blur-3xl opacity-60" />
+      <div className="fixed inset-0 pointer-events-none z-[-1] hidden lg:block" suppressHydrationWarning>
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl opacity-50" suppressHydrationWarning />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-secondary/10 rounded-full blur-3xl opacity-60" suppressHydrationWarning />
       </div>
 
       {/* Desktop version - Fixed layout */}
-      <div className="hidden lg:flex h-[calc(100dvh-64px)] px-6 py-6 gap-6 max-w-7xl mx-auto">
+      <div className="hidden lg:flex h-[calc(100dvh-64px)] px-6 py-6 gap-6 max-w-7xl mx-auto" suppressHydrationWarning>
         {/* Sidebar - Fixed */}
-        <div className="w-96 shrink-0 h-full">
+        <div className="w-96 shrink-0 h-full" suppressHydrationWarning>
           <ConversationList
             conversations={conversations}
             search={search}
@@ -846,14 +917,15 @@ function MessagesContent() {
             setShowSearchBar={setShowSearchBar}
             openConversation={openConversation}
             targetId={targetId}
+            onlineUsers={onlineUsers}
           />
         </div>
 
         {/* Chat pane */}
-        <div className="flex-1 h-full min-w-0">
+        <div className="flex-1 h-full min-w-0" suppressHydrationWarning>
           {loading ? (
-            <div className="h-full w-full bg-white/50 backdrop-blur-xl rounded-[2rem] border border-white/40 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="h-full w-full bg-white/50 backdrop-blur-xl rounded-[2rem] border border-white/40 flex items-center justify-center" suppressHydrationWarning>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" suppressHydrationWarning></div>
             </div>
           ) : targetId ? (
             <ChatView
@@ -868,6 +940,9 @@ function MessagesContent() {
               goBackToConversations={goBackToConversations}
               listRef={listRef}
               isClosedConversation={isClosedConversation}
+              isOnline={targetId ? onlineUsers.has(targetId) : false}
+              subscribePush={() => subscribePush(PUSH_CONFIG.vapidPublicKey)}
+              pushPermission={pushPermission}
             />
           ) : (
             <div className="h-full w-full bg-white/20 backdrop-blur-md rounded-[2rem] border border-white/20 flex flex-col items-center justify-center text-center p-8 text-muted-foreground/60 shadow-lg">
@@ -882,7 +957,7 @@ function MessagesContent() {
       </div>
 
       {/* Mobile version with full-screen experience */}
-      <div className="lg:hidden w-full relative [&_*]:!touch-manipulation flex flex-col h-[100dvh] overflow-hidden bg-background">
+      <div className="lg:hidden w-full relative [&_*]:!touch-manipulation flex flex-col h-[100dvh] overflow-hidden bg-background" suppressHydrationWarning>
         {(!targetId && !loading) || (isMobileView && !targetId) ? (
           <div className="h-full p-0 pt-[env(safe-area-inset-top)]">
             <ConversationList
@@ -894,6 +969,7 @@ function MessagesContent() {
               setShowSearchBar={setShowSearchBar}
               openConversation={openConversation}
               targetId={targetId}
+              onlineUsers={onlineUsers}
             />
           </div>
         ) : targetId && !loading ? (
@@ -911,6 +987,9 @@ function MessagesContent() {
               goBackToConversations={goBackToConversations}
               listRef={listRef}
               isClosedConversation={isClosedConversation}
+              isOnline={targetId ? onlineUsers.has(targetId) : false}
+              subscribePush={() => subscribePush(PUSH_CONFIG.vapidPublicKey)}
+              pushPermission={pushPermission}
             />
           </div>
         ) : loading ? (
