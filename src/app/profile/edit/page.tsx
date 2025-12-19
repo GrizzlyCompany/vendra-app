@@ -21,7 +21,7 @@ export default function ProfileEditPage() {
   const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
   const [role, setRole] = useState<"comprador" | "vendedor_agente" | "empresa_constructora">("comprador");
-  
+
   // Fields from seller_applications (enhanced to match seller/apply)
   const [fullName, setFullName] = useState("");
   const [idType, setIdType] = useState("cedula");
@@ -100,34 +100,34 @@ export default function ProfileEditPage() {
           setIdNumber(existing.id_document_number ?? "");
           setBirthDate(existing.birth_date ?? "");
           setNationality(existing.nationality ?? "");
-          
+
           // Contact fields
           setPhone(existing.phone ?? "");
           setEmail(existing.email ?? "");
           setAddress(existing.address ?? "");
-          
+
           // Role choice
           setRoleChoice((existing.role_choice ?? "vendedor_particular") as any);
-          
+
           // Agent data
           setCompanyName(existing.company_name ?? "");
           setCompanyTaxId(existing.company_tax_id ?? "");
           setLicenseNumber(existing.license_number ?? "");
           setJobTitle(existing.job_title ?? "");
-          
+
           // Owner data
           setOwnerRelation(existing.owner_relation ?? "");
           setOwnershipProofUrl(existing.ownership_proof_url ?? "");
-          
+
           // Documents
           setDocFrontUrl(existing.doc_front_url ?? "");
           setDocBackUrl(existing.doc_back_url ?? "");
           setSelfieUrl(existing.selfie_url ?? "");
-          
+
           // Confirmations
           setTermsAccepted(!!existing.terms_accepted);
           setConfirmTruth(!!existing.confirm_truth);
-          
+
           // Social fields
           setLinkedinUrl(existing.linkedin_url ?? "");
           setWebsiteUrl(existing.website_url ?? "");
@@ -155,7 +155,7 @@ export default function ProfileEditPage() {
     return pub.publicUrl;
   };
 
-  const onFilePick = async (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string)=>void) => {
+  const onFilePick = async (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void) => {
     const f = e.target.files?.[0];
     if (!f) return;
     setError(null);
@@ -174,7 +174,7 @@ export default function ProfileEditPage() {
         router.replace("/login");
         return;
       }
-      
+
       // Use fullName as the primary name field, fallback to name if fullName is empty
       const displayName = fullName || name;
 
@@ -213,7 +213,7 @@ export default function ProfileEditPage() {
         social_urls: socialUrls ? socialUrls.split(",").map(url => url.trim()) : null,
         status: "draft", // Always save as draft in profile edit
       };
-      
+
       if (appId) {
         const { error: e2 } = await supabase
           .from("seller_applications")
@@ -229,12 +229,12 @@ export default function ProfileEditPage() {
         if (e3) throw e3;
         setAppId(ins.id);
       }
-      
+
       // Sync into auth metadata for convenience
       try {
         await supabase.auth.updateUser({ data: { name: displayName } });
-      } catch {}
-      
+      } catch { }
+
       // Also update the public_profiles table to ensure consistency
       try {
         const publicProfileData: Record<string, unknown> = {
@@ -243,7 +243,7 @@ export default function ProfileEditPage() {
           email: email,
           bio: bio || null,
         };
-        
+
         await supabase
           .from('public_profiles')
           .upsert(publicProfileData)
@@ -251,7 +251,7 @@ export default function ProfileEditPage() {
       } catch (e) {
         console.debug("Error updating public_profiles", e);
       }
-      
+
       setSuccess("Perfil actualizado correctamente");
       // Navigate back to profile after a brief delay
       setTimeout(() => router.push("/profile"), 600);
@@ -305,29 +305,29 @@ export default function ProfileEditPage() {
                   </div>
                   <div>
                     <label className="block text-sm text-muted-foreground mb-1">Tipo de documento</label>
-                    <select value={idType} onChange={(e)=>setIdType(e.target.value)} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                    <select value={idType} onChange={(e) => setIdType(e.target.value)} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
                       <option value="cedula">Cédula</option>
                       <option value="pasaporte">Pasaporte</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm text-muted-foreground mb-1">Número de documento</label>
-                    <Input value={idNumber} onChange={(e)=>setIdNumber(e.target.value)} />
+                    <Input value={idNumber} onChange={(e) => setIdNumber(e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-sm text-muted-foreground mb-1">Nacionalidad</label>
-                    <Input value={nationality} onChange={(e)=>setNationality(e.target.value)} placeholder="Dominicana" />
+                    <Input value={nationality} onChange={(e) => setNationality(e.target.value)} placeholder="Dominicana" />
                   </div>
                   <div>
                     <label className="block text-sm text-muted-foreground mb-1">Fecha de nacimiento</label>
-                    <Input type="date" value={birthDate} onChange={(e)=>setBirthDate(e.target.value)} />
+                    <Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm text-muted-foreground mb-1">Biografía</label>
-                    <textarea 
+                    <textarea
                       className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={bio} 
-                      onChange={(e) => setBio(e.target.value)} 
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
                       placeholder="Escribe una breve introducción sobre ti..."
                       maxLength={500}
                       rows={3}
@@ -349,11 +349,11 @@ export default function ProfileEditPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-muted-foreground mb-1">Teléfono</label>
-                    <Input value={phone} onChange={(e)=>setPhone(e.target.value)} placeholder="809-000-0000" />
+                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="809-000-0000" />
                   </div>
                   <div>
                     <label className="block text-sm text-muted-foreground mb-1">Dirección</label>
-                    <Input value={address} onChange={(e)=>setAddress(e.target.value)} placeholder="Calle, ciudad" />
+                    <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Calle, ciudad" />
                   </div>
                 </div>
               </section>
@@ -366,7 +366,11 @@ export default function ProfileEditPage() {
                     <label className="block text-sm text-muted-foreground mb-1">Rol actual</label>
                     <Input
                       readOnly
-                      value={role === "comprador" ? "Comprador" : role === "vendedor_agente" ? "Vendedor/Agente" : "Empresa constructora"}
+                      value={
+                        role === "empresa_constructora" ? "Empresa constructora" :
+                          (role === "vendedor_agente" && (appId || roleChoice !== 'vendedor_particular')) ? "Vendedor/Agente" :
+                            "Comprador"
+                      }
                     />
                     <p className="mt-1 text-xs text-muted-foreground">El rol es administrado por el sistema según tu aplicación como vendedor.</p>
                   </div>
@@ -379,36 +383,36 @@ export default function ProfileEditPage() {
                     <p className="mt-1 text-xs text-muted-foreground">Seleccionado en tu aplicación como vendedor.</p>
                   </div>
                 </div>
-                
+
                 {/* Conditional fields based on role choice */}
                 {requiresAgentData ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                     <div>
                       <label className="block text-sm text-muted-foreground mb-1">Nombre de la empresa / agencia</label>
-                      <Input value={companyName} onChange={(e)=>setCompanyName(e.target.value)} />
+                      <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
                     </div>
                     <div>
                       <label className="block text-sm text-muted-foreground mb-1">RNC / Registro fiscal</label>
-                      <Input value={companyTaxId} onChange={(e)=>setCompanyTaxId(e.target.value)} />
+                      <Input value={companyTaxId} onChange={(e) => setCompanyTaxId(e.target.value)} />
                     </div>
                     <div>
                       <label className="block text-sm text-muted-foreground mb-1">Número de licencia (opcional)</label>
-                      <Input value={licenseNumber} onChange={(e)=>setLicenseNumber(e.target.value)} />
+                      <Input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} />
                     </div>
                     <div>
                       <label className="block text-sm text-muted-foreground mb-1">Cargo en la empresa</label>
-                      <Input value={jobTitle} onChange={(e)=>setJobTitle(e.target.value)} />
+                      <Input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
                     </div>
                   </div>
                 ) : roleChoice !== "empresa_constructora" ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                     <div>
                       <label className="block text-sm text-muted-foreground mb-1">Relación con la propiedad</label>
-                      <Input value={ownerRelation} onChange={(e)=>setOwnerRelation(e.target.value)} placeholder="propietario / familiar / apoderado" />
+                      <Input value={ownerRelation} onChange={(e) => setOwnerRelation(e.target.value)} placeholder="propietario / familiar / apoderado" />
                     </div>
                     <div>
                       <label className="block text-sm text-muted-foreground mb-1">Documento que lo avale (URL opcional)</label>
-                      <Input value={ownershipProofUrl} onChange={(e)=>setOwnershipProofUrl(e.target.value)} placeholder="URL de documento" />
+                      <Input value={ownershipProofUrl} onChange={(e) => setOwnershipProofUrl(e.target.value)} placeholder="URL de documento" />
                     </div>
                   </div>
                 ) : null}
@@ -420,15 +424,15 @@ export default function ProfileEditPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-muted-foreground mb-1">LinkedIn (URL)</label>
-                    <Input value={linkedinUrl} onChange={(e)=>setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/in/tu-perfil" />
+                    <Input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/in/tu-perfil" />
                   </div>
                   <div>
                     <label className="block text-sm text-muted-foreground mb-1">Sitio web (URL)</label>
-                    <Input value={websiteUrl} onChange={(e)=>setWebsiteUrl(e.target.value)} placeholder="https://tusitio.com" />
+                    <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://tusitio.com" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm text-muted-foreground mb-1">Otras redes sociales (separadas por coma)</label>
-                    <Input value={socialUrls} onChange={(e)=>setSocialUrls(e.target.value)} placeholder="https://facebook.com/tu-perfil, https://instagram.com/tu-perfil" />
+                    <Input value={socialUrls} onChange={(e) => setSocialUrls(e.target.value)} placeholder="https://facebook.com/tu-perfil, https://instagram.com/tu-perfil" />
                   </div>
                 </div>
               </section>
@@ -469,11 +473,11 @@ export default function ProfileEditPage() {
               <section className="space-y-2">
                 <h3 className="text-sm font-medium">7) Confirmaciones</h3>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={termsAccepted} onChange={(e)=>setTermsAccepted(e.target.checked)} />
+                  <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} />
                   Acepto términos y condiciones
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={confirmTruth} onChange={(e)=>setConfirmTruth(e.target.checked)} />
+                  <input type="checkbox" checked={confirmTruth} onChange={(e) => setConfirmTruth(e.target.checked)} />
                   Confirmo que la información es verdadera y autorizo verificaciones necesarias
                 </label>
               </section>

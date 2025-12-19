@@ -326,11 +326,15 @@ export default function PropertyDetails({ params }: { params: Promise<{ id: stri
                   <div className="space-y-4">
                     {currentUserId !== property.owner_id ? (
                       <>
-                        <Button className="w-full h-12 rounded-xl text-lg font-medium shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90">
-                          Contactar Agente
+                        <Button asChild className="w-full h-12 rounded-xl text-lg font-medium shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90">
+                          <Link href={`/messages?to=${property.owner_id}`}>
+                            Contactar Agente
+                          </Link>
                         </Button>
-                        <Button variant="outline" className="w-full h-12 rounded-xl text-lg border-2 hover:bg-secondary/20 hover:text-foreground hover:border-primary/30">
-                          Agendar Visita
+                        <Button asChild variant="outline" className="w-full h-12 rounded-xl text-lg border-2 hover:bg-secondary/20 hover:text-foreground hover:border-primary/30">
+                          <Link href={`/messages?to=${property.owner_id}&msg=${encodeURIComponent(`Hola, me gustaría agendar una visita para la propiedad: ${property.title}`)}`}>
+                            Agendar Visita
+                          </Link>
                         </Button>
                       </>
                     ) : (

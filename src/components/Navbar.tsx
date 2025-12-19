@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   LogIn, LogOut, UserPlus, Home, User, Building2,
   MessageSquare, Bell, Search, Command, MapPin,
-  DollarSign, Briefcase
+  DollarSign, Briefcase, Settings
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useUserAvatar } from "@/hooks/useUserAvatar";
@@ -158,7 +158,7 @@ export function Navbar() {
                           </div>
                         </div>
                       </Button>
-                      <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { router.push('/agents'); setSearchOpen(false); }}>
+                      <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { router.push('/search?type=agent'); setSearchOpen(false); }}>
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
                             <Briefcase className="h-4 w-4" />
@@ -266,7 +266,7 @@ export function Navbar() {
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/80"
                       onClick={() => setMenuOpen(false)}
                     >
-                      <Badge variant="secondary" className="h-5 px-1.5 text-[10px] mr-auto">Nuevo</Badge> Preferencias
+                      <Settings className="h-4 w-4" /> Preferencias
                     </Link>
                     <Link
                       href="/reports"

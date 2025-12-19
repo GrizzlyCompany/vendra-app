@@ -26,6 +26,7 @@ type ProfileRow = {
   role: string | null;
   avatar_url?: string | null;
   subscription_active?: boolean | null;
+  applicationStatus?: string | null; // Tracks 'submitted', 'approved', etc.
 };
 
 export default function ProfilePage() {
@@ -45,10 +46,11 @@ export default function ProfilePage() {
 
     // Fetch the latest full_name from seller_applications
     let fullName = null;
+    let applicationStatus = null;
     try {
       const { data: sellerApp } = await supabase
         .from("seller_applications")
-        .select("full_name")
+        .select("full_name, status")
         .eq("user_id", userId)
         .in("status", ["draft", "submitted", "needs_more_info", "approved"] as any)
         .order("created_at", { ascending: false })
@@ -56,6 +58,7 @@ export default function ProfilePage() {
         .maybeSingle();
 
       fullName = sellerApp?.full_name ?? null;
+      applicationStatus = sellerApp?.status ?? null;
     } catch (e) {
       console.debug("Error fetching seller application full name", e);
     }
@@ -94,6 +97,7 @@ export default function ProfilePage() {
         profileData?.avatar_url ??
         authUser?.user_metadata?.avatar_url ??
         null,
+      applicationStatus: applicationStatus,
     } as ProfileRow;
     setProfile(merged);
   };
@@ -180,14 +184,27 @@ export default function ProfilePage() {
   const hasListings = useMemo(() => (properties?.length ?? 0) > 0, [properties]);
   const roleBadge = useMemo(() => {
     // If user has listings, they act as seller/agent regardless of stored role
-    if (hasListings) return "Vendedor/Agente";
-    // Otherwise fall back to stored role if any
-    if (profile?.role && profile.role.trim().length > 0) {
-      const r = profile.role;
-      return r.charAt(0).toUpperCase() + r.slice(1);
+    const r = (profile?.role || "").trim().toLowerCase();
+
+    // Top Priority: Verified (Application Approved) OR Construction Company
+    // Wait, construction company is role. "Verificado" is a status.
+    // User said: "empresa constructora evoluciona a verificado".
+    // So if company AND approved -> Verified company?
+    // Let's stick to badges.
+
+    // If Application is APPROVED => "Verificado" (unless we want "Empresa Verificada"?)
+    // User said "evoluciona a verificado". So "Verificado" is the badge.
+    if (profile?.applicationStatus === 'approved') return "Verificado";
+
+    if (r === 'empresa_constructora' || r.includes("empresa")) {
+      return "Empresa constructora";
+    }
+
+    if (hasListings && (profile?.applicationStatus === 'submitted' || r === 'vendedor_agente')) {
+      return "Vendedor/Agente";
     }
     return "Comprador";
-  }, [profile?.role, hasListings]);
+  }, [profile?.role, profile?.applicationStatus, hasListings]);
 
   // Delete a property and its images (best-effort)
   // First-click arms confirmation; second-click performs deletion without window.confirm

@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { AlertCircle, CheckCircle, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle, Upload, ArrowRight, UserCheck, Scale, Building2, BadgeCheck, Loader2, ChevronLeft } from "lucide-react";
+import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
+import Link from "next/link";
+import { Label } from "@/components/ui/label";
 
-// Enhanced seller application form with improved UI/UX
-// Saves draft and allows submission to 'submitted'. Admin must approve.
+// Enhanced seller application form with premium Glassmorphism UI
 export default function SellerApplyPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -108,7 +110,7 @@ export default function SellerApplyPage() {
     return pub.publicUrl;
   };
 
-  const onFilePick = async (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string)=>void) => {
+  const onFilePick = async (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void) => {
     const f = e.target.files?.[0];
     if (!f) return;
     setError(null);
@@ -158,7 +160,7 @@ export default function SellerApplyPage() {
       const { data, error } = await supabase.from("seller_applications").upsert(payload, { onConflict: "id" }).select("id").single();
       if (error) throw error;
       setAppId(data.id);
-      setSuccess("Borrador guardado");
+      setSuccess("Borrador guardado exitosamente");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error guardando borrador");
     } finally {
@@ -171,11 +173,11 @@ export default function SellerApplyPage() {
     setSuccess(null);
     setLoading(true);
     try {
-      if (!termsAccepted || !confirmTruth) throw new Error("Debes aceptar los términos y confirmar veracidad");
+      if (!termsAccepted || !confirmTruth) throw new Error("Debes aceptar los términos y confirmar veracidad para continuar.");
       const { data: session } = await supabase.auth.getSession();
       const uid = session.session?.user?.id;
       if (!uid) throw new Error("No autenticado");
-      
+
       const payload: Record<string, unknown> = {
         user_id: uid,
         full_name: fullName,
@@ -204,47 +206,37 @@ export default function SellerApplyPage() {
       const { data, error } = await supabase.from("seller_applications").upsert(payload, { onConflict: "id" }).select("id").single();
       if (error) throw error;
       setAppId(data.id);
-      
+
       // Update user role from comprador to vendedor_agente
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("role")
         .eq("id", uid)
         .single();
-      
+
       if (userError) throw userError;
-      
+
       if (userData.role === "comprador") {
         const { error: updateError } = await supabase
           .from("users")
           .update({ role: "vendedor_agente" })
           .eq("id", uid);
-        
+
         if (updateError) throw updateError;
-        
+
         // Also update auth metadata
         try {
           await supabase.auth.updateUser({ data: { role: "vendedor_agente" } });
-        } catch {}
+        } catch { }
       }
-      
-      setSuccess("Solicitud enviada. Ya puedes publicar tu propiedad.");
-      // Esperar a que la fila sea visible para el guard de /properties/new
-      try {
-        const { data: session2 } = await supabase.auth.getSession();
-        const uid2 = session2.session?.user?.id;
-        for (let i = 0; i < 5; i++) {
-          const { data: check } = await supabase
-            .from("seller_applications")
-            .select("id")
-            .eq("user_id", uid2)
-            .in("status", ["submitted", "approved"])
-            .maybeSingle();
-          if (check) break;
-          await new Promise(r => setTimeout(r, 150));
-        }
-      } catch {}
-      router.push("/properties/new");
+
+      setSuccess("¡Solicitud enviada con éxito! Redirigiendo...");
+
+      // Short delay for user to see success message
+      setTimeout(() => {
+        router.push("/properties/new");
+      }, 1500);
+
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error enviando solicitud");
     } finally {
@@ -253,321 +245,335 @@ export default function SellerApplyPage() {
   };
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-background flex items-center justify-center px-4 py-8 mobile-bottom-safe">
-      <Card className="w-full max-w-3xl border-border">
-        <CardHeader className="pb-4">
-          <CardTitle className="font-serif text-2xl text-foreground">Verificación para Vendedor/Agente</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Completa esta verificación para poder publicar tus propiedades en la plataforma.
+    <main className="min-h-[calc(100dvh-64px)] bg-background px-4 sm:px-6 py-8 sm:py-12 mobile-bottom-safe mobile-horizontal-safe font-sans">
+      <DetailBackButton className="mb-6 max-w-4xl mx-auto">
+        <Button variant="ghost" size="sm" asChild className="gap-2">
+          <Link href="/">
+            <ChevronLeft className="w-4 h-4" /> Volver al Inicio
+          </Link>
+        </Button>
+      </DetailBackButton>
+
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8 text-center sm:text-left">
+          <h1 className="text-3xl sm:text-4xl font-serif font-bold text-foreground mb-3">
+            Verificación <span className="text-primary italic">Profesional</span>
+          </h1>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto sm:mx-0">
+            Completa tu perfil profesional para desbloquear las herramientas de venta y conectar con miles de compradores.
           </p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {error && (
-              <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-            {success && (
-              <div className="flex items-start gap-2 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700">
-                <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>{success}</span>
-              </div>
-            )}
+        </div>
 
-            {/* 1. Datos Básicos */}
-            <section className="space-y-3">
-              <h3 className="text-sm font-medium">1. Datos Básicos</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm text-muted-foreground">Nombre completo</label>
-                  <Input 
-                    value={fullName} 
-                    onChange={(e)=>setFullName(e.target.value)} 
-                    placeholder="Tu nombre completo"
-                  />
+        <div className="grid gap-8">
+          {/* Status Messages */}
+          {(error || success) && (
+            <div className={`p-4 rounded-2xl border backdrop-blur-sm animate-in fade-in slide-in-from-top-4 ${error
+              ? 'bg-destructive/5 border-destructive/20 text-destructive'
+              : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+              }`}>
+              <div className="flex items-center gap-3">
+                {error ? <AlertCircle className="h-5 w-5" /> : <CheckCircle className="h-5 w-5" />}
+                <p className="font-medium">{error || success}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-[1fr_300px] gap-8">
+            {/* Main Form */}
+            <div className="space-y-6">
+
+              {/* Sección 1: Datos Personales */}
+              <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/60 dark:bg-white/5 backdrop-blur-xl p-6 sm:p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-xl font-semibold">1. Datos Personales</h2>
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-sm text-muted-foreground">Tipo de documento</label>
-                  <Select value={idType} onChange={(e)=>setIdType(e.target.value)}>
-                    <option value="cedula">Cédula</option>
-                    <option value="pasaporte">Pasaporte</option>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm text-muted-foreground">Número de documento</label>
-                  <Input 
-                    value={idNumber} 
-                    onChange={(e)=>setIdNumber(e.target.value)} 
-                    placeholder="000-0000000-0"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm text-muted-foreground">Fecha de nacimiento</label>
-                  <Input 
-                    type="date" 
-                    value={birthDate} 
-                    onChange={(e)=>setBirthDate(e.target.value)} 
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="block text-sm text-muted-foreground">Nacionalidad</label>
-                  <Input 
-                    value={nationality} 
-                    onChange={(e)=>setNationality(e.target.value)} 
-                    placeholder="Dominicana"
-                  />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Nombre completo</Label>
+                    <Input
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Ej. Juan Pérez"
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tipo de documento</Label>
+                    <Select value={idType} onChange={(e) => setIdType(e.target.value)} className="bg-background/50">
+                      <option value="cedula">Cédula de Identidad</option>
+                      <option value="pasaporte">Pasaporte</option>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Número de documento</Label>
+                    <Input
+                      value={idNumber}
+                      onChange={(e) => setIdNumber(e.target.value)}
+                      placeholder="000-0000000-0"
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Fecha de nacimiento</Label>
+                    <Input
+                      type="date"
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nacionalidad</Label>
+                    <Input
+                      value={nationality}
+                      onChange={(e) => setNationality(e.target.value)}
+                      placeholder="Ej. Dominicana"
+                      className="bg-background/50"
+                    />
+                  </div>
                 </div>
               </div>
-            </section>
 
-            {/* 2. Contacto */}
-            <section className="space-y-3">
-              <h3 className="text-sm font-medium">2. Información de Contacto</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm text-muted-foreground">Teléfono principal</label>
-                  <Input 
-                    value={phone} 
-                    onChange={(e)=>setPhone(e.target.value)} 
-                    placeholder="809-000-0000"
-                  />
+              {/* Sección 2: Contacto */}
+              <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/60 dark:bg-white/5 backdrop-blur-xl p-6 sm:p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-xl font-semibold">2. Información de Contacto</h2>
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-sm text-muted-foreground">Correo electrónico</label>
-                  <Input 
-                    type="email" 
-                    value={email} 
-                    onChange={(e)=>setEmail(e.target.value)} 
-                    placeholder="tu@email.com"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="block text-sm text-muted-foreground">Dirección actual</label>
-                  <Input 
-                    value={address} 
-                    onChange={(e)=>setAddress(e.target.value)} 
-                    placeholder="Calle, ciudad"
-                  />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label>Teléfono móvil</Label>
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="809-000-0000"
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Correo electrónico</Label>
+                    <Input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="tu@email.com"
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Dirección residencial</Label>
+                    <Input
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Calle, número, sector, ciudad"
+                      className="bg-background/50"
+                    />
+                  </div>
                 </div>
               </div>
-            </section>
 
-            {/* 3. Rol */}
-            <section className="space-y-3">
-              <h3 className="text-sm font-medium">3. Tipo de Vendedor</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button 
-                    type="button" 
-                    className={`rounded-md border px-4 py-3 text-sm text-left transition-colors ${
-                      roleChoice === 'vendedor_particular' 
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-800' 
-                        : 'border-border hover:bg-muted'
-                    }`}
-                    onClick={()=>setRoleChoice('vendedor_particular')}
+              {/* Sección 3: Perfil Profesional */}
+              <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/60 dark:bg-white/5 backdrop-blur-xl p-6 sm:p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600">
+                    <BadgeCheck className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-xl font-semibold">3. Perfil Profesional</h2>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setRoleChoice('vendedor_particular')}
+                      className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 hover:shadow-md ${roleChoice === 'vendedor_particular'
+                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 ring-1 ring-emerald-500'
+                        : 'border-border bg-background/50 hover:border-emerald-200'
+                        }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-lg">Vendedor Particular</span>
+                        {roleChoice === 'vendedor_particular' && <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Soy propietario y deseo vender o alquilar mis propias propiedades.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRoleChoice('agente_inmobiliario')}
+                      className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 hover:shadow-md ${roleChoice === 'agente_inmobiliario'
+                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 ring-1 ring-emerald-500'
+                        : 'border-border bg-background/50 hover:border-emerald-200'
+                        }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-lg">Agente Inmobiliario</span>
+                        {roleChoice === 'agente_inmobiliario' && <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Represento a clientes o trabajo para una agencia inmobiliaria.
+                      </p>
+                    </button>
+                  </div>
+
+                  {requiresAgentData ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in slide-in-from-top-2">
+                      <div className="space-y-2">
+                        <Label>Agencia / Empresa</Label>
+                        <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Nombre de la agencia" className="bg-background/50" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>RNC / Registro Fiscal</Label>
+                        <Input value={companyTaxId} onChange={(e) => setCompanyTaxId(e.target.value)} placeholder="0-00-00000-0" className="bg-background/50" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Número de Licencia</Label>
+                        <Input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} placeholder="Opcional" className="bg-background/50" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Cargo / Título</Label>
+                        <Input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="Ej. Agente Senior" className="bg-background/50" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in slide-in-from-top-2">
+                      <div className="space-y-2">
+                        <Label>Relación con la propiedad</Label>
+                        <Input value={ownerRelation} onChange={(e) => setOwnerRelation(e.target.value)} placeholder="Ej. Propietario único" className="bg-background/50" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Prueba de propiedad (Link)</Label>
+                        <Input value={ownershipProofUrl} onChange={(e) => setOwnershipProofUrl(e.target.value)} placeholder="URL a documento (opcional)" className="bg-background/50" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Sección 4: Documentación */}
+              <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/60 dark:bg-white/5 backdrop-blur-xl p-6 sm:p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
+                  <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-600">
+                    <Scale className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-xl font-semibold">4. Documentación</h2>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {[
+                    { label: "Frontal Cédula", state: docFrontUrl, setter: setDocFrontUrl },
+                    { label: "Trasera Cédula", state: docBackUrl, setter: setDocBackUrl },
+                    { label: "Selfie con Cédula", state: selfieUrl, setter: setSelfieUrl },
+                  ].map((doc, idx) => (
+                    <div key={idx} className="space-y-3">
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{doc.label}</Label>
+                      <div className={`relative aspect-[3/2] rounded-xl border-2 border-dashed transition-all ${doc.state ? 'border-emerald-500/50 bg-emerald-50/30' : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }`}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => onFilePick(e, doc.setter)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                          {doc.state ? (
+                            <>
+                              <CheckCircle className="w-8 h-8 text-emerald-500 mb-2" />
+                              <span className="text-xs text-emerald-600 font-medium truncate w-full px-2">Archivo subido</span>
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                              <span className="text-xs text-muted-foreground">Click para subir</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {doc.state && (
+                        <a href={doc.state} target="_blank" rel="noopener noreferrer" className="block text-center text-xs text-primary hover:underline">
+                          Ver archivo actual
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar Sticky Actions */}
+            <div className="md:sticky md:top-24 h-fit space-y-6">
+              <div className="rounded-3xl border border-white/20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl p-6 shadow-xl">
+                <h3 className="font-serif font-bold text-lg mb-4">Resumen</h3>
+                <div className="space-y-4 text-sm">
+                  <div className="flex justify-between py-2 border-b border-border/50">
+                    <span className="text-muted-foreground">Rol solicitado</span>
+                    <span className="font-medium text-right">{roleChoice === 'vendedor_particular' ? 'Vendedor' : 'Agente'}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border/50">
+                    <span className="text-muted-foreground">Documentos</span>
+                    <span className={`font-medium ${docFrontUrl && docBackUrl && selfieUrl ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {[docFrontUrl, docBackUrl, selfieUrl].filter(Boolean).length}/3
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <label className="flex items-start gap-3 text-sm cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors">
+                    <div className="pt-0.5">
+                      <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="rounded border-border text-primary focus:ring-primary" />
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      He leído y acepto los <Link href="/terms" className="text-primary hover:underline">Términos y Condiciones</Link>.
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-3 text-sm cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors">
+                    <div className="pt-0.5">
+                      <input type="checkbox" checked={confirmTruth} onChange={(e) => setConfirmTruth(e.target.checked)} className="rounded border-border text-primary focus:ring-primary" />
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      Declaro que la información es verídica.
+                    </span>
+                  </label>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <Button
+                    onClick={submit}
+                    disabled={loading || !termsAccepted || !confirmTruth}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 text-base shadow-lg hover:shadow-primary/25 transition-all"
                   >
-                    <div className="font-medium">Vendedor particular</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Vendo propiedades que me pertenecen
-                    </div>
-                  </button>
-                  <button 
-                    type="button" 
-                    className={`rounded-md border px-4 py-3 text-sm text-left transition-colors ${
-                      roleChoice === 'agente_inmobiliario' 
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-800' 
-                        : 'border-border hover:bg-muted'
-                    }`}
-                    onClick={()=>setRoleChoice('agente_inmobiliario')}
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Enviar Solicitud"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={saveDraft}
+                    disabled={loading}
+                    className="w-full h-10 border-border/50 hover:bg-muted/50"
                   >
-                    <div className="font-medium">Agente inmobiliario</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Represento a clientes en la venta de propiedades
-                    </div>
-                  </button>
-                </div>
-                
-                {requiresAgentData ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div className="space-y-2">
-                      <label className="block text-sm text-muted-foreground">Nombre de la empresa / agencia</label>
-                      <Input 
-                        value={companyName} 
-                        onChange={(e)=>setCompanyName(e.target.value)} 
-                        placeholder="Nombre de tu agencia"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm text-muted-foreground">RNC / Registro fiscal</label>
-                      <Input 
-                        value={companyTaxId} 
-                        onChange={(e)=>setCompanyTaxId(e.target.value)} 
-                        placeholder="0-00-00000-0"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm text-muted-foreground">Número de licencia (opcional)</label>
-                      <Input 
-                        value={licenseNumber} 
-                        onChange={(e)=>setLicenseNumber(e.target.value)} 
-                        placeholder="Licencia de agente"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm text-muted-foreground">Cargo en la empresa</label>
-                      <Input 
-                        value={jobTitle} 
-                        onChange={(e)=>setJobTitle(e.target.value)} 
-                        placeholder="Agente inmobiliario"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div className="space-y-2">
-                      <label className="block text-sm text-muted-foreground">Relación con la propiedad</label>
-                      <Input 
-                        value={ownerRelation} 
-                        onChange={(e)=>setOwnerRelation(e.target.value)} 
-                        placeholder="propietario / familiar / apoderado"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm text-muted-foreground">Documento que lo avale (URL opcional)</label>
-                      <Input 
-                        value={ownershipProofUrl} 
-                        onChange={(e)=>setOwnershipProofUrl(e.target.value)} 
-                        placeholder="https://..."
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* 4. Verificación de identidad */}
-            <section className="space-y-3">
-              <h3 className="text-sm font-medium">4. Documentos de Verificación</h3>
-              <p className="text-xs text-muted-foreground">
-                Sube imágenes claras de tus documentos de identidad y una selfie para completar la verificación.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm text-muted-foreground">Documento frontal</label>
-                  <div className="relative">
-                    <Input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={(e)=>onFilePick(e,setDocFrontUrl)} 
-                      className="file:mr-2 file:py-1 file:px-3 file:text-sm file:rounded file:border file:border-border file:bg-background file:text-foreground hover:file:bg-muted"
-                    />
-                    {docFrontUrl && (
-                      <a 
-                        className="text-xs text-emerald-700 mt-1 inline-block" 
-                        href={docFrontUrl} 
-                        target="_blank"
-                      >
-                        Ver archivo
-                      </a>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm text-muted-foreground">Documento trasero</label>
-                  <div className="relative">
-                    <Input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={(e)=>onFilePick(e,setDocBackUrl)} 
-                      className="file:mr-2 file:py-1 file:px-3 file:text-sm file:rounded file:border file:border-border file:bg-background file:text-foreground hover:file:bg-muted"
-                    />
-                    {docBackUrl && (
-                      <a 
-                        className="text-xs text-emerald-700 mt-1 inline-block" 
-                        href={docBackUrl} 
-                        target="_blank"
-                      >
-                        Ver archivo
-                      </a>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm text-muted-foreground">Selfie en vivo</label>
-                  <div className="relative">
-                    <Input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={(e)=>onFilePick(e,setSelfieUrl)} 
-                      className="file:mr-2 file:py-1 file:px-3 file:text-sm file:rounded file:border file:border-border file:bg-background file:text-foreground hover:file:bg-muted"
-                    />
-                    {selfieUrl && (
-                      <a 
-                        className="text-xs text-emerald-700 mt-1 inline-block" 
-                        href={selfieUrl} 
-                        target="_blank"
-                      >
-                        Ver archivo
-                      </a>
-                    )}
-                  </div>
+                    Guardar Borrador
+                  </Button>
                 </div>
               </div>
-            </section>
 
-            {/* 5. Confirmaciones */}
-            <section className="space-y-4">
-              <h3 className="text-sm font-medium">5. Confirmaciones</h3>
-              <div className="space-y-3">
-                <label className="flex items-start gap-3 text-sm">
-                  <input 
-                    type="checkbox" 
-                    checked={termsAccepted} 
-                    onChange={(e)=>setTermsAccepted(e.target.checked)} 
-                    className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="text-muted-foreground">
-                    Acepto los <a href="#" className="text-emerald-600 hover:underline">términos y condiciones</a> de la plataforma
-                  </span>
-                </label>
-                <label className="flex items-start gap-3 text-sm">
-                  <input 
-                    type="checkbox" 
-                    checked={confirmTruth} 
-                    onChange={(e)=>setConfirmTruth(e.target.checked)} 
-                    className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="text-muted-foreground">
-                    Confirmo que la información proporcionada es verdadera y autorizo las verificaciones necesarias
-                  </span>
-                </label>
+              <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 text-xs text-blue-600/80 leading-relaxed text-center">
+                <p>
+                  Tu información está protegida y será revisada por nuestro equipo de cumplimiento en 24-48 horas.
+                </p>
               </div>
-            </section>
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                type="button" 
-                disabled={loading} 
-                onClick={saveDraft}
-                variant="outline"
-                className="w-full sm:w-auto"
-              >
-                {loading ? "Guardando..." : "Guardar borrador"}
-              </Button>
-              <Button 
-                type="button" 
-                disabled={loading} 
-                onClick={submit}
-                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                {loading ? "Enviando..." : "Enviar solicitud"}
-              </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </div>
+    </main>
   );
 }

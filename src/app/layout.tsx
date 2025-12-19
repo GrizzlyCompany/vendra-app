@@ -68,6 +68,7 @@ export default function RootLayout({
       </head>
       <body
         className={`${ptSans.variable} ${playfair.variable} antialiased`}
+        suppressHydrationWarning
       >
         <SplashScreenWrapper />
         <ErrorBoundary>

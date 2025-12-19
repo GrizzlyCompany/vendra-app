@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { FormSelect } from "@/components/ui/form-select";
 import { supabase } from "@/lib/supabase/client";
 import { ImageSelector } from "@/components/dashboard/ImageSelector";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
-import { MapPin } from "lucide-react";
+import { MapPin, Plus, Trash2 } from "lucide-react";
 
 export function AddPropertySection() {
   const [form, setForm] = useState({
@@ -32,9 +32,8 @@ export function AddPropertySection() {
     builtAreas: "",
 
     // 4. Detalles de las Unidades
-    unitTypes: "",
+    unitEntries: [{ type: "", quantity: "", size: "", available: "" }] as Array<{ type: string; quantity: string; size: string; available: string }>,
     sizeRange: "",
-    quantityPerType: "",
 
     // 5. Amenidades y Servicios
     amenities: new Set<string>(),
@@ -58,6 +57,7 @@ export function AddPropertySection() {
   const [uploading, setUploading] = useState(false);
   const [imagesFiles, setImagesFiles] = useState<FileList | null>(null);
   const [plansFiles, setPlansFiles] = useState<FileList | null>(null);
+  const [brochureFiles, setBrochureFiles] = useState<FileList | null>(null);
 
   // Google Maps State
   const { isLoaded } = useJsApiLoader({
@@ -161,6 +161,30 @@ export function AddPropertySection() {
     });
   };
 
+  // Unit entry helpers
+  const addUnitEntry = () => {
+    setForm((p) => ({
+      ...p,
+      unitEntries: [...p.unitEntries, { type: "", quantity: "", size: "", available: "" }]
+    }));
+  };
+
+  const removeUnitEntry = (index: number) => {
+    setForm((p) => ({
+      ...p,
+      unitEntries: p.unitEntries.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateUnitEntry = (index: number, field: "type" | "quantity" | "size" | "available", value: string) => {
+    setForm((p) => ({
+      ...p,
+      unitEntries: p.unitEntries.map((entry, i) =>
+        i === index ? { ...entry, [field]: value } : entry
+      )
+    }));
+  };
+
   const addCustomAmenity = (e: React.FormEvent) => {
     e.preventDefault();
     if (form.customAmenity.trim() !== "") {
@@ -209,6 +233,7 @@ export function AddPropertySection() {
       // 1) Subir archivos a Storage y recolectar URLs públicas
       const imageUrls: string[] = [];
       const planUrls: string[] = [];
+      const brochureUrls: string[] = [];
 
       if (imagesFiles && imagesFiles.length > 0) {
         setUploading(true);
@@ -248,6 +273,25 @@ export function AddPropertySection() {
         setUploading(false);
       }
 
+      if (brochureFiles && brochureFiles.length > 0) {
+        setUploading(true);
+        const bucket = "project-brochures";
+        for (let i = 0; i < brochureFiles.length; i++) {
+          const f = brochureFiles.item(i)!;
+          const ext = f.name.split(".").pop() || "bin";
+          const path = `${uid}/projects/${Date.now()}-brochure-${i}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: false, cacheControl: "3600" });
+          if (upErr) {
+            setError(`Error al subir brochure: ${upErr.message}`);
+            setUploading(false);
+            return;
+          }
+          const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
+          if (pub?.publicUrl) brochureUrls.push(pub.publicUrl);
+        }
+        setUploading(false);
+      }
+
       const payload = {
         project_name: form.projectName || null,
         description_title: form.descriptionTitle || null, // New field
@@ -262,13 +306,15 @@ export function AddPropertySection() {
         floors: toNumber(form.floors),
         land_size: toNumber(form.landSize),
         built_areas: toNumber(form.builtAreas),
-        unit_types: form.unitTypes || null,
+        unit_types: JSON.stringify(form.unitEntries.filter(e => e.type)),
         size_range: form.sizeRange || null,
-        quantity_per_type: form.quantityPerType || null,
+        // Keep quantity_per_type for semi-backward compatibility with search if needed, but the main data is in unit_types
+        quantity_per_type: form.unitEntries.filter(e => e.type && e.quantity).map(e => `${e.quantity} ${e.type}`).join(", ") || null,
         amenities: Array.from(form.amenities),
         images: imageUrls.length ? imageUrls : null,
         promo_video: form.promoVideo || null,
         plans: planUrls.length ? planUrls : null,
+        brochure: brochureUrls.length ? brochureUrls : null,
         unit_price_range: form.unitPriceRange || null,
         payment_methods: form.paymentMethods || null,
         partner_bank: form.partnerBank || null,
@@ -317,7 +363,7 @@ export function AddPropertySection() {
         )}
 
         {/* 1. Información General */}
-        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+        <Card className="border-border/40 shadow-sm bg-card/50 backdrop-blur-sm relative z-50">
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
@@ -348,23 +394,25 @@ export function AddPropertySection() {
               <div className="text-xs text-right text-muted-foreground">{form.shortDescription.length}/300</div>
             </div>
             <div className="grid gap-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="category">Categoría</label>
-              <div className="relative">
-                <Select id="category" name="category" value={form.category} onChange={onChange} className="h-11 bg-background/50">
-                  <option value="">Seleccionar Tipo...</option>
-                  <option value="Residencial">Residencial</option>
-                  <option value="Comercial">Comercial</option>
-                  <option value="Mixto">Mixto</option>
-                  <option value="Turístico">Turístico</option>
-                  <option value="Otro">Otro</option>
-                </Select>
-              </div>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Categoría</label>
+              <FormSelect
+                value={form.category}
+                onChange={(val) => setForm(p => ({ ...p, category: val }))}
+                placeholder="Seleccionar Tipo..."
+                options={[
+                  { value: "Residencial", label: "Residencial" },
+                  { value: "Comercial", label: "Comercial" },
+                  { value: "Mixto", label: "Mixto" },
+                  { value: "Turístico", label: "Turístico" },
+                  { value: "Otro", label: "Otro" }
+                ]}
+              />
             </div>
           </CardContent>
         </Card>
 
         {/* 2. Ubicación */}
-        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+        <Card className="border-border/40 shadow-sm bg-card/50 backdrop-blur-sm relative z-40">
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
@@ -422,7 +470,7 @@ export function AddPropertySection() {
         </Card>
 
         {/* 3. Detalles Técnicos */}
-        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+        <Card className="border-border/40 shadow-sm bg-card/50 backdrop-blur-sm relative z-30">
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
@@ -431,14 +479,18 @@ export function AddPropertySection() {
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="grid gap-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="projectStatus">Estado de Obra</label>
-              <Select id="projectStatus" name="projectStatus" value={form.projectStatus} onChange={onChange} className="h-11 bg-background/50">
-                <option value="">Seleccionar...</option>
-                <option value="En planos">En planos</option>
-                <option value="En construcción">En construcción</option>
-                <option value="En preventa">En preventa</option>
-                <option value="Terminado">Terminado</option>
-              </Select>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Estado de Obra</label>
+              <FormSelect
+                value={form.projectStatus}
+                onChange={(val) => setForm(p => ({ ...p, projectStatus: val }))}
+                placeholder="Seleccionar..."
+                options={[
+                  { value: "En planos", label: "En planos" },
+                  { value: "En construcción", label: "En construcción" },
+                  { value: "En preventa", label: "En preventa" },
+                  { value: "Terminado", label: "Terminado" }
+                ]}
+              />
             </div>
             <div className="grid gap-2">
               <label className="text-sm text-foreground/80 font-medium" htmlFor="deliveryDate">Fecha de Entrega</label>
@@ -464,31 +516,100 @@ export function AddPropertySection() {
         </Card>
 
         {/* 4. Unidades & Distribución */}
-        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+        <Card className="border-border/40 shadow-sm bg-card/50 backdrop-blur-sm relative z-20">
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">4</span>
               Unidades & Distribución
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="grid gap-2 md:col-span-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="unitTypes">Tipos de Unidades</label>
-              <textarea id="unitTypes" name="unitTypes" value={form.unitTypes} onChange={onChange} rows={2} className="rounded-md border bg-background/50 px-3 py-2 text-sm resize-none" placeholder="Describe brevemente los tipos (ej: Apts estudio, 2 habs, Penthouses...)" />
-            </div>
-            <div className="grid gap-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="sizeRange">Rango Metrajes (m²)</label>
-              <Input id="sizeRange" name="sizeRange" value={form.sizeRange} onChange={onChange} placeholder="Ej: 85 - 240 m²" className="h-11 bg-background/50" />
-            </div>
-            <div className="grid gap-2 md:col-span-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="quantityPerType">Cantidad por Tipo</label>
-              <textarea id="quantityPerType" name="quantityPerType" value={form.quantityPerType} onChange={onChange} rows={2} className="rounded-md border bg-background/50 px-3 py-2 text-sm resize-none" placeholder="Ej: 20 Unidades Tipo A, 15 Tipo B..." />
-            </div>
+          <CardContent className="p-6 space-y-4">
+            <p className="text-sm text-muted-foreground mb-2">Agrega los diferentes tipos de unidades que ofrece este proyecto.</p>
+
+            {form.unitEntries.map((entry, index) => (
+              <div key={index} className="flex flex-col sm:flex-row gap-3 p-4 rounded-xl border border-border/50 bg-background/30">
+                <div className="flex-1 grid gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Tipo de Unidad</label>
+                  <FormSelect
+                    value={entry.type}
+                    onChange={(val) => updateUnitEntry(index, "type", val)}
+                    placeholder="Seleccionar..."
+                    options={[
+                      { value: "Estudio", label: "Estudio" },
+                      { value: "1 Habitación", label: "1 Habitación" },
+                      { value: "2 Habitaciones", label: "2 Habitaciones" },
+                      { value: "3 Habitaciones", label: "3 Habitaciones" },
+                      { value: "4+ Habitaciones", label: "4+ Habitaciones" },
+                      { value: "Penthouse", label: "Penthouse" },
+                      { value: "Local Comercial", label: "Local Comercial" },
+                      { value: "Oficina", label: "Oficina" },
+                      { value: "Otro", label: "Otro" }
+                    ]}
+                  />
+                </div>
+
+                <div className="w-full sm:w-28 grid gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Cantidad</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={entry.quantity}
+                    onChange={(e) => updateUnitEntry(index, "quantity", e.target.value)}
+                    placeholder="0"
+                    className="h-10 bg-background/50"
+                  />
+                </div>
+
+                <div className="w-full sm:w-32 grid gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Tamaño (m²)</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={entry.size}
+                    onChange={(e) => updateUnitEntry(index, "size", e.target.value)}
+                    placeholder="0"
+                    className="h-10 bg-background/50"
+                  />
+                </div>
+
+                <div className="w-full sm:w-28 grid gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Disponibles</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={entry.available || ""}
+                    onChange={(e) => updateUnitEntry(index, "available", e.target.value)}
+                    placeholder="0"
+                    className="h-10 border-primary/30 bg-primary/5 focus:bg-background"
+                  />
+                </div>
+
+                {form.unitEntries.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeUnitEntry(index)}
+                    className="self-end h-10 w-10 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addUnitEntry}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="text-sm font-medium">Agregar Tipo de Unidad</span>
+            </button>
           </CardContent>
         </Card>
 
         {/* 5. Amenidades */}
-        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+        <Card className="border-border/40 shadow-sm bg-card/50 backdrop-blur-sm relative z-10">
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">5</span>
@@ -554,7 +675,7 @@ export function AddPropertySection() {
         </Card>
 
         {/* 6. Multimedia */}
-        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+        <Card className="border-border/40 shadow-sm bg-card/50 backdrop-blur-sm relative z-[5]">
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">6</span>
@@ -594,12 +715,27 @@ export function AddPropertySection() {
                   <div className="text-xs text-primary font-medium mt-1">✓ {plansFiles!.length} archivos seleccionados</div>
                 )}
               </div>
+              <div className="grid gap-2">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="brochureFiles">Brochure/Folleto (PDF/Imagen)</label>
+                <input
+                  id="brochureFiles"
+                  name="brochureFiles"
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setBrochureFiles(e.target.files)}
+                  className="file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20 text-sm text-muted-foreground cursor-pointer"
+                />
+                {(brochureFiles?.length || 0) > 0 && (
+                  <div className="text-xs text-primary font-medium mt-1">✓ {brochureFiles!.length} archivos seleccionados</div>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* 7. Finanzas */}
-        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+        <Card className="border-border/40 shadow-sm bg-card/50 backdrop-blur-sm relative z-0">
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">7</span>
@@ -615,12 +751,17 @@ export function AddPropertySection() {
               </div>
             </div>
             <div className="grid gap-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="currency">Moneda</label>
-              <Select id="currency" name="currency" value={form.currency} onChange={onChange} className="h-11 bg-background/50">
-                <option value="USD">USD (Dólares)</option>
-                <option value="DOP">DOP (Pesos)</option>
-                <option value="EUR">EUR (Euros)</option>
-              </Select>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Moneda</label>
+              <FormSelect
+                value={form.currency}
+                onChange={(val) => setForm(p => ({ ...p, currency: val }))}
+                placeholder="Seleccionar..."
+                options={[
+                  { value: "USD", label: "USD (Dólares)" },
+                  { value: "DOP", label: "DOP (Pesos)" },
+                  { value: "EUR", label: "EUR (Euros)" }
+                ]}
+              />
             </div>
             <div className="grid gap-2 md:col-span-2">
               <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="paymentMethods">Plan de Pagos / Métodos</label>

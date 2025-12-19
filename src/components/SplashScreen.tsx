@@ -45,8 +45,8 @@ export function SplashScreen({ onComplete, show = true }: SplashScreenProps) {
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
               className="space-y-2"
             >
-              <h1 className="splash-logo font-serif font-bold text-primary">
-                Vendra
+              <h1 className="splash-logo font-serif font-bold tracking-tight text-primary">
+                VENDRA
               </h1>
               <p className="splash-subtitle text-muted-foreground font-sans">
                 Conecta compradores y vendedores

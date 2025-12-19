@@ -55,7 +55,7 @@ function MessagesContent() {
   const [error, setError] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(params.get("msg") || "");
   const [isInputFocused, setIsInputFocused] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [search, setSearch] = useState("");
@@ -101,6 +101,14 @@ function MessagesContent() {
     prevMessagesLength.current = messages.length;
     lastMessageId.current = actualLastMessageId;
   }, [messages]);
+
+  // Handle pre-filled message from URL parameters
+  useEffect(() => {
+    const msg = params.get("msg");
+    if (msg) {
+      setText(msg);
+    }
+  }, [params]);
 
   // Set initial state for mobile view
   useEffect(() => {

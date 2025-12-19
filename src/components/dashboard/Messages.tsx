@@ -21,15 +21,24 @@ function MessagesContent() {
   const [messages, setMessages] = useState<Array<{ id: string; sender_id: string; recipient_id: string; content: string; created_at: string; read_at: string | null }>>([]);
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const isFirstLoad = useRef(true);
   const [search, setSearch] = useState("");
   const [conversations, setConversations] = useState<Array<{ otherId: string; name: string | null; avatar_url: string | null; lastAt: string }>>([]);
 
   // Auto scroll to bottom when messages change
   useEffect(() => {
-    try {
-      listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-    } catch { }
+    if (messages.length > 0) {
+      const behavior = isFirstLoad.current ? "auto" : "smooth";
+      scrollRef.current?.scrollIntoView({ behavior });
+      isFirstLoad.current = false;
+    }
   }, [messages.length]);
+
+  // Reset scroll state when changing conversation
+  useEffect(() => {
+    isFirstLoad.current = true;
+  }, [targetId]);
 
   // Initialize session and load target
   useEffect(() => {
@@ -59,11 +68,9 @@ function MessagesContent() {
             const other = last ? (last.sender_id === uid ? last.recipient_id : last.sender_id) : null;
             if (other) {
               // Update URL without full navigation since we're in dashboard
-              const newUrl = new URL(window.location.href);
-              newUrl.searchParams.set('to', other);
-              window.history.replaceState({}, '', newUrl.toString());
-              // Trigger re-render by updating targetId
-              window.location.reload();
+              const params = new URLSearchParams(window.location.search);
+              params.set('to', other);
+              router.replace(`${window.location.pathname}?${params.toString()}`);
               return;
             }
           } catch { }
@@ -215,10 +222,9 @@ function MessagesContent() {
   };
 
   const handleConversationSelect = (otherId: string) => {
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.set('to', otherId);
-    window.history.replaceState({}, '', newUrl.toString());
-    window.location.reload();
+    const params = new URLSearchParams(window.location.search);
+    params.set('to', otherId);
+    router.replace(`${window.location.pathname}?${params.toString()}`);
   };
 
   return (
@@ -248,8 +254,8 @@ function MessagesContent() {
                 <button
                   key={c.otherId}
                   className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all duration-200 text-left group ${isActive
-                      ? 'bg-primary/10 shadow-sm border border-primary/20'
-                      : 'hover:bg-white/5 border border-transparent'
+                    ? 'bg-primary/10 shadow-sm border border-primary/20'
+                    : 'hover:bg-white/5 border border-transparent'
                     }`}
                   onClick={() => handleConversationSelect(c.otherId)}
                 >
@@ -339,12 +345,20 @@ function MessagesContent() {
                 <div ref={listRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-muted-foreground/10">
                   {messages.map((m, i) => {
                     const mine = m.sender_id === me;
+                    // Only animate the last 5 messages to prevent long delays on initial load
+                    const shouldAnimate = i >= messages.length - 5;
+                    const delay = shouldAnimate ? (i - (messages.length - 5)) * 0.05 : 0;
+
                     return (
-                      <div key={m.id} className={`flex w-full ${mine ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300 fill-mode-backwards`} style={{ animationDelay: `${i * 0.05}s` }}>
+                      <div
+                        key={m.id}
+                        className={`flex w-full ${mine ? 'justify-end' : 'justify-start'} ${shouldAnimate ? 'animate-in slide-in-from-bottom-2 duration-300 fill-mode-backwards' : ''}`}
+                        style={{ animationDelay: `${delay}s` }}
+                      >
                         <div className={`max-w-[70%] relative group`}>
                           <div className={`px-5 py-3 rounded-[1.25rem] shadow-sm text-sm leading-relaxed ${mine
-                              ? 'bg-primary text-primary-foreground rounded-br-none shadow-primary/20'
-                              : 'bg-white/80 dark:bg-white/10 text-foreground rounded-bl-none border border-border/40'
+                            ? 'bg-primary text-primary-foreground rounded-br-none shadow-primary/20'
+                            : 'bg-white/80 dark:bg-white/10 text-foreground rounded-bl-none border border-border/40'
                             }`}>
                             <div className="whitespace-pre-wrap break-words">{m.content}</div>
                           </div>
@@ -365,6 +379,7 @@ function MessagesContent() {
                       <p className="text-sm">Envía un mensaje para comenzar...</p>
                     </div>
                   )}
+                  <div ref={scrollRef} />
                 </div>
 
                 {/* Input Area */}

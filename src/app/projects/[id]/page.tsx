@@ -12,15 +12,15 @@ import {
   CheckCircle,
   Calendar,
   Download,
-  Phone,
-  Mail,
   Globe,
   Building,
   ChevronLeft,
   ChevronRight,
   Share2,
   Maximize2,
-  ArrowRight
+  ArrowRight,
+  FileText,
+  LayoutGrid
 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
@@ -54,6 +54,7 @@ interface Project {
   images: string[];
   promo_video: string;
   plans: string[];
+  brochure: string[];
   unit_price_range: string;
   payment_methods: string;
   partner_bank: string;
@@ -111,6 +112,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const viewTrackedRef = useRef(false);
   const router = useRouter();
   const { user: currentUser } = useAuth();
+  const isOwner = currentUser?.id === project?.owner_id;
   const trackProjectViewRef = useRef<Promise<void> | null>(null);
 
   // Map state
@@ -235,6 +237,30 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
   const images = project.images ?? [];
   const currentImage = images[activeImageIndex] || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop";
+
+  // Parse unit entries for display
+  const unitsData = (() => {
+    let units = [];
+    try {
+      // Attempt to parse JSON units
+      units = project.unit_types ? JSON.parse(project.unit_types) : [];
+      if (!Array.isArray(units)) throw new Error();
+    } catch (e) {
+      // Fallback for legacy string-based format
+      const types = project.unit_types ? project.unit_types.split(",").map(t => t.trim()) : [];
+      const qtys = project.quantity_per_type ? project.quantity_per_type.split(",").map(q => q.trim()) : [];
+
+      units = types.map(t => {
+        const sizeMatch = t.match(/\((.*?)\s*m²\)/);
+        const size = sizeMatch ? sizeMatch[1] : "";
+        const cleanType = t.replace(/\s*\(.*?\)/, "").trim();
+        const qtyMatch = qtys.find(q => q.includes(cleanType));
+        const quantity = qtyMatch ? qtyMatch.replace(new RegExp(cleanType, 'g'), "").trim() : "";
+        return { type: cleanType, size, quantity, available: "" };
+      });
+    }
+    return units;
+  })();
 
   return (
     <main className="min-h-screen bg-background pb-20 mobile-bottom-safe">
@@ -382,60 +408,129 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
               )}
             </section>
 
-            {/* Plans preview */}
-            {project.plans && project.plans.length > 0 && (
-              <section>
-                <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
-                  <Building className="w-5 h-5 text-primary" />
-                  Planos Disponibles
-                </h3>
-                <div className="rounded-2xl overflow-hidden border border-border relative group cursor-pointer" onClick={() => window.open(project.plans?.[0], '_blank')}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={project.plans[0]} alt="Plano" className="w-full h-64 object-contain bg-white/50" />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button variant="secondary" className="gap-2">
-                      <Download className="w-4 h-4" /> Ver Plano Completo
-                    </Button>
-                  </div>
+            {/* Unit Types & Availability */}
+            <section>
+              <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
+                <LayoutGrid className="w-5 h-5 text-primary" />
+                Tipos de Unidades & Disponibilidad
+              </h3>
+              {unitsData.length === 0 ? (
+                <p className="text-muted-foreground italic">No hay información de unidades detallada.</p>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-border shadow-sm">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-muted/50 border-b border-border">
+                        <th className="p-4 text-xs uppercase font-bold text-muted-foreground">Tipo</th>
+                        <th className="p-4 text-xs uppercase font-bold text-muted-foreground">Tamaño</th>
+                        <th className="p-4 text-xs uppercase font-bold text-muted-foreground text-center">Total</th>
+                        <th className="p-4 text-xs uppercase font-bold text-muted-foreground text-right">Disponibles</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {unitsData.map((u: any, i: number) => {
+                        const availUnits = u.available ? parseInt(u.available) : null;
+                        const totalUnits = u.quantity ? parseInt(u.quantity) : null;
+                        let statusLabel = "Consultar";
+                        let statusColor = "bg-blue-500/10 text-blue-600 border-blue-200";
+
+                        if (availUnits !== null && !isNaN(availUnits)) {
+                          if (availUnits === 0) {
+                            statusLabel = "Agotado";
+                            statusColor = "bg-red-500/10 text-red-600 border-red-200";
+                          } else if (availUnits <= 3) {
+                            statusLabel = `Últimas ${availUnits}`;
+                            statusColor = "bg-amber-500/10 text-amber-600 border-amber-200";
+                          } else {
+                            statusLabel = `${availUnits} disp.`;
+                            statusColor = "bg-emerald-500/10 text-emerald-600 border-emerald-200";
+                          }
+                        } else if (u.available) {
+                          statusLabel = `${u.available} disp.`;
+                          statusColor = "bg-emerald-500/10 text-emerald-600 border-emerald-200";
+                        }
+
+                        return (
+                          <tr key={i} className="hover:bg-muted/30 transition-colors">
+                            <td className="p-4 font-semibold text-foreground">{u.type}</td>
+                            <td className="p-4 text-muted-foreground tracking-wide">{u.size ? `${u.size} m²` : "—"}</td>
+                            <td className="p-4 text-center font-medium text-muted-foreground">{u.quantity || "—"}</td>
+                            <td className="p-4 text-right">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${statusColor}`}>
+                                {statusLabel}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              </section>
-            )}
+              )}
+            </section>
+
+            {/* Plans preview */}
+            {
+              project.plans && project.plans.length > 0 && (
+                <section>
+                  <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
+                    <Building className="w-5 h-5 text-primary" />
+                    Planos Disponibles
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {project.plans.map((plan, i) => (
+                      <div key={i} className="rounded-2xl overflow-hidden border border-border relative group cursor-pointer" onClick={() => window.open(plan, '_blank')}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={plan.toLowerCase().endsWith('.pdf') ? 'https://via.placeholder.com/400x300?text=VISTA+PREVIA+PDF' : plan} alt={`Plano ${i + 1}`} className="w-full h-48 object-contain bg-white/50" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Button variant="secondary" size="sm" className="gap-2">
+                            <Download className="w-4 h-4" /> Ver Plano {project.plans.length > 1 ? i + 1 : ''}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )
+            }
 
             {/* Location Map Placeholder */}
-            {project.address && (
-              <section>
-                <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-primary" />
-                  Ubicación Prestigiosa
-                </h3>
-                <div className="h-[400px] w-full rounded-3xl overflow-hidden border border-border shadow-sm bg-muted/20">
-                  {isLoaded ? (
-                    <GoogleMap
-                      mapContainerStyle={containerStyle}
-                      center={markerPos || defaultCenter}
-                      zoom={15}
-                      onLoad={onLoad}
-                      onUnmount={onUnmount}
-                      options={{
-                        disableDefaultUI: false,
-                        streetViewControl: true,
-                        mapTypeControl: false,
-                      }}
-                    >
-                      {markerPos && <Marker position={markerPos} />}
-                    </GoogleMap>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4 text-center bg-background/80 backdrop-blur-md p-4 rounded-2xl border border-white/20 inline-block w-full">
-                  <p className="font-medium">{project.address}</p>
-                  <p className="text-sm text-muted-foreground">{project.city_province}</p>
-                </div>
-              </section>
-            )}
+            {
+              project.address && (
+                <section>
+                  <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-primary" />
+                    Ubicación Prestigiosa
+                  </h3>
+                  <div className="h-[400px] w-full rounded-3xl overflow-hidden border border-border shadow-sm bg-muted/20">
+                    {isLoaded ? (
+                      <GoogleMap
+                        mapContainerStyle={containerStyle}
+                        center={markerPos || defaultCenter}
+                        zoom={15}
+                        onLoad={onLoad}
+                        onUnmount={onUnmount}
+                        options={{
+                          disableDefaultUI: false,
+                          streetViewControl: true,
+                          mapTypeControl: false,
+                        }}
+                      >
+                        {markerPos && <Marker position={markerPos as google.maps.LatLngLiteral} />}
+                      </GoogleMap>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-4 text-center bg-background/80 backdrop-blur-md p-4 rounded-2xl border border-white/20 inline-block w-full">
+                    <p className="font-medium">{project.address}</p>
+                    <p className="text-sm text-muted-foreground">{project.city_province}</p>
+                  </div>
+                </section>
+              )
+            }
 
           </div>
 
@@ -454,12 +549,16 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                   </h2>
 
                   <div className="space-y-3">
-                    <Button className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all gap-2">
-                      <Calendar className="w-5 h-5" /> Agendar Visita Privada
-                    </Button>
+                    {!isOwner && (
+                      <Button asChild className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all gap-2">
+                        <Link href={`/messages?to=${project.owner_id}&msg=${encodeURIComponent(`Hola, me gustaría agendar una visita privada para el proyecto: ${project.project_name}`)}`}>
+                          <Calendar className="w-5 h-5" /> Agendar Visita Privada
+                        </Link>
+                      </Button>
+                    )}
                     <Button variant="outline" className="w-full h-12 rounded-xl border-primary/20 hover:bg-primary/5 text-primary gap-2"
-                      onClick={() => project.plans?.[0] && window.open(project.plans[0], '_blank')}
-                      disabled={!project.plans?.length}
+                      onClick={() => project.brochure?.[0] && window.open(project.brochure[0], '_blank')}
+                      disabled={!project.brochure?.length}
                     >
                       <Download className="w-5 h-5" /> Descargar Brochure
                     </Button>
@@ -476,25 +575,16 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                       <p className="text-xs text-muted-foreground uppercase">Desarrollado por</p>
                       <p className="font-medium truncate">{owner?.name || "Empresa Constructora"}</p>
                     </div>
-                    <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary/10 text-primary">
-                      <ArrowRight className="w-5 h-5" />
+                    <Button asChild variant="ghost" size="icon" className="rounded-full hover:bg-secondary/10 text-primary">
+                      <Link href={isOwner ? "/profile" : `/profile/${owner?.id || project?.owner_id}`}>
+                        <ArrowRight className="w-5 h-5" />
+                      </Link>
                     </Button>
                   </div>
 
                 </div>
               </div>
 
-              {/* Contact Quick Links */}
-              <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 rounded-2xl border-white/20 bg-white/40 hover:bg-white/60 shadow-sm h-full">
-                  <Phone className="w-6 h-6 text-primary" />
-                  <span className="text-xs font-medium">Llamar</span>
-                </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 rounded-2xl border-white/20 bg-white/40 hover:bg-white/60 shadow-sm h-full">
-                  <Mail className="w-6 h-6 text-primary" />
-                  <span className="text-xs font-medium">Email</span>
-                </Button>
-              </div>
 
             </div>
           </div>

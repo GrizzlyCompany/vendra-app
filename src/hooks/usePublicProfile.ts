@@ -321,15 +321,43 @@ export function usePublicProfile(userId: string | null): UsePublicProfileReturn 
               .eq("owner_id", userId);
             hasListings = (properties?.length ?? 0) > 0;
 
-            if (profile?.role && profile.role.trim().length > 0) {
-              const r = profile.role.toLowerCase();
-              if (r === 'empresa_constructora' || r.includes("empresa")) {
-                roleBadge = "Empresa constructora";
-              } else if (r.includes("vendedor") || r.includes("agente")) {
-                roleBadge = "Vendedor/Agente";
+            // Determine role badge logic
+            const r = (profile?.role || "").trim().toLowerCase();
+            const isCompany = r === 'empresa_constructora' || r.includes("empresa");
+
+            // Role Evolution Logic:
+            // 1. "Verificado": Application APPROVED (Highest status for ALL roles)
+            // 2. "Empresa constructora": Static Role (No degradation)
+            // 3. "Vendedor/Agente": Application SUBMITTED + Posted Listings.
+            // 4. "Comprador": Default
+
+            let appStatus: string | null = null;
+            try {
+              const { data: apps } = await supabase
+                .from("seller_applications")
+                .select("status")
+                .eq("user_id", userId)
+                .in("status", ["approved", "submitted"])
+                .order("created_at", { ascending: false })
+                .limit(1);
+
+              if (apps && apps.length > 0) {
+                appStatus = apps[0].status;
               }
-            } else if (hasListings) {
+            } catch { }
+
+            const isApproved = appStatus === 'approved';
+            // If we can't see the app status (RLS), treat the 'vendedor_agente' role as 'submitted'
+            const isSubmitted = appStatus === 'submitted' || r === 'vendedor_agente';
+
+            if (isApproved) {
+              roleBadge = "Verificado";
+            } else if (isCompany) {
+              roleBadge = "Empresa constructora";
+            } else if (hasListings && (isSubmitted || isApproved)) {
               roleBadge = "Vendedor/Agente";
+            } else {
+              roleBadge = "Comprador";
             }
           }
         } catch {

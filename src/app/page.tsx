@@ -116,6 +116,7 @@ const FeaturedPropertiesSection = () => (
           <PropertyCard
             key={property.id}
             property={property}
+            href="/signup"
           />
         ))}
       </div>
