@@ -533,7 +533,7 @@ export default function SellerApplyPage() {
                       <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="rounded border-border text-primary focus:ring-primary" />
                     </div>
                     <span className="text-muted-foreground text-xs">
-                      He leído y acepto los <Link href="/terms" className="text-primary hover:underline">Términos y Condiciones</Link>.
+                      He leído y acepto los <Link href="/terms" className="text-primary hover:underline">Términos y Condiciones</Link> y la <Link href="/privacy" className="text-primary hover:underline">Política de Privacidad</Link>.
                     </span>
                   </label>
                   <label className="flex items-start gap-3 text-sm cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors">

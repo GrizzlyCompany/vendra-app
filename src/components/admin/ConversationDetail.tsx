@@ -75,8 +75,6 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
 
     const loadConversation = async () => {
       try {
-        console.log('Loading conversation for user ID:', conversationId);
-
         // Validate conversationId
         if (!conversationId) {
           throw new Error('ID de conversación no válido');
@@ -85,7 +83,6 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
         setLoading(true);
 
         // Get admin user ID
-        console.log('Fetching admin user...');
         const { data: adminUser, error: adminUserError } = await supabase
           .from('users')
           .select('id')
@@ -104,10 +101,8 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
         }
 
         setAdminUserId(adminUser.id);
-        console.log('Admin user ID set:', adminUser.id);
 
         // Get user information
-        console.log('Fetching user data for:', conversationId);
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, name, email, avatar_url')
@@ -123,7 +118,6 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
 
         // Handle case where user doesn't exist
         if (!userData) {
-          console.warn('User not found for ID:', conversationId);
           // Create a minimal user object for display purposes
           setUser({
             id: conversationId,
@@ -134,11 +128,9 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
         } else {
           if (cancelled) return;
           setUser(userData);
-          console.log('User data set:', userData);
         }
 
         // Check if conversation is closed
-        console.log('Checking conversation status...');
         const { data: conversationMessages, error: conversationError } = await supabase
           .from('messages')
           .select('case_status')
@@ -146,25 +138,19 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
           .order('created_at', { ascending: false })
           .limit(1);
 
-        console.log('Conversation status result:', { conversationMessages, conversationError });
-
         if (conversationError) {
           console.warn('Error checking conversation status:', conversationError);
           // Don't throw here, just continue with default state (open)
         } else if (conversationMessages && conversationMessages.length > 0) {
           setIsClosedConversation(conversationMessages[0].case_status === 'closed');
-          console.log('Conversation closed status:', conversationMessages[0].case_status);
         }
 
         // Load messages with comprehensive query
-        console.log('Loading messages...');
         const { data: messagesData, error: messagesError } = await supabase
           .from('messages')
           .select('id, sender_id, recipient_id, content, created_at, read_at, case_status, conversation_type')
           .or(`and(sender_id.eq.${adminUser.id},recipient_id.eq.${conversationId}),and(sender_id.eq.${conversationId},recipient_id.eq.${adminUser.id})`)
           .order('created_at', { ascending: true });
-
-        console.log('Messages result:', { messagesData: messagesData?.length, messagesError });
 
         if (messagesError) {
           console.error('Error loading messages:', messagesError);

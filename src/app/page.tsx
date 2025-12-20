@@ -264,12 +264,13 @@ const CallToActionSection = () => (
 );
 
 const Footer = () => (
-  <footer className="bg-white py-6">
+  <footer className="bg-white py-6 border-t border-border/20">
     <div className="container mx-auto px-4 text-center text-gray-500">
-      <p>© Vendra 2025</p>
+      <p>© {new Date().getFullYear()} VENDRA APP SRL</p>
       <div className="flex justify-center space-x-4 mt-2">
-        <Link href="#" className="hover:text-[#3BB273]">Términos</Link>
-        <Link href="#" className="hover:text-[#3BB273]">Privacidad</Link>
+        <Link href="/terms" className="hover:text-[#3BB273]">Términos y Condiciones</Link>
+        <Link href="/privacy" className="hover:text-[#3BB273]">Política de Privacidad</Link>
+        <Link href="/about" className="hover:text-[#3BB273]">Acerca de</Link>
       </div>
     </div>
   </footer>

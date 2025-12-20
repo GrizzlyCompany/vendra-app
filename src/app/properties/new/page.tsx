@@ -134,6 +134,21 @@ export default function NewPropertyPage() {
         const { data: prof } = await supabase.from("users").select("role").eq("id", userId).maybeSingle();
         const role = prof?.role ?? null;
         if (role === "empresa_constructora") {
+          // Check if empresa_constructora has complete profile (company_name, rnc)
+          const { data: userProfile } = await supabase
+            .from("users")
+            .select("company_name, rnc, phone")
+            .eq("id", userId)
+            .maybeSingle();
+
+          const hasCompleteProfile = userProfile?.company_name && userProfile?.rnc;
+
+          if (!hasCompleteProfile) {
+            // Redirect to profile edit to complete company info
+            router.replace("/profile/edit?complete=company");
+            return;
+          }
+
           setUid(userId);
           setLoading(false);
           return;

@@ -11,29 +11,12 @@ import { useToastContext } from "@/components/ToastProvider"
 import { AdminSidebar, AdminSection } from "@/components/admin/AdminSidebar"
 import { DashboardOverview } from "@/components/admin/DashboardOverview"
 import { PropertiesTable } from "@/components/admin/PropertiesTable"
-import { AgentsTable } from "@/components/admin/AgentsTable"
-import { CompaniesTable } from "@/components/admin/CompaniesTable"
 import { MessagesTable } from "@/components/admin/MessagesTable"
 import { SettingsPanel } from "@/components/admin/SettingsPanel"
 import { ContactFormsTable } from "@/components/admin/ContactFormsTable"
 import { ApplicationsTable } from "@/components/admin/ApplicationsTable"
-import { BuyersTable } from "@/components/admin/BuyersTable"
+import { UsersTable } from "@/components/admin/UsersTable"
 import { supabase } from "@/lib/supabase/client"
-
-type SellerApplication = {
-  id: string;
-  user_id: string;
-  status: string;
-  role_choice: string;
-  full_name: string | null;
-  email: string | null;
-  created_at: string;
-  submitted_at: string | null;
-  review_notes: string | null;
-  reviewer_id: string | null;
-  user_name: string;
-  user_email: string;
-};
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth()
@@ -42,22 +25,19 @@ export default function AdminPage() {
   const [activeSection, setActiveSection] = useState<AdminSection>('dashboard')
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
+  // Double-check admin access
+  const isAdmin = user?.email === 'admin@vendra.com' ||
+    user?.email?.endsWith('@admin.com') ||
+    user?.email?.endsWith('@vendra.com') ||
+    false
+
   // Handle redirection if user is not authenticated or not admin
   useEffect(() => {
     if (authLoading) return
-    if (!user) {
-      router.push("/")
-      return
-    }
-    // Check if user has admin access
-    const isAdmin = user.email === 'admin@vendra.com' ||
-      user.email?.endsWith('@admin.com') ||
-      user.email?.endsWith('@vendra.com') ||
-      false
-    if (!isAdmin) {
+    if (!user || !isAdmin) {
       router.push("/")
     }
-  }, [user, authLoading, router])
+  }, [user, authLoading, router, isAdmin])
 
   if (authLoading) {
     return (
@@ -70,17 +50,7 @@ export default function AdminPage() {
     )
   }
 
-  if (!user) {
-    return null
-  }
-
-  // Double-check admin access
-  const isAdmin = user.email === 'admin@vendra.com' ||
-    user.email?.endsWith('@admin.com') ||
-    user.email?.endsWith('@vendra.com') ||
-    false
-
-  if (!isAdmin) {
+  if (!user || !isAdmin) {
     return null
   }
 
@@ -89,19 +59,16 @@ export default function AdminPage() {
       case 'dashboard':
         return <DashboardOverview />
       case 'properties':
-        return <PropertiesContent />
-      case 'agents':
-        return <AgentsContent />
-      case 'buyers':
-        return <BuyersContent />
-      case 'companies':
-        return <CompaniesContent />
+        return <PropertiesTable />
+
       case 'requests':
-        return <RequestsContent />
+        return <ApplicationsTable />
       case 'messages':
-        return <MessagesContent />
+        return <MessagesTable />
+      case 'users':
+        return <UsersTable />
       case 'settings':
-        return <SettingsContent />
+        return <SettingsPanel />
       default:
         return <DashboardOverview />
     }
@@ -153,34 +120,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-}
-
-// Placeholder components for each section
-
-function PropertiesContent() {
-  return <PropertiesTable />
-}
-
-function AgentsContent() {
-  return <AgentsTable />
-}
-
-function BuyersContent() {
-  return <BuyersTable />
-}
-
-function CompaniesContent() {
-  return <CompaniesTable />
-}
-
-function RequestsContent() {
-  return <ApplicationsTable />
-}
-
-function MessagesContent() {
-  return <MessagesTable />
-}
-
-function SettingsContent() {
-  return <SettingsPanel />
 }

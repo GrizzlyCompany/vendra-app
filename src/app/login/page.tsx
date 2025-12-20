@@ -12,7 +12,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useToastContext } from "@/components/ToastProvider";
 import { handleSupabaseError } from "@/lib/errors";
 import { validateLoginForm, LoginFormData } from "@/lib/validation";
-import { UserPlus, ArrowLeft, Mail, Quote, Fingerprint } from "lucide-react";
+import { UserPlus, ArrowLeft, Mail, Quote, Fingerprint, AlertTriangle } from "lucide-react";
 import {
     shouldShowBiometricLogin,
     authenticateWithBiometrics,
@@ -34,6 +34,9 @@ function LoginPageContent() {
     const [recoveryLoading, setRecoveryLoading] = useState(false);
     const [showBiometricOption, setShowBiometricOption] = useState(false);
     const [biometricLoading, setBiometricLoading] = useState(false);
+    const [showReactivateDialog, setShowReactivateDialog] = useState(false);
+    const [pendingDeletionDate, setPendingDeletionDate] = useState<string | null>(null);
+    const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
     useEffect(() => {
         const message = searchParams.get('message');
@@ -81,11 +84,29 @@ function LoginPageContent() {
         }
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
+            const { data, error } = await supabase.auth.signInWithPassword({
                 email: formData.email,
                 password: formData.password
             });
             if (error) throw error;
+
+            const userId = data.user?.id;
+            if (userId) {
+                // Check if user has a scheduled deletion
+                const { data: profile } = await supabase
+                    .from("users")
+                    .select("deletion_scheduled_at")
+                    .eq("id", userId)
+                    .maybeSingle();
+
+                if (profile?.deletion_scheduled_at) {
+                    setPendingDeletionDate(profile.deletion_scheduled_at);
+                    setPendingUserId(userId);
+                    setShowReactivateDialog(true);
+                    setLoading(false);
+                    return; // Stop here, show dialog
+                }
+            }
 
             // Enable biometric login for next time
             enableBiometricLogin();
@@ -100,6 +121,33 @@ function LoginPageContent() {
         }
     };
 
+    const handleReactivate = async () => {
+        if (!pendingUserId) return;
+        setLoading(true);
+        try {
+            // 1. Clear deletion_scheduled_at in users
+            await supabase
+                .from("users")
+                .update({ deletion_scheduled_at: null })
+                .eq("id", pendingUserId);
+
+            // 2. Update status in deletion_requests
+            await supabase
+                .from("deletion_requests")
+                .update({ status: "rejected", notes: "Reactivado por el usuario al iniciar sesión" })
+                .eq("user_id", pendingUserId)
+                .eq("status", "pending");
+
+            showSuccess("¡Cuenta reactivada!", "Tu solicitud de eliminación ha sido cancelada.");
+            router.replace("/main");
+        } catch (error) {
+            showError("Error", "No se pudo reactivar la cuenta");
+        } finally {
+            setLoading(false);
+            setShowReactivateDialog(false);
+        }
+    };
+
     const handleBiometricLogin = async () => {
         setBiometricLoading(true);
         try {
@@ -107,7 +155,23 @@ function LoginPageContent() {
             if (result.verified) {
                 // Get stored session and refresh it
                 const { data: session } = await supabase.auth.getSession();
-                if (session?.session) {
+                const userId = session?.session?.user?.id;
+
+                if (userId) {
+                    // Check for scheduled deletion
+                    const { data: profile } = await supabase
+                        .from("users")
+                        .select("deletion_scheduled_at")
+                        .eq("id", userId)
+                        .maybeSingle();
+
+                    if (profile?.deletion_scheduled_at) {
+                        setPendingDeletionDate(profile.deletion_scheduled_at);
+                        setPendingUserId(userId);
+                        setShowReactivateDialog(true);
+                        return;
+                    }
+
                     showSuccess("¡Bienvenido de vuelta!");
                     router.replace("/main");
                 } else {
@@ -328,6 +392,50 @@ function LoginPageContent() {
                 </div>
             </div>
 
+            {/* Reactivation Dialog Overlay */}
+            {showReactivateDialog && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <Card className="w-full max-w-sm border-none shadow-2xl bg-background overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="bg-amber-500 h-2 w-full" />
+                        <CardHeader className="text-center pt-8">
+                            <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+                                <AlertTriangle className="size-6 text-amber-600" />
+                            </div>
+                            <CardTitle className="text-xl font-serif">Cuenta en proceso de eliminación</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6 text-center">
+                            <p className="text-sm text-muted-foreground">
+                                Tu cuenta está programada para ser eliminada permanentemente el
+                                <strong className="block text-foreground mt-1 text-base">
+                                    {pendingDeletionDate ? new Date(pendingDeletionDate).toLocaleDateString("es-DO", { day: '2-digit', month: 'long', year: 'numeric' }) : ""}
+                                </strong>
+                            </p>
+                            <p className="text-xs text-muted-foreground bg-secondary/20 p-3 rounded-lg">
+                                Iniciar sesión reactivará tu cuenta y cancelará la solicitud de eliminación de forma inmediata.
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <Button
+                                    onClick={handleReactivate}
+                                    disabled={loading}
+                                    className="w-full h-12 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-medium"
+                                >
+                                    {loading ? "Reactivando..." : "Reactivar mi cuenta"}
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    onClick={async () => {
+                                        await supabase.auth.signOut();
+                                        setShowReactivateDialog(false);
+                                    }}
+                                    className="text-muted-foreground hover:text-foreground"
+                                >
+                                    Cancelar y salir
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }

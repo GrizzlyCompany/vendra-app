@@ -13,18 +13,17 @@ import {
   Home,
   X,
   User,
-  LogOut
+  LogOut,
+  Users2
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 
 export type AdminSection =
   | 'dashboard'
   | 'properties'
-  | 'agents'
-  | 'companies'
-  | 'buyers'
   | 'requests'
   | 'messages'
+  | 'users'
   | 'settings'
 
 interface AdminSidebarProps {
@@ -47,14 +46,13 @@ const navigationItems = [
     category: 'Gestión',
     items: [
       { id: 'properties' as AdminSection, label: 'Propiedades', icon: Home },
-      { id: 'agents' as AdminSection, label: 'Agentes', icon: Users },
-      { id: 'buyers' as AdminSection, label: 'Compradores', icon: User },
-      { id: 'companies' as AdminSection, label: 'Constructoras', icon: Building },
     ]
   },
+
   {
     category: 'Sistema',
     items: [
+      { id: 'users' as AdminSection, label: 'Usuarios', icon: Users2 },
       { id: 'settings' as AdminSection, label: 'Configuración', icon: Settings },
     ]
   }

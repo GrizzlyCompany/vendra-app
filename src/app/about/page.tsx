@@ -82,7 +82,7 @@ export default function AboutPage() {
               </p>
               <div className="w-24 h-1 bg-gradient-to-r from-[#2F6D48] to-[#3BB273] mx-auto mt-6 rounded-full"></div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {/* Transparencia */}
               <div className="bg-background rounded-2xl p-8 text-center group shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 hover:border-green-200">
@@ -133,7 +133,7 @@ export default function AboutPage() {
                 </p>
                 <div className="w-24 h-1 bg-gradient-to-r from-[#2F6D48] to-[#3BB273] mx-auto mt-6 rounded-full"></div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Para Vendedores */}
                 <Card className="bg-background border-2 border-gray-100 hover:border-green-200 transition-all duration-300 hover:shadow-lg">
@@ -209,7 +209,7 @@ export default function AboutPage() {
               <p className="text-xl text-white/90 mb-10 max-w-2xl mx-auto">
                 Comienza tu viaje inmobiliario con nosotros. Ya sea que busques vender o comprar, tenemos las herramientas perfectas para ti.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Button asChild size="lg" className="bg-white text-[#2F6D48] hover:bg-gray-100 rounded-full px-8 py-3 font-semibold min-w-[200px]">
                   <Link href="/signup">
@@ -217,7 +217,7 @@ export default function AboutPage() {
                     Crear Cuenta
                   </Link>
                 </Button>
-                
+
                 <Button asChild size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-[#2F6D48] rounded-full px-8 py-3 font-semibold min-w-[200px] bg-transparent">
                   <Link href="/search">
                     <Search className="mr-2 h-5 w-5" />
@@ -228,6 +228,18 @@ export default function AboutPage() {
             </div>
           </div>
         </section>
+
+        {/* Footer */}
+        <footer className="bg-background py-6 border-t border-border/20">
+          <div className="container mx-auto px-4 text-center text-gray-500">
+            <p>© {new Date().getFullYear()} VENDRA APP SRL</p>
+            <div className="flex justify-center space-x-4 mt-2">
+              <Link href="/terms" className="hover:text-[#3BB273]">Términos y Condiciones</Link>
+              <Link href="/privacy" className="hover:text-[#3BB273]">Política de Privacidad</Link>
+              <Link href="/" className="hover:text-[#3BB273]">Inicio</Link>
+            </div>
+          </div>
+        </footer>
       </main>
     </div>
   );

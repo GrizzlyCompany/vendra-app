@@ -22,6 +22,7 @@ function SignupPageContent() {
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<string>("comprador");
   const [error, setError] = useState<string | null>(null);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -165,9 +166,27 @@ function SignupPageContent() {
                 <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 animate-in slide-in-from-top-1">{error}</div>
               )}
 
+              {/* Terms acceptance */}
+              <div className="flex items-start gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="acceptTerms"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="acceptTerms" className="text-xs text-muted-foreground leading-relaxed">
+                  Al registrarme, acepto los{" "}
+                  <Link href="/terms" className="text-primary hover:underline font-medium">Términos y Condiciones</Link>
+                  {" "}y la{" "}
+                  <Link href="/privacy" className="text-primary hover:underline font-medium">Política de Privacidad</Link>
+                  {" "}de VENDRA APP SRL.
+                </label>
+              </div>
+
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !acceptTerms}
                 className="w-full h-12 rounded-xl text-base font-medium shadow-md shadow-primary/20 hover:shadow-lg transition-all mt-4"
               >
                 {loading ? "Creando cuenta..." : "Registrarse"}

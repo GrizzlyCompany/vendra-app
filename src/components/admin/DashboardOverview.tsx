@@ -57,8 +57,6 @@ export function DashboardOverview() {
         throw new Error('Usuario no autenticado')
       }
 
-      console.log('🔍 Fetching admin stats...')
-
       // Fetch stats
       const { data: statsData, error: statsError } = await supabase.functions.invoke('admin-get-stats', {
         method: 'POST',
@@ -83,11 +81,9 @@ export function DashboardOverview() {
         throw new Error('No se recibieron datos de estadísticas')
       }
 
-      console.log('✅ Stats data received:', statsData)
       setStats(statsData.stats)
 
       // Fetch recent properties
-      console.log('🔍 Fetching recent properties...')
       const { data: propertiesData, error: propertiesError } = await supabase.functions.invoke('admin-get-properties', {
         method: 'POST',
         headers: {
@@ -123,8 +119,6 @@ export function DashboardOverview() {
       if (!propertiesData?.properties) {
         throw new Error('No se recibieron datos de propiedades')
       }
-
-      console.log('✅ Properties data received:', propertiesData.properties.length, 'properties')
 
       // Get the 5 most recent properties
       const recent = propertiesData.properties
