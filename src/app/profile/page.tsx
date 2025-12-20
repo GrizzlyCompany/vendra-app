@@ -109,12 +109,9 @@ export default function ProfilePage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const confirmTimers = useRef<Record<string, number>>({});
-  const [showEditMenu, setShowEditMenu] = useState(false);
   const [showBioEditor, setShowBioEditor] = useState(false);
   const [bioText, setBioText] = useState("");
   const [savingBio, setSavingBio] = useState(false);
-  const editMenuRef = useRef<HTMLDivElement | null>(null);
-  const editBtnRef = useRef<HTMLButtonElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [showBannerModal, setShowBannerModal] = useState(false);
@@ -580,84 +577,7 @@ export default function ProfilePage() {
     }
   };
 
-  // Close edit menu on outside click or ESC and handle repositioning
-  useEffect(() => {
-    if (!showEditMenu) return;
 
-    // Force update menu position when it opens
-    const updatePosition = () => {
-      if (editMenuRef.current && editBtnRef.current) {
-        const rect = editBtnRef.current.getBoundingClientRect();
-        const menuHeight = 200; // Approximate menu height
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const spaceAbove = rect.top;
-        const isMobile = window.innerWidth < 640; // sm breakpoint
-
-        const menu = editMenuRef.current;
-        if (spaceBelow < menuHeight && spaceAbove > menuHeight) {
-          menu.style.top = `${rect.top - menuHeight - 8}px`;
-        } else {
-          menu.style.top = `${rect.bottom + 8}px`;
-        }
-
-        if (isMobile) {
-          // Center the menu horizontally on mobile
-          const menuWidth = 224; // 56 * 4 = w-56
-          menu.style.left = `${(window.innerWidth - menuWidth) / 2}px`;
-          menu.style.right = 'auto';
-        } else {
-          // Desktop: align to button right edge
-          menu.style.right = `${window.innerWidth - rect.right}px`;
-          menu.style.left = 'auto';
-        }
-      }
-    };
-
-    // Update position on open
-    setTimeout(updatePosition, 0);
-
-    const onDown = (e: MouseEvent) => {
-      const t = e.target as Node;
-      // Check if click is inside menu or button (including SVG children)
-      if (editMenuRef.current?.contains(t)) return;
-      if (editBtnRef.current?.contains(t)) return;
-      setShowEditMenu(false);
-    };
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowEditMenu(false);
-    };
-
-    const onResize = () => {
-      updatePosition();
-    };
-
-    // Use requestAnimationFrame to delay adding the listener
-    // This ensures the current click event finishes before we start listening
-    let frameId: number;
-    let listenersAdded = false;
-
-    frameId = requestAnimationFrame(() => {
-      // Double RAF to ensure we're past the current event cycle
-      frameId = requestAnimationFrame(() => {
-        window.addEventListener("mousedown", onDown);
-        window.addEventListener("keydown", onKey);
-        window.addEventListener("resize", onResize);
-        window.addEventListener("scroll", updatePosition);
-        listenersAdded = true;
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-      if (listenersAdded) {
-        window.removeEventListener("mousedown", onDown);
-        window.removeEventListener("keydown", onKey);
-        window.removeEventListener("resize", onResize);
-        window.removeEventListener("scroll", updatePosition);
-      }
-    };
-  }, [showEditMenu]);
 
   if (loading) {
     return (
@@ -682,7 +602,7 @@ export default function ProfilePage() {
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-background px-3 sm:px-6 py-8 sm:py-12 mobile-bottom-safe mobile-horizontal-safe">
       {/* Mobile Header with "Perfil" and back button - visible only on mobile/tablet */}
-      <DetailBackButton className="lg:hidden mb-6 sticky top-0 bg-background/95 backdrop-blur-sm z-30 py-2">
+      <DetailBackButton className="md:hidden mb-6 sticky top-0 bg-background/95 backdrop-blur-sm z-30 py-2 mobile-top-safe">
         <div className="flex items-center justify-between w-full">
           {/* Back Button */}
           <Button
@@ -709,23 +629,34 @@ export default function ProfilePage() {
       <div className="w-full max-w-5xl mx-auto space-y-8 sm:space-y-12">
 
         {/* Premium Profile Header */}
-        <div className="relative mb-24 sm:mb-28">
-          {/* Banner */}
+        <div className="relative mb-32 sm:mb-40 z-10">
           <div
-            className="h-56 sm:h-72 rounded-[2rem] shadow-xl overflow-hidden relative group"
+            className="h-64 sm:h-[450px] rounded-[2.5rem] shadow-2xl overflow-hidden relative group transition-all duration-700"
             style={{
               backgroundImage: bannerUrl ? `url(${bannerUrl})` : undefined,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              backgroundColor: bannerUrl ? undefined : 'hsl(40, 20%, 95%)', // Soft Cream Placeholder
+              backgroundColor: bannerUrl ? undefined : 'hsl(40, 20%, 95%)',
             }}
           >
+            {/* Ambient Shadow Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-700" />
+
+            {/* Parallax-like scale effect on the image container if we had a nested img, 
+                for now we'll scale the background slightly with a trick or just the container */}
+            <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-1000 ease-out"
+              style={{
+                backgroundImage: 'inherit',
+                backgroundSize: 'inherit',
+                backgroundPosition: 'inherit'
+              }}
+            />
+
             {!bannerUrl && (
               <div className="absolute inset-0 flex items-center justify-center opacity-30">
                 <Building className="w-16 h-16 text-muted-foreground" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent group-hover:from-black/30 transition-all duration-500" />
 
             {/* Edit Cover Trigger */}
             <button
@@ -733,15 +664,15 @@ export default function ProfilePage() {
                 setShowBannerModal(true);
                 await loadBanners();
               }}
-              className="absolute top-4 right-4 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-md"
+              className="absolute top-6 right-6 bg-black/40 hover:bg-white/20 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-xl border border-white/20 z-10"
             >
               <Settings className="w-4 h-4" />
             </button>
           </div>
 
           {/* Avatar & Info Floating Card */}
-          <div className="absolute -bottom-20 sm:-bottom-24 left-0 right-0 px-1 sm:px-8 flex justify-center">
-            <div className="bg-background/95 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-center sm:items-end gap-3 sm:gap-4 max-w-3xl w-full mx-auto">
+          <div className="absolute -bottom-28 sm:-bottom-32 left-0 right-0 px-1 sm:px-8 flex justify-center z-20">
+            <div className="bg-background/95 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-center sm:items-end gap-3 sm:gap-4 max-w-3xl w-full mx-auto z-40">
 
               {/* Avatar */}
               <div className="relative -mt-16 sm:-mt-20 shrink-0">
@@ -760,19 +691,39 @@ export default function ProfilePage() {
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                      side="top"
+                      side="bottom"
                       align="end"
-                      className="w-64 p-2 rounded-2xl border border-white/20 bg-background/80 backdrop-blur-xl shadow-2xl mb-2 animate-in fade-in zoom-in-95 duration-200"
+                      className="w-64 p-2 rounded-2xl border border-white/20 bg-background/95 backdrop-blur-xl shadow-2xl mt-2 animate-in fade-in zoom-in-95 duration-200"
                     >
                       <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                         Configuración
                       </div>
 
                       <DropdownMenuItem
-                        onClick={() => { setBioText(profile?.bio || ""); setShowBioEditor(true); }}
+                        onClick={() => router.push("/profile/edit")}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-primary/10 focus:bg-primary/10 text-sm font-medium transition-colors"
                       >
                         <div className="p-1.5 bg-blue-100/50 text-blue-600 rounded-lg">
+                          <UserPen className="w-4 h-4" />
+                        </div>
+                        Información del perfil
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        onClick={() => router.push("/preferences")}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-primary/10 focus:bg-primary/10 text-sm font-medium transition-colors"
+                      >
+                        <div className="p-1.5 bg-amber-100/50 text-amber-600 rounded-lg">
+                          <Settings className="w-4 h-4" />
+                        </div>
+                        Preferencias
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        onClick={() => { setBioText(profile?.bio || ""); setShowBioEditor(true); }}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-primary/10 focus:bg-primary/10 text-sm font-medium transition-colors"
+                      >
+                        <div className="p-1.5 bg-indigo-100/50 text-indigo-600 rounded-lg">
                           <UserPen className="w-4 h-4" />
                         </div>
                         Editar biografía

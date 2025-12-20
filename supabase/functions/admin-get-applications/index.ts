@@ -86,10 +86,10 @@ serve(async (req) => {
 
     // Check if user has admin access (either by email or user metadata)
     const isAdmin = user.email === 'admin@vendra.com' ||
-                    user.email?.endsWith('@admin.com') ||
-                    user.email?.endsWith('@vendra.com') ||
-                    user.user_metadata?.role === 'admin' ||
-                    false
+      user.email?.endsWith('@admin.com') ||
+      user.email?.endsWith('@vendra.com') ||
+      user.user_metadata?.role === 'admin' ||
+      false
 
     console.log('🔍 Admin check:', {
       email: user.email,

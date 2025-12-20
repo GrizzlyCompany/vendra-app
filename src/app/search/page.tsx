@@ -133,7 +133,7 @@ function SearchContent() {
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-background px-4 sm:px-6 py-6 mobile-bottom-safe mobile-horizontal-safe">
       {/* Mobile Header */}
-      <DetailBackButton className="lg:hidden mb-6 sticky top-0 bg-background/95 backdrop-blur-sm z-30 py-2">
+      <DetailBackButton className="md:hidden mb-6 sticky top-0 bg-background/95 backdrop-blur-sm z-30 py-2 mobile-top-safe">
         <div className="flex items-center justify-between w-full">
           <Button
             asChild
@@ -270,7 +270,7 @@ function SearchContent() {
                 agents.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {agents.map(a => (
-                      <div key={a.id} onClick={() => router.push(`/profile/${a.id}`)} className="bg-background border border-border/50 rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer group">
+                      <div key={a.id} onClick={() => router.push(`/profile/view?id=${a.id}`)} className="bg-background border border-border/50 rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer group">
                         <div className="size-12 rounded-full bg-secondary/20 flex items-center justify-center text-primary font-bold text-lg group-hover:scale-110 transition-transform overflow-hidden relative">
                           {a.avatar_url ? (
                             <img src={a.avatar_url} alt={a.name || "Agent"} className="h-full w-full object-cover" />

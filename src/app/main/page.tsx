@@ -175,7 +175,7 @@ function MainContent() {
       suppressHydrationWarning
     >
       {/* Header with logo and VENDRA text centered - visible only on mobile/tablet */}
-      <header className="lg:hidden mb-6 py-4 sticky top-0 bg-background z-40 pt-4" suppressHydrationWarning>
+      <header className="md:hidden mb-6 py-4 sticky top-0 bg-background z-40 pt-4 mobile-top-safe" suppressHydrationWarning>
         <div className="container mx-auto flex justify-center items-center" suppressHydrationWarning>
           <Link href="/" className="flex items-center gap-2 text-primary" aria-label="Ir al inicio">
             <Image

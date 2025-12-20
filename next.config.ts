@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  output: 'export', // Required for Capacitor - generates static HTML/JS/CSS
   trailingSlash: true,
   // Ensure file tracing resolves from this project root
   outputFileTracingRoot: path.join(__dirname),

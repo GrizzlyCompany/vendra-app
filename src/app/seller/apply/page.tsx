@@ -246,7 +246,7 @@ export default function SellerApplyPage() {
 
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-background px-4 sm:px-6 py-8 sm:py-12 mobile-bottom-safe mobile-horizontal-safe font-sans">
-      <DetailBackButton className="mb-6 max-w-4xl mx-auto">
+      <DetailBackButton className="mb-6 max-w-4xl mx-auto mobile-top-safe">
         <Button variant="ghost" size="sm" asChild className="gap-2">
           <Link href="/">
             <ChevronLeft className="w-4 h-4" /> Volver al Inicio

@@ -78,7 +78,7 @@ export function ChatView({
       className="flex flex-col h-full bg-white/50 backdrop-blur-xl rounded-[2rem] border border-white/40 shadow-2xl overflow-hidden"
     >
       {/* Chat Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 bg-white/60 backdrop-blur-md z-10 shadow-sm transition-all">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 bg-white/60 backdrop-blur-md z-10 shadow-sm transition-all mobile-top-safe">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -90,7 +90,7 @@ export function ChatView({
           </Button>
 
           <div className="relative group cursor-pointer transition-transform active:scale-95">
-            <Link href={target?.id ? `/profile/${target.id}` : '#'}>
+            <Link href={target?.id ? `/profile/view?id=${target.id}` : '#'}>
               <div className="h-11 w-11 overflow-hidden rounded-full border-2 border-white shadow-md bg-muted">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {target?.avatar_url ? <img src={target.avatar_url} alt={target.name ?? 'Usuario'} className="h-full w-full object-cover" /> : null}
@@ -102,7 +102,7 @@ export function ChatView({
           </div>
 
           <div>
-            <Link href={target?.id ? `/profile/${target.id}` : '#'}>
+            <Link href={target?.id ? `/profile/view?id=${target.id}` : '#'}>
               <div className="font-serif font-bold text-base text-foreground hover:underline decoration-primary/30 underline-offset-4">{target?.name ?? 'Usuario'}</div>
             </Link>
             <div className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block transition-colors duration-500 ${isOnline ? 'text-emerald-600 bg-emerald-100/50' : 'text-muted-foreground/60 bg-muted/50'}`}>
@@ -202,7 +202,7 @@ export function ChatView({
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-white/80 border-t border-white/50 backdrop-blur-xl z-40">
+      <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] md:pb-4 bg-white/80 border-t border-white/50 backdrop-blur-xl z-40">
         <div className="flex items-center gap-2 max-w-4xl mx-auto bg-white/50 border border-black/5 p-2 rounded-full shadow-sm hover:shadow-md hover:bg-white transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30">
           <Input
             value={isClosedConversation ? "" : text}

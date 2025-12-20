@@ -93,7 +93,7 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
                             </span>
                         </div>
 
-                        <Link href={`/projects/${project.id}`}>
+                        <Link href={`/projects/view?id=${project.id}`}>
                             <button className="h-10 w-10 rounded-full bg-white/10 hover:bg-white text-white hover:text-black backdrop-blur-md border border-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg group-active:scale-95">
                                 <ArrowRight className="w-5 h-5" />
                             </button>

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   LogIn, LogOut, UserPlus, Home, User, Building2,
   MessageSquare, Bell, Search, Command, MapPin,
-  DollarSign, Briefcase, Settings
+  DollarSign, Briefcase, Settings, UserPen
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useUserAvatar } from "@/hooks/useUserAvatar";
@@ -63,12 +63,32 @@ export function Navbar() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Hide navbar on login and signup pages
-  const hideOnAuthPages = pathname === '/login' || pathname === '/signup';
+  // Robust check for pathname handling trailing slashes and index.html commonly found in static exports/Capacitor
+  const normalizedPathname = (pathname || '/')
+    .replace(/\/index\.html$/, '')
+    .replace(/\/index$/, '')
+    .replace(/\.html$/, '')
+    .replace(/\/$/, '') || '/';
 
-  if (hideOnAuthPages) {
-    return null;
-  }
+  const isAuthPage = normalizedPathname === '/login' || normalizedPathname === '/signup' || normalizedPathname === '/reset-password';
+
+  // List of routes that have their own custom mobile header
+  const routesWithCustomHeader = [
+    '/',
+    '/main',
+    '/search',
+    '/profile',
+    '/messages',
+    '/projects',
+    '/properties/view',
+    '/seller/apply',
+    '/about',
+    '/admin'
+  ];
+
+  const hasCustomMobileHeader = routesWithCustomHeader.includes(normalizedPathname);
+
+  if (isAuthPage) return null;
 
   const handleSignOut = async () => {
     try {
@@ -91,7 +111,7 @@ export function Navbar() {
 
   return (
     <header
-      className={`${pathname === '/main' ? '' : 'hidden md:block'} sticky top-0 z-40 w-full border-b border-white/10 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-200 mobile-horizontal-safe`}
+      className={`${hasCustomMobileHeader ? 'hidden md:block' : ''} sticky top-0 z-40 w-full border-b border-white/10 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-200 mobile-horizontal-safe mobile-top-safe`}
       suppressHydrationWarning
     >
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4" suppressHydrationWarning>
@@ -271,6 +291,13 @@ export function Navbar() {
                     </Link>
                     <Link
                       href="/profile/edit"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/80"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <UserPen className="h-4 w-4" /> Información del perfil
+                    </Link>
+                    <Link
+                      href="/preferences"
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/80"
                       onClick={() => setMenuOpen(false)}
                     >

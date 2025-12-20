@@ -1,0 +1,14 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "com.vendra.app",
+            "sha256_cert_fingerprints": [
+                "EC:70:77:1F:4B:C3:88:47:32:09:52:E2:9F:AC:EC:02:F4:CE:35:EB:D3:B2:21:83:B2:19:AA:78:B9:32:8D:E6"
+            ]
+        }
+    }
+]

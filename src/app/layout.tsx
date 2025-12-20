@@ -9,6 +9,7 @@ import { ToastProvider } from "@/components/ToastProvider";
 
 import { ClientLayout } from "@/components/ClientLayout";
 import { SplashScreenWrapper } from "@/components/SplashScreenWrapper";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -64,27 +65,28 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="theme-color" content="hsl(135 29% 30%)" />
+        <meta name="theme-color" content="#2F6D48" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.webp" />
       </head>
       <body
         className={`${ptSans.variable} ${playfair.variable} antialiased`}
         suppressHydrationWarning
       >
-        <SplashScreenWrapper />
-        <ErrorBoundary>
-          <ToastProvider>
-            <div className="app-container">
-              <Navbar />
-              <ClientLayout>
-                {children}
-              </ClientLayout>
-            </div>
-            {/* Bottom nav visible solo para usuarios autenticados (y ya responsiva con md:hidden) */}
-            <AuthenticatedBottomNav />
-            {/* Debug component for development */}
-
-          </ToastProvider>
-        </ErrorBoundary>
+        <ThemeProvider>
+          <SplashScreenWrapper />
+          <ErrorBoundary>
+            <ToastProvider>
+              <div className="app-container">
+                <Navbar />
+                <ClientLayout>
+                  {children}
+                </ClientLayout>
+              </div>
+              <AuthenticatedBottomNav />
+            </ToastProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
       </body>
     </html>
   );

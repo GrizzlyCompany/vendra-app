@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { isNative } from '@/lib/capacitor/platform';
 
 function urlBase64ToUint8Array(base64String: string) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -26,19 +27,30 @@ export function usePushNotifications() {
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
-        const checkSupport = () => {
-            const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-            setIsSupported(supported);
-            if (supported) {
-                setPermission(Notification.permission);
+        const checkSupport = async () => {
+            if (isNative()) {
+                setIsSupported(true);
+                try {
+                    const { PushNotifications } = await import('@capacitor/push-notifications');
+                    const result = await PushNotifications.checkPermissions();
+                    setPermission(result.receive === 'granted' ? 'granted' : result.receive === 'prompt' ? 'default' : 'denied');
+                } catch (e) {
+                    console.error('Push: Error checking native permissions', e);
+                }
+            } else {
+                const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+                setIsSupported(supported);
+                if (supported) {
+                    setPermission(Notification.permission);
+                }
             }
             setLoading(false);
         };
 
         checkSupport();
 
-        // Register Service Worker
-        if ('serviceWorker' in navigator) {
+        // Register Service Worker (Web only)
+        if (!isNative() && 'serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
                 .then(registration => {
                     console.log('SW Registered:', registration.scope);
@@ -50,6 +62,22 @@ export function usePushNotifications() {
     }, []);
 
     const subscribe = async (vapidPublicKey: string) => {
+        if (isNative()) {
+            try {
+                console.log('Push: Using native registration flow');
+                const { registerPushNotifications } = await import('@/lib/capacitor/push');
+                const token = await registerPushNotifications();
+                if (token) {
+                    setPermission('granted');
+                    return { endpoint: 'capacitor-native' }; // Return a dummy object to indicate success
+                }
+                return null;
+            } catch (error) {
+                console.error('Push: Native subscription error:', error);
+                throw error;
+            }
+        }
+
         if (!('serviceWorker' in navigator)) {
             console.warn('Service Worker is not supported in this browser');
             return;
@@ -109,12 +137,7 @@ export function usePushNotifications() {
                 });
 
             if (error) {
-                console.error('Push: Error saving to Supabase:', {
-                    message: error.message,
-                    details: error.details,
-                    hint: error.hint,
-                    code: error.code
-                });
+                console.error('Push: Error saving to Supabase:', error);
                 throw error;
             }
 

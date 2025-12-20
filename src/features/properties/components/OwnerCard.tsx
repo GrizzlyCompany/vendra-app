@@ -119,7 +119,7 @@ export function OwnerCard({ ownerId }: { ownerId: string | null | undefined }) {
       {/* Action: go to profile (private if it's me, public otherwise) */}
       {owner?.id ? (
         <Button asChild className="w-full justify-center bg-primary text-primary-foreground hover:bg-primary/90">
-          <Link href={owner.id === selfId ? "/profile" : `/profile/${owner.id}`}>
+          <Link href={owner.id === selfId ? "/profile" : `/profile/view?id=${owner.id}`}>
             {owner.id === selfId ? "Ir a mi perfil" : "Ver perfil"}
           </Link>
         </Button>

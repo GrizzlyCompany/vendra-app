@@ -41,7 +41,7 @@ export function ReviewsTabContent({
     const reviewer = sess.session?.user?.id ?? null;
 
     if (!reviewer) {
-      router.push(`/login?redirect_url=/profile/${userId}`);
+      router.push(`/login?redirect_url=/profile/view?id=${userId}`);
       return;
     }
 

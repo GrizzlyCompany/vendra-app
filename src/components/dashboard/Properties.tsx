@@ -203,7 +203,7 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
               <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end h-full">
                 <div className="transform translate-y-2 transition-transform duration-300 group-hover:translate-y-0">
                   <h3 className="font-serif text-2xl font-bold text-white mb-1.5 leading-tight drop-shadow-md line-clamp-2">
-                    <Link href={p.source === "project" ? `/projects/${p.id}` : `/properties/${p.id}`} className="hover:text-primary transition-colors">
+                    <Link href={p.source === "project" ? `/projects/${p.id}` : `/properties/view?id=${p.id}`} className="hover:text-primary transition-colors">
                       {p.title}
                     </Link>
                   </h3>
@@ -223,7 +223,7 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
                       </span>
                     </div>
 
-                    <Link href={p.source === "project" ? `/projects/${p.id}` : `/properties/${p.id}`}>
+                    <Link href={p.source === "project" ? `/projects/${p.id}` : `/properties/view?id=${p.id}`}>
                       <div className="flex items-center gap-1 text-sm font-medium text-white hover:text-primary transition-colors">
                         Ver detalles
                         {/* Simple arrow icon */}

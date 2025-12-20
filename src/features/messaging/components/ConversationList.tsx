@@ -46,7 +46,7 @@ export function ConversationList({
       suppressHydrationWarning
     >
       {/* Search Header */}
-      <div className="flex items-center justify-between px-4 py-3 lg:p-4 border-b border-border/40 lg:border-black/5 bg-background/80 lg:bg-white/40 backdrop-blur-md sticky top-0 z-10 safe-area-top" suppressHydrationWarning>
+      <div className="flex items-center justify-between px-4 py-3 lg:p-4 border-b border-border/40 lg:border-black/5 bg-background/80 lg:bg-white/40 backdrop-blur-md sticky top-0 z-10 mobile-top-safe" suppressHydrationWarning>
         {showSearchBar ? (
           <>
             <Button

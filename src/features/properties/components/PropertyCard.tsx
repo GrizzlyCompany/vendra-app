@@ -130,7 +130,7 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
 
   return (
     <MorphCard
-      targetUrl={href || `/properties/${property.id}`}
+      targetUrl={href || `/properties/view?id=${property.id}`}
       className="group h-full"
       enableMorph={!onDelete && !showEdit}
     >
@@ -255,7 +255,7 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
               className="w-full sm:flex-1 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg transition-all duration-300 min-h-[40px] rounded-lg group/btn"
               aria-describedby={`property-title-${property.id} property-description-${property.id}`}
             >
-              <Link href={href || `/properties/${property.id}`}>
+              <Link href={href || `/properties/view?id=${property.id}`}>
                 Ver detalles
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
                 <span className="sr-only">de {property.title}</span>

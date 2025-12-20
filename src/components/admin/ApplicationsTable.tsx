@@ -20,7 +20,10 @@ import {
   Phone,
   AlertCircle,
   Clock,
-  FileText
+  FileText,
+  Image as ImageIcon,
+  ZoomIn,
+  X
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useToastContext } from '@/components/ToastProvider'
@@ -47,6 +50,12 @@ interface SellerApplication {
   reviewer_id: string | null
   user_name: string
   user_email: string
+  // KYC Document URLs
+  doc_front_url: string | null
+  doc_back_url: string | null
+  selfie_url: string | null
+  id_document_type: string | null
+  id_document_number: string | null
 }
 
 interface ApplicationsTableProps {
@@ -63,6 +72,7 @@ export function ApplicationsTable({ onRefreshStats }: ApplicationsTableProps) {
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const { success: showSuccess, error: showError } = useToastContext()
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   const itemsPerPage = 50
   const [currentPage, setCurrentPage] = useState(1)
@@ -108,8 +118,8 @@ export function ApplicationsTable({ onRefreshStats }: ApplicationsTableProps) {
       if (error) throw error
 
       const statusText = newStatus === 'approved' ? 'aprobada' :
-                        newStatus === 'rejected' ? 'rechazada' :
-                        'marcada como necesita más información'
+        newStatus === 'rejected' ? 'rechazada' :
+          'marcada como necesita más información'
 
       showSuccess(`Solicitud ${statusText} exitosamente`)
 
@@ -138,9 +148,9 @@ export function ApplicationsTable({ onRefreshStats }: ApplicationsTableProps) {
   const filteredApplications = useMemo(() => {
     return applications.filter(app => {
       const matchesSearch = app.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          app.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          app.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (app.phone && app.phone.includes(searchTerm))
+        app.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        app.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (app.phone && app.phone.includes(searchTerm))
 
       const matchesStatus = statusFilter === 'all' || app.status === statusFilter
 
@@ -206,9 +216,9 @@ export function ApplicationsTable({ onRefreshStats }: ApplicationsTableProps) {
 
   const getVerificationBadge = (status: string) => {
     const icon = status === 'approved' ? <CheckCircle className="h-3 w-3 mr-1" /> :
-                 status === 'rejected' ? <XCircle className="h-3 w-3 mr-1" /> :
-                 status === 'submitted' ? <Clock className="h-3 w-3 mr-1" /> :
-                 <AlertCircle className="h-3 w-3 mr-1" />
+      status === 'rejected' ? <XCircle className="h-3 w-3 mr-1" /> :
+        status === 'submitted' ? <Clock className="h-3 w-3 mr-1" /> :
+          <AlertCircle className="h-3 w-3 mr-1" />
 
     return (
       <Badge className={getStatusColor(status)} variant="secondary">
@@ -341,9 +351,8 @@ export function ApplicationsTable({ onRefreshStats }: ApplicationsTableProps) {
               {paginatedApplications.map((app) => (
                 <div
                   key={app.id}
-                  className={`flex items-center gap-4 p-4 border rounded-lg transition-colors ${
-                    app.status === 'submitted' ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
-                  }`}
+                  className={`flex items-center gap-4 p-4 border rounded-lg transition-colors ${app.status === 'submitted' ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
+                    }`}
                 >
                   {/* Avatar */}
                   <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -469,7 +478,7 @@ export function ApplicationsTable({ onRefreshStats }: ApplicationsTableProps) {
 
       {/* Application Details Modal */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalles de la Solicitud</DialogTitle>
             <DialogDescription>
@@ -540,10 +549,151 @@ export function ApplicationsTable({ onRefreshStats }: ApplicationsTableProps) {
                   </Card>
                 </div>
               )}
+
+              {/* KYC Documents Section */}
+              <div className="space-y-4 border-t pt-4">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5 text-purple-600" />
+                  <h4 className="font-semibold text-lg">Verificación de Identidad (KYC)</h4>
+                </div>
+
+                {selectedApplication.id_document_number && (
+                  <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                    <span className="font-medium">Documento:</span> {selectedApplication.id_document_type === 'cedula' ? 'Cédula' : 'Pasaporte'} - {selectedApplication.id_document_number}
+                  </div>
+                )}
+
+                {/* Document Grid */}
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Cédula Frontal */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Cédula Frontal</label>
+                    {selectedApplication.doc_front_url ? (
+                      <div
+                        className="relative aspect-[3/2] rounded-lg border-2 border-gray-200 overflow-hidden cursor-pointer hover:border-primary transition-colors group"
+                        onClick={() => setPreviewImage(selectedApplication.doc_front_url)}
+                      >
+                        <img
+                          src={selectedApplication.doc_front_url}
+                          alt="Cédula frontal"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <ZoomIn className="h-6 w-6 text-white" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-[3/2] rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
+                        <span className="text-xs text-gray-400">No subido</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Cédula Trasera */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Cédula Trasera</label>
+                    {selectedApplication.doc_back_url ? (
+                      <div
+                        className="relative aspect-[3/2] rounded-lg border-2 border-gray-200 overflow-hidden cursor-pointer hover:border-primary transition-colors group"
+                        onClick={() => setPreviewImage(selectedApplication.doc_back_url)}
+                      >
+                        <img
+                          src={selectedApplication.doc_back_url}
+                          alt="Cédula trasera"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <ZoomIn className="h-6 w-6 text-white" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-[3/2] rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
+                        <span className="text-xs text-gray-400">No subido</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selfie */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Selfie</label>
+                    {selectedApplication.selfie_url ? (
+                      <div
+                        className="relative aspect-[3/2] rounded-lg border-2 border-gray-200 overflow-hidden cursor-pointer hover:border-primary transition-colors group"
+                        onClick={() => setPreviewImage(selectedApplication.selfie_url)}
+                      >
+                        <img
+                          src={selectedApplication.selfie_url}
+                          alt="Selfie"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <ZoomIn className="h-6 w-6 text-white" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-[3/2] rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
+                        <span className="text-xs text-gray-400">No subido</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Side-by-side Comparison */}
+                {selectedApplication.doc_front_url && selectedApplication.selfie_url && (
+                  <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <p className="text-sm font-medium text-blue-800 mb-3 flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Comparación Visual: Cédula vs Selfie
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-blue-200">
+                        <img
+                          src={selectedApplication.doc_front_url}
+                          alt="Cédula"
+                          className="w-full h-full object-cover"
+                        />
+                        <span className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">Cédula</span>
+                      </div>
+                      <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-blue-200">
+                        <img
+                          src={selectedApplication.selfie_url}
+                          alt="Selfie"
+                          className="w-full h-full object-cover"
+                        />
+                        <span className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">Selfie</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-3 text-center">
+                      Verifica que la persona en el selfie coincida con la foto del documento
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            onClick={() => setPreviewImage(null)}
+          >
+            <X className="h-8 w-8" />
+          </button>
+          <img
+            src={previewImage}
+            alt="Preview"
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }

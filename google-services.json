@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "584555319556",
+    "project_id": "vendraappv1",
+    "storage_bucket": "vendraappv1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:584555319556:android:92ce896483062f6aa78051",
+        "android_client_info": {
+          "package_name": "com.vendra.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmYmj8Hly1Jq1LRQggz92kaI0czutdzqw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

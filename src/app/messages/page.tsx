@@ -906,7 +906,7 @@ function MessagesContent() {
       </div>
 
       {/* Desktop version - Fixed layout */}
-      <div className="hidden lg:flex h-[calc(100dvh-64px)] px-6 py-6 gap-6 max-w-7xl mx-auto" suppressHydrationWarning>
+      <div className="hidden md:flex h-[calc(100dvh-64px)] px-6 py-6 gap-6 max-w-7xl mx-auto" suppressHydrationWarning>
         {/* Sidebar - Fixed */}
         <div className="w-96 shrink-0 h-full" suppressHydrationWarning>
           <ConversationList
@@ -957,9 +957,9 @@ function MessagesContent() {
       </div>
 
       {/* Mobile version with full-screen experience */}
-      <div className="lg:hidden w-full relative [&_*]:!touch-manipulation flex flex-col h-[100dvh] overflow-hidden bg-background" suppressHydrationWarning>
+      <div className="md:hidden w-full relative [&_*]:!touch-manipulation flex flex-col h-[100dvh] overflow-hidden bg-background" suppressHydrationWarning>
         {(!targetId && !loading) || (isMobileView && !targetId) ? (
-          <div className="h-full p-0 pt-[env(safe-area-inset-top)]">
+          <div className="h-full p-0">
             <ConversationList
               key="conversation-list"
               conversations={conversations}

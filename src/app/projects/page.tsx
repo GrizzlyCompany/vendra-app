@@ -7,7 +7,7 @@ import { ProjectCard } from "@/features/projects/components/ProjectCard"; // Mak
 import { Input } from "@/components/ui/input";
 
 // Force dynamic rendering for this page
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic'; // Removed for static export
 
 async function getEmpresaProjects() {
   const { data: projects, error } = await supabase
@@ -29,7 +29,7 @@ export default async function ProjectsIndexPage() {
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-background mobile-bottom-safe">
       {/* Mobile Header */}
-      <DetailBackButton className="lg:hidden sticky top-0 bg-background/80 backdrop-blur-md z-30 pt-safe-top border-b border-border/5">
+      <DetailBackButton className="md:hidden sticky top-0 bg-background/80 backdrop-blur-md z-30 mobile-top-safe border-b border-border/5">
         <div className="flex items-center justify-between px-4 py-3">
           <Button
             asChild

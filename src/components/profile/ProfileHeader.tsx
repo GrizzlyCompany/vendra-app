@@ -27,7 +27,7 @@ export function ProfileHeader({ userId, profile, stats, isLoading, profileError 
     const me = sess.session?.user?.id ?? null;
 
     if (!me) {
-      router.push(`/login?redirect_url=/profile/${userId}`);
+      router.push(`/login?redirect_url=/profile/view?id=${userId}`);
       return;
     }
 

@@ -89,7 +89,7 @@ function SignupPageContent() {
       {/* Left Column: Form (Clean Bone White) */}
       <div className="relative z-10 flex flex-col items-center justify-center px-4 sm:px-12 xl:px-24 py-12 bg-background text-foreground animate-in fade-in slide-in-from-left-4 duration-700">
 
-        <div className="absolute top-8 left-8">
+        <div className="absolute top-[calc(2rem+env(safe-area-inset-top,0px))] left-8 z-20">
           <Link href="/" className="group flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
             <div className="p-2 rounded-full border border-border/50 bg-background group-hover:bg-primary/5 transition-colors">
               <ArrowLeft className="size-4" />
@@ -150,8 +150,8 @@ function SignupPageContent() {
                       type="button"
                       onClick={() => setRole(opt.val)}
                       className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-medium transition-all ${role === opt.val
-                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-[1.02]"
-                          : "bg-background border-border hover:bg-secondary/20 hover:border-primary/30 text-muted-foreground"
+                        ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-[1.02]"
+                        : "bg-background border-border hover:bg-secondary/20 hover:border-primary/30 text-muted-foreground"
                         }`}
                     >
                       <opt.icon className="size-5 mb-1 opacity-80" />
