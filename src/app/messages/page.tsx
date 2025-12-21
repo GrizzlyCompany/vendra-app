@@ -17,6 +17,8 @@ import { ChatViewWithBlock } from "@/features/messaging/components/ChatViewWithB
 import { usePushNotifications } from "@/features/messaging/hooks/usePushNotifications";
 import { useBlockStatus } from "@/features/messaging/hooks/useUserBlocks";
 import { PUSH_CONFIG } from "@/features/messaging/config/push";
+import { useTranslations } from "next-intl";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface Message {
   id: string;
@@ -48,6 +50,9 @@ interface SupabasePayload {
 
 // 1:1 chat page. Open with /messages?to=<userId>
 function MessagesContent() {
+  const t = useTranslations("messages");
+  const tCommon = useTranslations("common");
+  const { locale } = useLanguage();
   const router = useRouter();
   const params = useSearchParams();
   const targetId = params.get("to");
@@ -871,7 +876,7 @@ function MessagesContent() {
       }
     } catch (e) {
       console.error('Error checking conversation status:', e);
-      alert('Error al verificar el estado de la conversación');
+      alert(t("errorCheckingStatus"));
     }
   };
 
@@ -952,8 +957,8 @@ function MessagesContent() {
               <div className="h-32 w-32 bg-secondary/10 rounded-full flex items-center justify-center mb-6">
                 <div className="text-6xl grayscale opacity-50">💬</div>
               </div>
-              <h3 className="text-2xl font-serif font-bold text-primary/80 mb-2">Mensajes</h3>
-              <p className="max-w-xs">Selecciona una conversación a la izquierda o busca un usuario para comenzar.</p>
+              <h3 className="text-2xl font-serif font-bold text-primary/80 mb-2">{t("title")}</h3>
+              <p className="max-w-xs">{t("selectConversation")}</p>
             </div>
           )}
         </div>
@@ -1005,9 +1010,9 @@ function MessagesContent() {
             <div className="h-16 w-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
               <AlertCircle className="h-8 w-8 text-red-500" />
             </div>
-            <h3 className="text-xl font-bold text-foreground mb-2">Algo salió mal</h3>
+            <h3 className="text-xl font-bold text-foreground mb-2">{t("errorSomethingWrong")}</h3>
             <p className="text-muted-foreground mb-6 max-w-xs">{error}</p>
-            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+            <Button onClick={() => window.location.reload()}>{t("retry")}</Button>
           </div>
         ) : null}
       </div>
@@ -1016,8 +1021,9 @@ function MessagesContent() {
 }
 
 export default function MessagesPage() {
+  const tCommon = useTranslations("common");
   return (
-    <Suspense fallback={<main className="h-screen w-full flex items-center justify-center text-muted-foreground">Cargando...</main>}>
+    <Suspense fallback={<main className="h-screen w-full flex items-center justify-center text-muted-foreground">{tCommon("loading")}</main>}>
       <MessagesContent />
     </Suspense>
   );

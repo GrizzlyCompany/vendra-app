@@ -7,8 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 function MessagesContent() {
+  const t = useTranslations("dashboard.messages");
+  const tSidebar = useTranslations("dashboard.sidebar");
   const router = useRouter();
   const params = useSearchParams();
   const targetId = params.get("to");
@@ -237,7 +240,7 @@ function MessagesContent() {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
             <input
               className="w-full h-10 pl-10 pr-4 rounded-full bg-background/50 border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/50"
-              placeholder="Buscar conversación..."
+              placeholder={t("search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -262,7 +265,7 @@ function MessagesContent() {
                   <div className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 ${isActive ? 'border-primary/20' : 'border-transparent group-hover:border-white/20'}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {c.avatar_url ? (
-                      <img src={c.avatar_url} alt={c.name ?? 'Usuario'} className="h-full w-full object-cover" />
+                      <img src={c.avatar_url} alt={c.name ?? t("user")} className="h-full w-full object-cover" />
                     ) : (
                       <div className="h-full w-full bg-muted flex items-center justify-center text-muted-foreground font-bold">
                         {c.name?.[0] || '?'}
@@ -273,14 +276,14 @@ function MessagesContent() {
                   <div className="min-w-0 flex-1">
                     <div className="flex justify-between items-baseline mb-0.5">
                       <span className={`text-sm font-semibold truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
-                        {c.name ?? 'Usuario'}
+                        {c.name ?? t("user")}
                       </span>
                       <span className={`text-[10px] ${isActive ? 'text-primary/70' : 'text-muted-foreground/70'}`}>
                         {new Date(c.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                     <div className={`text-xs truncate ${isActive ? 'text-primary/60' : 'text-muted-foreground'}`}>
-                      Ver conversación
+                      {t("viewConversation")}
                     </div>
                   </div>
                 </button>
@@ -291,7 +294,7 @@ function MessagesContent() {
               <div className="h-10 w-10 rounded-full bg-muted/20 flex items-center justify-center mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
               </div>
-              <p className="text-xs">Sin conversaciones</p>
+              <p className="text-xs">{t("noConversations")}</p>
             </div>
           )}
         </div>
@@ -307,11 +310,11 @@ function MessagesContent() {
             </div>
             <div>
               <h3 className="font-serif text-lg font-bold text-foreground">
-                {target?.name ?? "Mensajes"}
+                {target?.name ?? tSidebar("messages")}
               </h3>
               {targetId && (
                 <Link href={`/profile/view?id=${targetId}`} className="text-xs text-primary hover:underline flex items-center gap-1">
-                  Ver perfil <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+                  {t("viewProfile")} <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
                 </Link>
               )}
             </div>
@@ -337,8 +340,8 @@ function MessagesContent() {
                 <div className="h-20 w-20 bg-muted/30 rounded-full flex items-center justify-center mb-4">
                   <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                 </div>
-                <h3 className="text-lg font-serif">Selecciona una conversación</h3>
-                <p className="text-sm text-muted-foreground max-w-xs mt-2">Elige un contacto de la barra lateral para comenzar a chatear.</p>
+                <h3 className="text-lg font-serif">{t("selectConversation")}</h3>
+                <p className="text-sm text-muted-foreground max-w-xs mt-2">{t("selectConversationDesc")}</p>
               </div>
             ) : (
               <>
@@ -376,7 +379,7 @@ function MessagesContent() {
                   })}
                   {messages.length === 0 && (
                     <div className="h-full flex flex-col items-center justify-center opacity-40">
-                      <p className="text-sm">Envía un mensaje para comenzar...</p>
+                      <p className="text-sm">{t("startMessaging")}</p>
                     </div>
                   )}
                   <div ref={scrollRef} />
@@ -390,7 +393,7 @@ function MessagesContent() {
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-                        placeholder="Escribe tu mensaje..."
+                        placeholder={t("typeMessage")}
                         className="w-full bg-transparent px-5 py-3.5 max-h-32 min-h-[50px] outline-none text-sm placeholder:text-muted-foreground/50 resize-none overflow-hidden"
                         autoComplete="off"
                       />
@@ -415,8 +418,9 @@ function MessagesContent() {
 }
 
 export function MessagesSection() {
+  const t = useTranslations("dashboard.messages");
   return (
-    <Suspense fallback={<div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">Cargando…</div>}>
+    <Suspense fallback={<div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">{t("loading")}</div>}>
       <MessagesContent />
     </Suspense>
   );

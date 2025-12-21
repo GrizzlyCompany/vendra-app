@@ -15,16 +15,17 @@ import { MessageItem } from "./MessageItem";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import { useToastContext } from "@/components/ToastProvider";
+import { useTranslations } from "next-intl";
 
 // Report reason options
-const REPORT_REASONS = [
-  { value: 'harassment', label: 'Acoso o amenazas' },
-  { value: 'spam', label: 'Spam o mensajes no solicitados' },
-  { value: 'fraud', label: 'Intento de estafa o fraude' },
-  { value: 'fake_listing', label: 'Propiedad falsa o engañosa' },
-  { value: 'inappropriate', label: 'Contenido inapropiado' },
-  { value: 'impersonation', label: 'Suplantación de identidad' },
-  { value: 'other', label: 'Otro motivo' },
+const REPORT_REASONS = (t: any) => [
+  { value: 'harassment', label: t("reasons.harassment") },
+  { value: 'spam', label: t("reasons.spam") },
+  { value: 'fraud', label: t("reasons.fraud") },
+  { value: 'fake_listing', label: t("reasons.fake_listing") },
+  { value: 'inappropriate', label: t("reasons.inappropriate") },
+  { value: 'impersonation', label: t("reasons.impersonation") },
+  { value: 'other', label: t("reasons.other") },
 ] as const;
 
 interface Message {
@@ -82,6 +83,8 @@ export function ChatView({
   onBlockToggle,
   isBlockLoading = false,
 }: ChatViewProps) {
+  const t = useTranslations("messages");
+  const tCommon = useTranslations("common");
   const { error: showError, success: showSuccess } = useToastContext();
 
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
@@ -156,16 +159,16 @@ export function ChatView({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Error al enviar el reporte');
+        throw new Error(data.error || t("reportError"));
       }
 
-      showSuccess('Reporte enviado correctamente. Nuestro equipo lo revisará pronto.');
+      showSuccess(t("reportSuccess"));
       setShowReportModal(false);
       setReportReason('');
       setReportDescription('');
     } catch (err: any) {
       console.error('Error reporting:', err);
-      showError(err.message || 'Error al enviar el reporte');
+      showError(err.message || t("reportError"));
     } finally {
       setIsReporting(false);
     }
@@ -196,7 +199,7 @@ export function ChatView({
             <Link href={target?.id ? `/profile/view?id=${target.id}` : '#'}>
               <div className="h-11 w-11 overflow-hidden rounded-full border-2 border-white shadow-md bg-muted">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {target?.avatar_url ? <img src={target.avatar_url} alt={target.name ?? 'Usuario'} className="h-full w-full object-cover" /> : null}
+                {target?.avatar_url ? <img src={target.avatar_url} alt={target.name ?? t("user")} className="h-full w-full object-cover" /> : null}
               </div>
               {isOnline && (
                 <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 shadow-sm animate-pulse"></div>
@@ -206,12 +209,12 @@ export function ChatView({
 
           <div>
             <Link href={target?.id ? `/profile/view?id=${target.id}` : '#'}>
-              <div className="font-serif font-bold text-base text-foreground hover:underline decoration-primary/30 underline-offset-4">{target?.name ?? 'Usuario'}</div>
+              <div className="font-serif font-bold text-base text-foreground hover:underline decoration-primary/30 underline-offset-4">{target?.name ?? t("user")}</div>
             </Link>
             <div className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block transition-colors duration-500 ${isOnline ? 'text-emerald-600 bg-emerald-100/50' : 'text-muted-foreground/60 bg-muted/50'}`}>
               {isBlocked ? (
-                <span className="text-red-500">Bloqueado</span>
-              ) : isOnline ? 'En línea' : 'Desconectado'}
+                <span className="text-red-500">{t("blocked")}</span>
+              ) : isOnline ? t("online") : t("disconnected")}
             </div>
           </div>
         </div>
@@ -234,7 +237,7 @@ export function ChatView({
             <DropdownMenuContent align="end" className="w-48 rounded-2xl">
               <DropdownMenuItem className="cursor-pointer p-0">
                 <Link href={target?.id ? `/profile/view?id=${target.id}` : '#'} className="w-full px-2 py-1.5">
-                  Ver Perfil
+                  {t("viewProfile")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -247,12 +250,12 @@ export function ChatView({
                   {iBlockedThem ? (
                     <>
                       <UserX className="h-4 w-4 mr-2" />
-                      Desbloquear Usuario
+                      {t("unblockUser")}
                     </>
                   ) : (
                     <>
                       <Ban className="h-4 w-4 mr-2" />
-                      Bloquear Usuario
+                      {t("blockUser")}
                     </>
                   )}
                 </DropdownMenuItem>
@@ -263,7 +266,7 @@ export function ChatView({
                 className="cursor-pointer text-amber-600"
               >
                 <Flag className="h-4 w-4 mr-2" />
-                Reportar Conversación
+                {t("reportConversation")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -283,9 +286,9 @@ export function ChatView({
                 <Ban className="h-8 w-8 text-red-500" />
               </div>
             </div>
-            <h3 className="font-bold text-lg text-center mb-2">¿Bloquear a {target?.name ?? 'este usuario'}?</h3>
+            <h3 className="font-bold text-lg text-center mb-2">{t("blockTitle", { name: target?.name ?? t("user") })}</h3>
             <p className="text-sm text-muted-foreground text-center mb-6">
-              No podrán enviarse mensajes entre ustedes. Puedes desbloquear en cualquier momento.
+              {t("blockDescription")}
             </p>
             <div className="flex gap-3">
               <Button
@@ -293,14 +296,14 @@ export function ChatView({
                 onClick={() => setShowBlockConfirm(false)}
                 className="flex-1 rounded-full"
               >
-                Cancelar
+                {tCommon("cancel")}
               </Button>
               <Button
                 onClick={confirmBlock}
                 disabled={isBlockLoading}
                 className="flex-1 rounded-full bg-red-500 hover:bg-red-600 text-white"
               >
-                {isBlockLoading ? 'Bloqueando...' : 'Bloquear'}
+                {isBlockLoading ? t("blocking") : t("blockUser")}
               </Button>
             </div>
           </motion.div>
@@ -320,16 +323,16 @@ export function ChatView({
                 <Flag className="h-8 w-8 text-amber-500" />
               </div>
             </div>
-            <h3 className="font-bold text-lg text-center mb-2">Reportar a {target?.name ?? 'este usuario'}</h3>
+            <h3 className="font-bold text-lg text-center mb-2">{t("reportTitle", { name: target?.name ?? t("user") })}</h3>
             <p className="text-sm text-muted-foreground text-center mb-6">
-              Selecciona el motivo del reporte. Nuestro equipo revisará el caso.
+              {t("reportDescription")}
             </p>
 
             {/* Reason Selection */}
             <div className="space-y-2 mb-4">
-              <label className="text-sm font-medium text-gray-700">Motivo del reporte *</label>
+              <label className="text-sm font-medium text-gray-700">{t("reportReasonLabel")}</label>
               <div className="grid gap-2">
-                {REPORT_REASONS.map((reason) => (
+                {REPORT_REASONS(t).map((reason) => (
                   <button
                     key={reason.value}
                     onClick={() => setReportReason(reason.value)}
@@ -346,11 +349,11 @@ export function ChatView({
 
             {/* Description */}
             <div className="space-y-2 mb-6">
-              <label className="text-sm font-medium text-gray-700">Descripción adicional (opcional)</label>
+              <label className="text-sm font-medium text-gray-700">{t("reportDetailsLabel")}</label>
               <Textarea
                 value={reportDescription}
                 onChange={(e) => setReportDescription(e.target.value)}
-                placeholder="Proporciona más detalles sobre el problema..."
+                placeholder={t("reportPlaceholder")}
                 className="min-h-[80px] rounded-xl resize-none"
               />
             </div>
@@ -366,7 +369,7 @@ export function ChatView({
                 className="flex-1 rounded-full"
                 disabled={isReporting}
               >
-                Cancelar
+                {tCommon("cancel")}
               </Button>
               <Button
                 onClick={handleReport}
@@ -376,10 +379,10 @@ export function ChatView({
                 {isReporting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Enviando...
+                    {t("reporting")}
                   </>
                 ) : (
-                  'Enviar Reporte'
+                  t("submitReport")
                 )}
               </Button>
             </div>
@@ -394,12 +397,12 @@ export function ChatView({
             <Ban className={`h-5 w-5 flex-shrink-0 mt-0.5 ${theyBlockedMe ? 'text-red-600' : 'text-amber-600'}`} />
             <div className="flex-1">
               <h3 className={`font-bold text-sm mb-1 ${theyBlockedMe ? 'text-red-800' : 'text-amber-800'}`}>
-                {theyBlockedMe ? 'No puedes enviar mensajes' : 'Has bloqueado a este usuario'}
+                {theyBlockedMe ? t("blockedNoMessages") : t("youBlockedUser")}
               </h3>
               <p className={`text-xs leading-relaxed ${theyBlockedMe ? 'text-red-700' : 'text-amber-700'}`}>
                 {theyBlockedMe
-                  ? 'No puedes enviar mensajes a este usuario en este momento.'
-                  : 'No pueden enviarse mensajes entre ustedes mientras esté bloqueado.'}
+                  ? t("theyBlockedYouDesc")
+                  : t("iBlockedThemDesc")}
               </p>
               {iBlockedThem && onBlockToggle && (
                 <Button
@@ -409,7 +412,7 @@ export function ChatView({
                   size="sm"
                 >
                   <UserX className="h-3 w-3" />
-                  Desbloquear
+                  {t("unblockUser")}
                 </Button>
               )}
             </div>
@@ -424,18 +427,17 @@ export function ChatView({
             <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-bold text-amber-800 text-sm mb-1">
-                Caso Cerrado
+                {t("caseClosed")}
               </h3>
               <p className="text-xs text-amber-700 mb-3 leading-relaxed">
-                Su caso ha sido cerrado por el administrador. Si tiene una inquietud diferente,
-                por favor cree un nuevo reporte desde la sección de reportes.
+                {t("caseClosedDesc")}
               </p>
               <Button
                 onClick={() => window.open('/reports', '_self')}
                 className="bg-amber-600 hover:bg-amber-700 text-white gap-2 h-8 text-xs rounded-full shadow-md shadow-amber-900/10"
                 size="sm"
               >
-                Crear Nuevo Reporte
+                {t("createNewReport")}
               </Button>
             </div>
           </div>
@@ -452,10 +454,10 @@ export function ChatView({
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-primary text-sm">
-                  ¿Activar notificaciones?
+                  {t("activateNotifications")}
                 </h3>
                 <p className="text-[10px] text-muted-foreground leading-tight">
-                  Recibe avisos al instante cuando te respondan.
+                  {t("notificationsDesc")}
                 </p>
               </div>
             </div>
@@ -464,7 +466,7 @@ export function ChatView({
               className="bg-primary hover:bg-primary/90 text-white h-8 text-xs rounded-full px-4 shrink-0"
               size="sm"
             >
-              Activar
+              {t("activate")}
             </Button>
           </div>
         </div>
@@ -487,8 +489,8 @@ export function ChatView({
               <div className="h-24 w-24 bg-gradient-to-br from-primary/10 to-emerald-500/5 rounded-full flex items-center justify-center mb-6 animate-pulse">
                 <span className="text-5xl">👋</span>
               </div>
-              <p className="font-serif font-bold text-lg text-primary/80">¡Saluda!</p>
-              <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">Comienza la conversación enviando un mensaje amable.</p>
+              <p className="font-serif font-bold text-lg text-primary/80">{t("sayHello")}</p>
+              <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">{t("sayHelloDesc")}</p>
             </div>
           )}
         </div>
@@ -508,7 +510,7 @@ export function ChatView({
                 onSend();
               }
             }}
-            placeholder={isClosedConversation ? "Chat cerrado" : isBlocked ? "Chat bloqueado" : "Escribe un mensaje..."}
+            placeholder={isClosedConversation ? t("chatClosed") : isBlocked ? t("chatBlocked") : t("typeMessage")}
             disabled={isClosedConversation || isBlocked}
             className="border-0 bg-transparent flex-1 ml-3 focus-visible:ring-0 shadow-none h-10 text-base md:text-sm placeholder:text-muted-foreground/40 font-medium"
           />

@@ -643,7 +643,7 @@ export function EditProjectSection({ projectId }: { projectId: string }) {
           <CardContent className="p-6 space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {[
-                "Piscina Inifinity", "Gimnasio Equipado", "Lobby Climatizado", "Terraza Social", "Area BBQ",
+                "Piscina Infinity", "Gimnasio Equipado", "Lobby Climatizado", "Terraza Social", "Area BBQ",
                 "Parque Infantil", "Seguridad 24/7", "Parqueo Techado", "Planta Eléctrica", "Ascensor",
                 "Cine", "Coworking", "Pet Friendly"
               ].map((a) => (

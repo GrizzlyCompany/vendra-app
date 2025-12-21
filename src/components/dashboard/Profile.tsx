@@ -10,8 +10,11 @@ import { Upload, FileText, Download, Trash2, Plus, CheckCircle } from "lucide-re
 import { validateCompanyProfileForm, type CompanyProfileFormData } from "@/lib/validation";
 import { useToastContext } from "@/components/ToastProvider";
 import { fetchUserProfile, updateUserProfile, fetchUserRole } from "@/lib/database";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 export function ProfileSection() {
+  const t = useTranslations("dashboard.companyProfile");
   const [uid, setUid] = useState<string | null>(null);
   const { error: showError, success: showSuccess } = useToastContext();
 
@@ -101,7 +104,7 @@ export function ProfileSection() {
       } catch (err: any) {
         if (mounted) {
           console.error("Error loading profile:", err.message || err);
-          showError("Error al cargar el perfil", "No se pudieron cargar los datos del perfil");
+          showError(t("loadError"), t("loadErrorDesc"));
         }
       }
     };
@@ -183,10 +186,10 @@ export function ProfileSection() {
         // Don't fail the save if sync fails
       }
 
-      showSuccess("Perfil actualizado", "Los cambios en tu perfil han sido guardados exitosamente");
+      showSuccess(t("updateSuccess"), t("updateSuccessDesc"));
     } catch (err: any) {
       console.error("Error saving profile:", err);
-      showError("Error al guardar", err.message || "No se pudieron guardar los cambios");
+      showError(t("saveError"), err.message || "No se pudieron guardar los cambios");
     } finally {
       setSaving(false);
     }
@@ -207,7 +210,7 @@ export function ProfileSection() {
 
       for (const file of Array.from(files)) {
         if (!file.type.includes('pdf')) {
-          showError("Tipo de archivo no válido", "Solo se permiten archivos PDF");
+          showError(t("invalidFile"), t("pdfOnly"));
           continue;
         }
 
@@ -239,11 +242,11 @@ export function ProfileSection() {
         // Update database immediately using safe utility
         await updateUserProfile(uid, { legal_documents: updatedDocs });
 
-        showSuccess("Documentos subidos", `Se subieron ${newDocUrls.length} documento(s) legal(es)`);
+        showSuccess(t("uploadSuccess"), t("uploadSuccessDesc", { count: newDocUrls.length }));
       }
     } catch (err: any) {
       console.error("Error uploading legal docs:", err);
-      showError("Error al subir documentos", "No se pudieron subir los documentos legales");
+      showError(t("saveError"), "No se pudieron subir los documentos legales");
     } finally {
       setUploadingDocs(false);
     }
@@ -267,10 +270,10 @@ export function ProfileSection() {
 
       await updateUserProfile(uid, { legal_documents: updatedDocs });
 
-      showSuccess("Documento eliminado", "El documento legal ha sido eliminado");
+      showSuccess(t("deleteDocSuccess"), t("deleteDocSuccessDesc"));
     } catch (err) {
       console.error("Error removing document:", err);
-      showError("Error al eliminar", "No se pudo eliminar el documento");
+      showError(t("deleteDocError"), t("deleteDocErrorDesc"));
     }
   };
 
@@ -339,12 +342,12 @@ export function ProfileSection() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <h2 className="font-serif text-2xl text-[#1C4B2E]">Perfil de Empresa</h2>
+      <h2 className="font-serif text-2xl text-[#1C4B2E]">{t("title")}</h2>
 
       {/* Section 1: Datos de la empresa */}
       <Card className="rounded-2xl border shadow-md">
         <CardHeader>
-          <CardTitle className="font-serif text-xl">1. Datos de la empresa</CardTitle>
+          <CardTitle className="font-serif text-xl">{t("sections.basic")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Avatar section */}
@@ -361,21 +364,21 @@ export function ProfileSection() {
               disabled={saving}
             >
               <Upload className="h-4 w-4" />
-              Subir Logo de Empresa
+              {t("logo")}
             </Button>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
               className="hidden"
-              aria-label="Subir logo de empresa"
+              aria-label={t("logo")}
               onChange={(e) => onAvatarFile(e.target.files?.[0])}
             />
           </div>
 
           {/* Banner Selection for All Roles */}
           <div className="space-y-4 pt-4 border-t">
-            <label className="text-sm font-medium">Banner de Perfil</label>
+            <label className="text-sm font-medium">{t("banner")}</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {PREDEFINED_BANNERS.map((banner, index) => (
                 <button
@@ -407,27 +410,27 @@ export function ProfileSection() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <label className="text-sm font-medium" htmlFor="name">Nombre de la empresa *</label>
+              <label className="text-sm font-medium" htmlFor="name">{t("name")}</label>
               <Input id="name" name="name" value={form.name} onChange={onChange} disabled={saving} />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm font-medium" htmlFor="email">Correo electrónico *</label>
+              <label className="text-sm font-medium" htmlFor="email">{t("email")}</label>
               <Input id="email" name="email" type="email" value={form.email} onChange={onChange} disabled={saving} />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm font-medium" htmlFor="phone">Teléfono principal</label>
+              <label className="text-sm font-medium" htmlFor="phone">{t("phone")}</label>
               <Input id="phone" name="phone" value={form.phone} onChange={onChange} disabled={saving} />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm font-medium" htmlFor="rnc">RNC / Registro mercantil *</label>
-              <Input id="rnc" name="rnc" value={form.rnc} onChange={onChange} disabled={saving} placeholder="Ej: 123456789" />
+              <label className="text-sm font-medium" htmlFor="rnc">{t("rnc")}</label>
+              <Input id="rnc" name="rnc" value={form.rnc} onChange={onChange} disabled={saving} placeholder={t("rncPlaceholder")} />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm font-medium" htmlFor="website">Sitio web oficial</label>
-              <Input id="website" name="website" type="url" value={form.website} onChange={onChange} disabled={saving} placeholder="https://ejemplo.com" />
+              <label className="text-sm font-medium" htmlFor="website">{t("website")}</label>
+              <Input id="website" name="website" type="url" value={form.website} onChange={onChange} disabled={saving} placeholder={t("websitePlaceholder")} />
             </div>
             <div className="grid gap-2 sm:col-span-2">
-              <label className="text-sm font-medium" htmlFor="headquarters_address">Dirección principal / sede</label>
+              <label className="text-sm font-medium" htmlFor="headquarters_address">{t("address")}</label>
               <textarea
                 id="headquarters_address"
                 name="headquarters_address"
@@ -435,11 +438,11 @@ export function ProfileSection() {
                 onChange={onTextareaChange}
                 disabled={saving}
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Dirección completa de la sede principal"
+                placeholder={t("addressPlaceholder")}
               />
             </div>
             <div className="grid gap-2 sm:col-span-2">
-              <label className="text-sm font-medium" htmlFor="bio">Biografía / Descripción de la empresa</label>
+              <label className="text-sm font-medium" htmlFor="bio">{t("bio")}</label>
               <textarea
                 id="bio"
                 name="bio"
@@ -447,21 +450,21 @@ export function ProfileSection() {
                 onChange={onTextareaChange}
                 disabled={saving}
                 className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Cuéntanos sobre tu empresa, su misión y experiencia..."
+                placeholder={t("bioPlaceholder")}
               />
-              <p className="text-xs text-muted-foreground text-right">{form.bio?.length || 0}/1000 caracteres</p>
+              <p className="text-xs text-muted-foreground text-right">{form.bio?.length || 0}/1000 {t("characters")}</p>
             </div>
             <div className="grid gap-2 sm:col-span-2">
-              <label className="text-sm font-medium" htmlFor="operational_areas">Áreas de operación</label>
+              <label className="text-sm font-medium" htmlFor="operational_areas">{t("operationalAreas")}</label>
               <Input
                 id="operational_areas"
                 name="operational_areas"
                 value={form.operational_areas}
                 onChange={onChange}
                 disabled={saving}
-                placeholder="Ej: Santo Domingo, Punta Cana, Santiago"
+                placeholder={t("areasPlaceholder")}
               />
-              <p className="text-xs text-muted-foreground">Separe las áreas con comas</p>
+              <p className="text-xs text-muted-foreground">{t("areasDesc")}</p>
             </div>
           </div>
         </CardContent>
@@ -470,22 +473,22 @@ export function ProfileSection() {
       {/* Section 2: Contacto corporativo */}
       <Card className="rounded-2xl border shadow-md">
         <CardHeader>
-          <CardTitle className="font-serif text-xl">2. Contacto corporativo</CardTitle>
+          <CardTitle className="font-serif text-xl">{t("sections.contact")}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="grid gap-2 sm:col-span-2">
-            <label className="text-sm font-medium" htmlFor="contact_person">Persona de contacto (nombre completo y cargo)</label>
+            <label className="text-sm font-medium" htmlFor="contact_person">{t("contactPerson")}</label>
             <Input
               id="contact_person"
               name="contact_person"
               value={form.contact_person}
               onChange={onChange}
               disabled={saving}
-              placeholder="Ej: Juan Pérez, Gerente General"
+              placeholder={t("contactPersonPlaceholder")}
             />
           </div>
           <div className="grid gap-2">
-            <label className="text-sm font-medium" htmlFor="primary_phone">Teléfono de contacto principal</label>
+            <label className="text-sm font-medium" htmlFor="primary_phone">{t("contactPhone")}</label>
             <Input
               id="primary_phone"
               name="primary_phone"
@@ -496,7 +499,7 @@ export function ProfileSection() {
             />
           </div>
           <div className="grid gap-2">
-            <label className="text-sm font-medium" htmlFor="secondary_phone">Teléfono secundario / WhatsApp</label>
+            <label className="text-sm font-medium" htmlFor="secondary_phone">{t("secondaryPhone")}</label>
             <Input
               id="secondary_phone"
               name="secondary_phone"
@@ -512,8 +515,8 @@ export function ProfileSection() {
       {/* Section 3: Información legal */}
       <Card className="rounded-2xl border shadow-md">
         <CardHeader>
-          <CardTitle className="font-serif text-xl">3. Información legal</CardTitle>
-          <p className="text-sm text-muted-foreground">Documentación legal: licencias de construcción, permisos, etc.</p>
+          <CardTitle className="font-serif text-xl">{t("sections.legal")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("legalDesc")}</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-4">
@@ -524,7 +527,7 @@ export function ProfileSection() {
               disabled={uploadingDocs || saving}
             >
               <Plus className="h-4 w-4" />
-              {uploadingDocs ? "Subiendo..." : "Subir documentos legales"}
+              {uploadingDocs ? t("uploading") : t("uploadLegal")}
             </Button>
             <input
               ref={legalDocsInputRef}
@@ -532,16 +535,16 @@ export function ProfileSection() {
               accept=".pdf"
               multiple
               className="hidden"
-              aria-label="Subir documentos legales PDF"
+              aria-label={t("uploadLegal")}
               onChange={(e) => onLegalDocsFile(e.target.files)}
             />
-            <p className="text-xs text-muted-foreground">Solo archivos PDF. Tamaño máximo: 10MB por archivo.</p>
+            <p className="text-xs text-muted-foreground">{t("legalConstraints")}</p>
           </div>
 
           {/* Display uploaded documents */}
           {form.legal_documents && form.legal_documents.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-sm font-medium">Documentos subidos:</h4>
+              <h4 className="text-sm font-medium">{t("uploadedDocs")}</h4>
               <div className="grid gap-2">
                 {form.legal_documents.map((url, index) => {
                   const fileName = url.split('/').pop()?.split('_').slice(2).join('_') || `Documento ${index + 1}`;
@@ -581,8 +584,8 @@ export function ProfileSection() {
       {/* Section 4: Redes y marketing */}
       <Card className="rounded-2xl border shadow-md">
         <CardHeader>
-          <CardTitle className="font-serif text-xl">4. Redes y marketing</CardTitle>
-          <p className="text-sm text-muted-foreground">Redes sociales corporativas y presencia digital</p>
+          <CardTitle className="font-serif text-xl">{t("sections.marketing")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("marketingDesc")}</p>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
@@ -627,8 +630,8 @@ export function ProfileSection() {
       {/* Section 5: Términos y condiciones */}
       <Card className="rounded-2xl border shadow-md">
         <CardHeader>
-          <CardTitle className="font-serif text-xl">5. Términos y condiciones</CardTitle>
-          <p className="text-sm text-muted-foreground">Aceptación de términos para el uso de la plataforma</p>
+          <CardTitle className="font-serif text-xl">{t("sections.terms")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("termsSectionDesc")}</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-start space-x-3">
@@ -643,18 +646,28 @@ export function ProfileSection() {
             />
             <div className="text-sm">
               <label htmlFor="terms_accepted" className="font-medium cursor-pointer">
-                ✅ Acepto los términos y condiciones de uso de la plataforma *
+                {t.rich("termsAcceptLabel", {
+                  terms: (chunks) => (
+                    <Link href="/terms" className="text-primary underline">
+                      {chunks}
+                    </Link>
+                  ),
+                  privacy: (chunks) => (
+                    <Link href="/privacy" className="text-primary underline">
+                      {chunks}
+                    </Link>
+                  )
+                })}
               </label>
               <p className="text-muted-foreground mt-1">
-                Al marcar esta casilla, acepto que la información proporcionada es veraz y me comprometo
-                a mantener actualizada toda la documentación legal requerida para operar en la plataforma.
+                {t("termsDesc")}
               </p>
             </div>
           </div>
 
           {!form.terms_accepted && (
             <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
-              Debe aceptar los términos y condiciones para guardar los cambios.
+              {t("termsRequired")}
             </p>
           )}
         </CardContent>
@@ -667,7 +680,7 @@ export function ProfileSection() {
           disabled={saving || uploadingDocs || !form.terms_accepted}
           className="bg-[#1C4B2E] text-white hover:bg-[#163c25] px-8 py-3 text-lg"
         >
-          {saving ? "Guardando cambios..." : "Guardar todos los cambios"}
+          {saving ? t("saving") : t("save")}
         </Button>
       </div>
     </div>

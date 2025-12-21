@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { Sidebar, type DashboardSection } from "@/components/dashboard/Sidebar";
 import { PropertiesSection } from "@/components/dashboard/Properties";
 import { supabase } from "@/lib/supabase/client";
@@ -12,6 +13,7 @@ import { handleSupabaseError } from "@/lib/errors";
 import { syncUserRole } from "@/lib/roleUtils";
 
 export default function DashboardPage() {
+  const t = useTranslations("dashboard");
   const { user, loading: authLoading } = useAuth();
   const { error: showError } = useToastContext();
   const router = useRouter();
@@ -37,13 +39,13 @@ export default function DashboardPage() {
         if (effectiveRole === "empresa_constructora") {
           setAuthorized(true);
         } else {
-          showError("No tienes permisos para acceder al dashboard");
+          showError(t("noPermissions"));
           router.push("/profile");
         }
       } catch (err) {
         if (mounted) {
           const error = handleSupabaseError(err);
-          showError("Error al verificar permisos", error.message);
+          showError(t("errorVerifyingPermissions"), error.message);
           router.push("/profile");
         }
       } finally {
@@ -63,7 +65,7 @@ export default function DashboardPage() {
       <div className="min-h-[calc(100dvh-64px)] bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Verificando permisos...</p>
+          <p className="mt-2 text-muted-foreground">{t("verifyingPermissions")}</p>
         </div>
       </div>
     );
@@ -89,18 +91,18 @@ export default function DashboardPage() {
           <div className="mx-auto flex h-20 items-center justify-between px-6 lg:px-10">
             <div className="flex flex-col">
               <h1 className="font-serif text-2xl md:text-3xl text-foreground font-bold tracking-tight">
-                {section === "mis" && "Mis Propiedades"}
-                {section === "agregar" && "Nuevo Proyecto"}
-                {section === "estadisticas" && "Panel de Control"}
-                {section === "mensajes" && "Centro de Mensajes"}
-                {section === "perfil" && "Mi Perfil"}
+                {section === "mis" && t("myProperties")}
+                {section === "agregar" && t("newProject")}
+                {section === "estadisticas" && t("analytics")}
+                {section === "mensajes" && t("sidebar.messages")}
+                {section === "perfil" && t("sidebar.profile")}
               </h1>
               <p className="text-xs text-muted-foreground font-medium hidden md:block mt-0.5">
-                {section === "mis" && "Gestiona tu portafolio inmobiliario"}
-                {section === "agregar" && "Publica una nueva propiedad"}
-                {section === "estadisticas" && "Analiza el rendimiento de tus ventas"}
-                {section === "mensajes" && "Comunícate con tus clientes"}
-                {section === "perfil" && "Configuración de tu cuenta"}
+                {section === "mis" && t("managePortfolio")}
+                {section === "agregar" && t("publishProperty")}
+                {section === "estadisticas" && t("analyzePerformance")}
+                {section === "mensajes" && t("communicateClients")}
+                {section === "perfil" && t("accountSettings")}
               </p>
             </div>
 
@@ -111,7 +113,7 @@ export default function DashboardPage() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                Sistema Activo
+                {t("activeSystem")}
               </div>
             </div>
           </div>
@@ -134,20 +136,25 @@ export default function DashboardPage() {
 
 const DynamicAddPropertySection = dynamic(
   () => import("@/components/dashboard/AddProperty").then(m => m.AddPropertySection),
-  { loading: () => <div className="text-muted-foreground">Cargando formulario…</div> }
+  { loading: () => <DeferredLoader namespace="dashboard" keyName="loadingForm" /> }
 );
 
 const DynamicStatsSection = dynamic(
   () => import("@/components/dashboard/Stats").then(m => m.StatsSection),
-  { loading: () => <div className="text-muted-foreground">Cargando estadísticas…</div> }
+  { loading: () => <DeferredLoader namespace="dashboard" keyName="loadingStats" /> }
 );
 
 const DynamicMessagesSection = dynamic(
   () => import("@/components/dashboard/Messages").then(m => m.MessagesSection),
-  { loading: () => <div className="text-muted-foreground">Cargando mensajes…</div> }
+  { loading: () => <DeferredLoader namespace="dashboard" keyName="loadingMessages" /> }
 );
 
 const DynamicProfileSection = dynamic(
   () => import("@/components/dashboard/Profile").then(m => m.ProfileSection),
-  { loading: () => <div className="text-muted-foreground">Cargando perfil…</div> }
+  { loading: () => <DeferredLoader namespace="dashboard" keyName="loadingProfile" /> }
 );
+
+function DeferredLoader({ namespace, keyName }: { namespace: string; keyName: string }) {
+  const t = useTranslations(namespace);
+  return <div className="text-muted-foreground">{t(keyName)}</div>;
+}

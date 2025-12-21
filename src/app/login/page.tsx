@@ -18,10 +18,16 @@ import {
     authenticateWithBiometrics,
     enableBiometricLogin
 } from "@/lib/capacitor/biometrics";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { useTranslations } from "next-intl";
 
 // export const dynamic = 'force-dynamic'; // Removed for static export
 
 function LoginPageContent() {
+    const t = useTranslations();
+    const tAuth = useTranslations('auth');
+    const tCommon = useTranslations('common');
+    const tLanding = useTranslations('landing');
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user, loading: authLoading } = useAuth();
@@ -42,8 +48,8 @@ function LoginPageContent() {
         const message = searchParams.get('message');
         if (message === 'email-confirmation-sent') {
             showSuccess(
-                "Cuenta creada exitosamente",
-                "Revisa tu correo electrónico para confirmar tu cuenta antes de iniciar sesión"
+                tAuth('signupSuccess'),
+                tAuth('checkEmailConfirm')
             );
             router.replace('/login', { scroll: false });
         }
@@ -78,7 +84,7 @@ function LoginPageContent() {
             const errorMessage = validation.error.issues
                 .map((issue) => issue.message)
                 .join(', ');
-            showError("Datos inválidos", errorMessage);
+            showError(tAuth('invalidData'), errorMessage);
             setLoading(false);
             return;
         }
@@ -111,11 +117,11 @@ function LoginPageContent() {
             // Enable biometric login for next time
             enableBiometricLogin();
 
-            showSuccess("¡Bienvenido de vuelta!");
+            showSuccess(tAuth('loginSuccess'));
             router.replace("/main");
         } catch (err: any) {
             const error = handleSupabaseError(err);
-            showError("Error al iniciar sesión", error.message);
+            showError(tAuth('loginError'), error.message);
         } finally {
             setLoading(false);
         }
@@ -138,10 +144,10 @@ function LoginPageContent() {
                 .eq("user_id", pendingUserId)
                 .eq("status", "pending");
 
-            showSuccess("¡Cuenta reactivada!", "Tu solicitud de eliminación ha sido cancelada.");
+            showSuccess(tAuth('accountReactivated'), tAuth('deletionCanceled'));
             router.replace("/main");
         } catch (error) {
-            showError("Error", "No se pudo reactivar la cuenta");
+            showError(tCommon('error'), tAuth('couldNotReactivate'));
         } finally {
             setLoading(false);
             setShowReactivateDialog(false);
@@ -172,16 +178,16 @@ function LoginPageContent() {
                         return;
                     }
 
-                    showSuccess("¡Bienvenido de vuelta!");
+                    showSuccess(tAuth('loginSuccess'));
                     router.replace("/main");
                 } else {
-                    showError("Sesión expirada", "Por favor inicia sesión con tu contraseña");
+                    showError(tAuth('sessionExpired'), tAuth('loginWithPassword'));
                 }
             } else {
-                showError("Autenticación fallida", result.error || "No se pudo verificar tu identidad");
+                showError(tAuth('authFailed'), result.error || tAuth('couldNotVerify'));
             }
         } catch (err) {
-            showError("Error", "Hubo un problema con la autenticación biométrica");
+            showError(tCommon('error'), tAuth('biometricError'));
         } finally {
             setBiometricLoading(false);
         }
@@ -198,15 +204,15 @@ function LoginPageContent() {
             if (error) throw error;
 
             showSuccess(
-                "Correo de recuperación enviado",
-                "Revisa tu bandeja de entrada para restablecer tu contraseña"
+                tAuth('recoverySent'),
+                tAuth('recoveryInstructions')
             );
 
             setRecoveryEmail("");
             setIsRecoveryMode(false);
         } catch (err: any) {
             const error = handleSupabaseError(err);
-            showError("Error al enviar correo", error.message);
+            showError(tAuth('loginError'), error.message);
         } finally {
             setRecoveryLoading(false);
         }
@@ -217,7 +223,7 @@ function LoginPageContent() {
             <div className="min-h-screen bg-background flex items-center justify-center">
                 <div className="text-center">
                     <div className="h-12 w-12 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto" />
-                    <p className="mt-4 text-muted-foreground font-serif">Iniciando experiencia...</p>
+                    <p className="mt-4 text-muted-foreground font-serif">{tAuth('startingExperience')}</p>
                 </div>
             </div>
         )
@@ -235,8 +241,13 @@ function LoginPageContent() {
                         <div className="p-2 rounded-full border border-border/50 bg-background group-hover:bg-primary/5 transition-colors">
                             <ArrowLeft className="size-4" />
                         </div>
-                        <span className="font-medium">Volver al inicio</span>
+                        <span className="font-medium">{tCommon('backToHome')}</span>
                     </Link>
+                </div>
+
+                {/* Language Selector */}
+                <div className="absolute top-[calc(2rem+env(safe-area-inset-top,0px))] right-8 z-20">
+                    <LanguageSelector />
                 </div>
 
                 <div className="w-full max-w-md space-y-8">
@@ -246,12 +257,12 @@ function LoginPageContent() {
                             <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center shadow-xl shadow-primary/20 text-primary-foreground font-serif text-2xl font-bold">V</div>
                         </div>
                         <h1 className="text-3xl font-serif font-bold text-foreground">
-                            {isRecoveryMode ? "Recuperar acceso" : "Bienvenido de nuevo"}
+                            {isRecoveryMode ? tAuth('recoverAccess') : tAuth('welcomeBack')}
                         </h1>
                         <p className="text-muted-foreground">
                             {isRecoveryMode
-                                ? "Te enviaremos las instrucciones a tu correo"
-                                : "Ingresa tus credenciales para acceder a tu panel"
+                                ? tAuth('recoveryInstructionsEmail')
+                                : tAuth('enterCredentials')
                             }
                         </p>
                     </div>
@@ -261,13 +272,13 @@ function LoginPageContent() {
                         {isRecoveryMode ? (
                             <form onSubmit={onRecoverySubmit} className="space-y-5">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground ml-1">Correo electrónico</label>
+                                    <label className="text-sm font-medium text-foreground ml-1">{tAuth('email')}</label>
                                     <Input
                                         type="email"
                                         value={recoveryEmail}
                                         onChange={(e) => setRecoveryEmail(e.target.value)}
                                         required
-                                        placeholder="ejemplo@vendra.com"
+                                        placeholder={tAuth('emailPlaceholder')}
                                         className="h-12 rounded-xl bg-secondary/10 border-transparent focus:border-primary focus:bg-background transition-all text-foreground placeholder:text-muted-foreground"
                                     />
                                 </div>
@@ -276,7 +287,7 @@ function LoginPageContent() {
                                     disabled={recoveryLoading}
                                     className="w-full h-12 rounded-xl text-base font-medium shadow-md shadow-primary/20 hover:shadow-lg transition-all"
                                 >
-                                    {recoveryLoading ? "Enviando..." : "Enviar enlace de recuperación"}
+                                    {recoveryLoading ? tAuth('sending') : tAuth('sendRecoveryLink')}
                                 </Button>
                                 <Button
                                     type="button"
@@ -284,31 +295,31 @@ function LoginPageContent() {
                                     onClick={() => setIsRecoveryMode(false)}
                                     className="w-full hover:bg-transparent hover:text-primary transition-colors h-auto p-0"
                                 >
-                                    Volver a iniciar sesión
+                                    {tAuth('backToLogin')}
                                 </Button>
                             </form>
                         ) : (
                             <form onSubmit={onSubmit} className="space-y-5">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground ml-1">Correo electrónico</label>
+                                    <label className="text-sm font-medium text-foreground ml-1">{tAuth('email')}</label>
                                     <Input
                                         type="email"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
-                                        placeholder="ejemplo@vendra.com"
+                                        placeholder={tAuth('emailPlaceholder')}
                                         className="h-12 rounded-xl bg-secondary/10 border-transparent focus:border-primary focus:bg-background transition-all text-foreground placeholder:text-muted-foreground"
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between ml-1">
-                                        <label className="text-sm font-medium text-foreground">Contraseña</label>
+                                        <label className="text-sm font-medium text-foreground">{tAuth('password')}</label>
                                         <button
                                             type="button"
                                             onClick={() => setIsRecoveryMode(true)}
                                             className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                                         >
-                                            ¿Olvidaste tu contraseña?
+                                            {tAuth('forgotPassword')}
                                         </button>
                                     </div>
                                     <Input
@@ -326,7 +337,7 @@ function LoginPageContent() {
                                     disabled={loading}
                                     className="w-full h-12 rounded-xl text-base font-medium shadow-md shadow-primary/20 hover:shadow-lg transition-all"
                                 >
-                                    {loading ? "Accediendo..." : "Iniciar Sesión"}
+                                    {loading ? tAuth('accessing') : tAuth('loginButton')}
                                 </Button>
 
                                 {/* Biometric Login Button */}
@@ -337,7 +348,7 @@ function LoginPageContent() {
                                                 <span className="w-full border-t border-border/50" />
                                             </div>
                                             <div className="relative flex justify-center text-xs uppercase">
-                                                <span className="bg-background px-2 text-muted-foreground">o</span>
+                                                <span className="bg-background px-2 text-muted-foreground">{tCommon('or')}</span>
                                             </div>
                                         </div>
                                         <Button
@@ -348,7 +359,7 @@ function LoginPageContent() {
                                             className="w-full h-12 mt-4 rounded-xl text-base font-medium flex items-center justify-center gap-3 border-2 hover:border-primary hover:bg-primary/5 transition-all"
                                         >
                                             <Fingerprint className="size-5" />
-                                            {biometricLoading ? "Verificando..." : "Acceder con huella"}
+                                            {biometricLoading ? tAuth('verifying') : tAuth('biometricAccess')}
                                         </Button>
                                     </div>
                                 )}
@@ -358,9 +369,9 @@ function LoginPageContent() {
 
                     {/* Footer */}
                     <div className="text-center text-sm pt-4">
-                        <span className="text-muted-foreground">{isRecoveryMode ? "¿Ya la recordaste?" : "¿Aún no tienes cuenta?"} </span>
+                        <span className="text-muted-foreground">{isRecoveryMode ? tAuth('remembered') : tAuth('noAccount')} </span>
                         <Link href={isRecoveryMode ? "#" : "/signup"} onClick={() => isRecoveryMode && setIsRecoveryMode(false)} className="font-semibold text-primary hover:text-primary/80 transition-colors">
-                            {isRecoveryMode ? "Inicia sesión" : "Regístrate gratis"}
+                            {isRecoveryMode ? tAuth('login') : tAuth('signupFree')}
                         </Link>
                     </div>
                 </div>
@@ -383,11 +394,11 @@ function LoginPageContent() {
                 <div className="absolute bottom-16 left-12 right-12 text-white space-y-6">
                     <Quote className="size-10 text-primary/80 fill-primary/20" />
                     <blockquote className="font-serif text-3xl md:text-4xl leading-tight font-medium opacity-95">
-                        "El hogar es el punto de partida del amor, la esperanza y los sueños."
+                        {tLanding('quote')}
                     </blockquote>
                     <div className="flex items-center gap-4">
                         <div className="h-px flex-1 bg-white/20" />
-                        <p className="text-sm font-medium tracking-widest uppercase opacity-70">Experiencia Vendra</p>
+                        <p className="text-sm font-medium tracking-widest uppercase opacity-70">{tLanding('experience')}</p>
                     </div>
                 </div>
             </div>
@@ -401,17 +412,17 @@ function LoginPageContent() {
                             <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-4">
                                 <AlertTriangle className="size-6 text-amber-600" />
                             </div>
-                            <CardTitle className="text-xl font-serif">Cuenta en proceso de eliminación</CardTitle>
+                            <CardTitle className="text-xl font-serif">{tAuth('accountDeletionPending')}</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6 text-center">
                             <p className="text-sm text-muted-foreground">
-                                Tu cuenta está programada para ser eliminada permanentemente el
+                                {tAuth('accountScheduledDeletion')}
                                 <strong className="block text-foreground mt-1 text-base">
-                                    {pendingDeletionDate ? new Date(pendingDeletionDate).toLocaleDateString("es-DO", { day: '2-digit', month: 'long', year: 'numeric' }) : ""}
+                                    {pendingDeletionDate ? new Date(pendingDeletionDate).toLocaleDateString(tAuth('locale') === 'en' ? "en-US" : "es-DO", { day: '2-digit', month: 'long', year: 'numeric' }) : ""}
                                 </strong>
                             </p>
                             <p className="text-xs text-muted-foreground bg-secondary/20 p-3 rounded-lg">
-                                Iniciar sesión reactivará tu cuenta y cancelará la solicitud de eliminación de forma inmediata.
+                                {tAuth('loginWillReactivate')}
                             </p>
                             <div className="flex flex-col gap-3">
                                 <Button
@@ -419,7 +430,7 @@ function LoginPageContent() {
                                     disabled={loading}
                                     className="w-full h-12 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-medium"
                                 >
-                                    {loading ? "Reactivando..." : "Reactivar mi cuenta"}
+                                    {loading ? tAuth('reactivating') : tAuth('reactivateAccount')}
                                 </Button>
                                 <Button
                                     variant="ghost"
@@ -429,7 +440,7 @@ function LoginPageContent() {
                                     }}
                                     className="text-muted-foreground hover:text-foreground"
                                 >
-                                    Cancelar y salir
+                                    {tAuth('cancelAndExit')}
                                 </Button>
                             </div>
                         </CardContent>

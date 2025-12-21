@@ -10,6 +10,8 @@ import { memo, useCallback } from "react";
 import { usePerformanceMonitor } from "@/hooks/usePerformance";
 import { safeString } from "@/lib/safe";
 import { MorphCard } from "@/components/transitions/MorphCard";
+import { useTranslations } from "next-intl";
+import { useLanguage } from "@/components/LanguageProvider";
 
 /**
  * Hook for optimizing image URLs, particularly for Unsplash images
@@ -53,17 +55,19 @@ interface PropertyCardProps {
 }
 
 /**
- * Formats a numeric value as USD currency with proper localization
+ * Formats a numeric value as currency with locale support
  * @param value - The numeric price value to format
+ * @param locale - The current locale code
+ * @param fallback - Fallback message if invalid
  * @returns Formatted price string or fallback message if invalid
  */
-function formatPriceUSD(value: number): string {
+function formatPrice(value: number, locale: string, fallback: string): string {
   if (typeof value !== 'number' || !isFinite(value)) {
-    return 'Price not available';
+    return fallback;
   }
 
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(locale === "es" ? "es-DO" : "en-US", {
       style: "currency",
       currency: "USD",
       maximumFractionDigits: 0,
@@ -95,6 +99,8 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
   href
 }) {
   usePerformanceMonitor('PropertyCard');
+  const t = useTranslations("properties");
+  const { locale } = useLanguage();
 
   // Enhanced image handling with optimization
   const fallbackImage = "https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1600&auto=format&fit=crop";
@@ -147,9 +153,9 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
           {/* Price badge with glassmorphism */}
           <div
             className="absolute left-3 top-3 z-20 rounded-full bg-black/50 backdrop-blur-md px-3 py-1.5 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20"
-            aria-label={`Precio: ${formatPriceUSD(property.price)}`}
+            aria-label={`${t("filters.priceRange")}: ${formatPrice(property.price, locale, t("priceNotAvailable"))}`}
           >
-            {formatPriceUSD(property.price)}
+            {formatPrice(property.price, locale, t("priceNotAvailable"))}
           </div>
 
           {/* Favorite Button (Top Right) */}
@@ -163,7 +169,7 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
               e.stopPropagation();
               onToggleFavorite?.(property.id);
             }}
-            title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
+            title={isFavorite ? t("removeFromFavorites") : t("addToFavorites")}
           >
             <Heart className={`h-4 w-4 transition-transform group-active/heart:scale-90 ${isFavorite ? "fill-current" : ""}`} />
           </button>
@@ -174,9 +180,9 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
               <span
                 className="inline-flex items-center rounded-full bg-white/90 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-foreground shadow-sm"
                 role="status"
-                aria-label={`Tipo de propiedad: ${property.type}`}
+                aria-label={`${t("filters.type")}: ${property.type}`}
               >
-                {property.type}
+                {t(`types.${property.type.toLowerCase() as any}`, { fallback: property.type })}
               </span>
             </div>
           )}
@@ -193,7 +199,7 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
 
           <Image
             src={optimizedImage}
-            alt={safeString(property.title, 'Imagen de propiedad')}
+            alt={safeString(property.title, t("imageAlt"))}
             fill
             className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -220,8 +226,8 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
               className="h-3.5 w-3.5 text-primary flex-shrink-0"
               aria-hidden="true"
             />
-            <span className="truncate font-medium text-xs sm:text-sm text-gray-500 dark:text-gray-400" aria-label={`Ubicación: ${safeString(property.location, 'Ubicación no especificada')}`}>
-              {safeString(property.location, 'Ubicación no especificada')}
+            <span className="truncate font-medium text-xs sm:text-sm text-gray-500 dark:text-gray-400" aria-label={`${t("filters.location")}: ${safeString(property.location, t("locationNotSpecified"))}`}>
+              {safeString(property.location, t("locationNotSpecified"))}
             </span>
           </div>
         </CardHeader>
@@ -229,21 +235,21 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
         {/* Feature Icons Row */}
         <div className="px-6 pb-2 flex items-center gap-4 text-sm text-muted-foreground">
           {property.bedrooms && (
-            <div className="flex items-center gap-1.5" title={`${property.bedrooms} Habitaciones`}>
+            <div className="flex items-center gap-1.5" title={`${property.bedrooms} ${t("details.bedrooms")}`}>
               <BedDouble className="h-4 w-4" />
               <span className="font-medium">{property.bedrooms}</span>
             </div>
           )}
           {property.bathrooms && (
-            <div className="flex items-center gap-1.5" title={`${property.bathrooms} Baños`}>
+            <div className="flex items-center gap-1.5" title={`${property.bathrooms} ${t("details.bathrooms")}`}>
               <Bath className="h-4 w-4" />
               <span className="font-medium">{property.bathrooms}</span>
             </div>
           )}
           {property.area && (
-            <div className="flex items-center gap-1.5" title={`${property.area} m²`}>
+            <div className="flex items-center gap-1.5" title={`${property.area} ${t("details.sqm")}`}>
               <Ruler className="h-4 w-4" />
-              <span className="font-medium">{property.area}<span className="text-[10px]">m²</span></span>
+              <span className="font-medium">{property.area}<span className="text-[10px]">{t("details.sqm")}</span></span>
             </div>
           )}
         </div>
@@ -256,7 +262,7 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
               aria-describedby={`property-title-${property.id} property-description-${property.id}`}
             >
               <Link href={href || `/properties/view?id=${property.id}`}>
-                Ver detalles
+                {t("viewDetails")}
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
                 <span className="sr-only">de {property.title}</span>
               </Link>
@@ -267,12 +273,12 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
                 asChild
                 variant="outline"
                 className="w-full sm:w-auto min-h-[40px] sm:w-10 sm:h-10 sm:p-0 rounded-lg hover:bg-muted"
-                title="Editar propiedad"
-                aria-label={`Editar propiedad: ${property.title}`}
+                title={t("editProperty")}
+                aria-label={`${t("editProperty")}: ${property.title}`}
               >
                 <Link href={`/properties/${property.id}/edit`}>
                   <Edit className="h-4 w-4" aria-hidden="true" />
-                  <span className="sm:hidden ml-2">Editar</span>
+                  <span className="sm:hidden ml-2">{t("edit")}</span>
                 </Link>
               </Button>
             )}
@@ -287,13 +293,13 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
                   handleDelete(e);
                 }}
                 disabled={isDeleting}
-                title={isDeleting ? "Eliminando propiedad" : isConfirmPending ? "Confirmar eliminación" : "Eliminar propiedad"}
-                aria-label={`${isDeleting ? "Eliminando" : isConfirmPending ? "Confirmar eliminación de" : "Eliminar"} propiedad: ${property.title}`}
+                title={isDeleting ? t("deletingProperty") : isConfirmPending ? t("confirmDelete") : t("deleteProperty")}
+                aria-label={`${isDeleting ? t("deleting") : isConfirmPending ? t("confirmDelete") : t("deleteProperty")}: ${property.title}`}
                 aria-describedby={`property-title-${property.id}`}
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
                 <span className="sm:hidden ml-2">
-                  {isDeleting ? "Eliminando…" : (isConfirmPending ? "Confirmar" : "Eliminar")}
+                  {isDeleting ? t("deleting") : (isConfirmPending ? t("confirm") : t("delete"))}
                 </span>
               </Button>
             )}

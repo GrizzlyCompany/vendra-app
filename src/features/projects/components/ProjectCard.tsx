@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, MapPin, Building2, Calendar, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useTranslations } from "next-intl";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface Project {
     id: string;
@@ -22,6 +24,18 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, index }: ProjectCardProps) {
+    const t = useTranslations("projects");
+    const { locale } = useLanguage();
+
+    const formatCurrency = (amount: string | number) => {
+        if (!amount) return "";
+        const num = typeof amount === "string" ? parseFloat(amount.replace(/[^0-9.-]+/g, "")) : amount;
+        return new Intl.NumberFormat(locale === "es" ? "es-DO" : "en-US", {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0
+        }).format(num);
+    };
     const images = Array.isArray(project.images)
         ? project.images
         : project.images
@@ -32,10 +46,21 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
 
     const getStatusColor = (status: string | null) => {
         const s = status?.toLowerCase() || "";
-        if (s.includes("preventa")) return "bg-blue-500/90 text-white border-blue-400/20";
-        if (s.includes("construcción") || s.includes("construccion")) return "bg-amber-500/90 text-white border-amber-400/20";
-        if (s.includes("entrega") || s.includes("finalizado")) return "bg-emerald-500/90 text-white border-emerald-400/20";
+        if (s.includes("preventa") || s.includes("presale")) return "bg-blue-500/90 text-white border-blue-400/20";
+        if (s.includes("construcción") || s.includes("construccion") || s.includes("construction")) return "bg-amber-500/90 text-white border-amber-400/20";
+        if (s.includes("entrega") || s.includes("delivery")) return "bg-emerald-500/90 text-white border-emerald-400/20";
+        if (s.includes("agotado") || s.includes("sold")) return "bg-red-500/90 text-white border-red-400/20";
         return "bg-primary/90 text-white border-primary/20";
+    };
+
+    const getStatusLabel = (status: string | null) => {
+        const s = status?.toLowerCase() || "";
+        if (s.includes("preventa") || s.includes("presale")) return t("status.presale");
+        if (s.includes("construcción") || s.includes("construccion") || s.includes("construction")) return t("status.construction");
+        if (s.includes("entrega") || s.includes("delivery")) return t("status.delivery");
+        if (s.includes("finalizado") || s.includes("finished")) return t("status.finished");
+        if (s.includes("agotado") || s.includes("sold")) return t("status.soldOut");
+        return status;
     };
 
     return (
@@ -59,7 +84,7 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
             {project.project_status && (
                 <div className="absolute top-4 left-4 z-10">
                     <Badge className={`px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg border ${getStatusColor(project.project_status)} uppercase tracking-wide text-[10px] font-bold`}>
-                        {project.project_status}
+                        {getStatusLabel(project.project_status)}
                     </Badge>
                 </div>
             )}
@@ -76,20 +101,20 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
 
                     <div className="flex items-center text-white/80 text-sm mb-3">
                         <MapPin className="w-4 h-4 mr-1.5 shrink-0 text-primary-foreground/80" />
-                        <span className="truncate">{project.city_province || project.address || "Ubicación Privilegiada"}</span>
+                        <span className="truncate">{project.city_province || project.address || t("card.locationDefault")}</span>
                     </div>
 
                     <div className="h-0 opacity-0 group-hover:h-auto group-hover:opacity-100 overflow-hidden transition-all duration-300 ease-in-out pb-1">
                         <p className="text-white/70 text-sm line-clamp-2 mb-3">
-                            Descubre un estilo de vida exclusivo en este desarrollo único. Diseño arquitectónico de vanguardia y amenidades de lujo.
+                            {t("card.desc")}
                         </p>
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t border-white/10">
                         <div className="flex flex-col">
-                            <span className="text-[10px] uppercase tracking-wider text-white/60 font-semibold">Precio desde</span>
+                            <span className="text-[10px] uppercase tracking-wider text-white/60 font-semibold">{t("card.priceFrom")}</span>
                             <span className="text-lg font-bold text-emerald-400 shadow-black drop-shadow-sm">
-                                {project.unit_price_range ? `$${project.unit_price_range}` : "Consultar"}
+                                {project.unit_price_range ? formatCurrency(project.unit_price_range) : t("card.consult")}
                             </span>
                         </div>
 

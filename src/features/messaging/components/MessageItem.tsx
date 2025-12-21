@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Check, CheckCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface Message {
   id: string;
@@ -17,6 +18,7 @@ interface MessageItemProps {
 }
 
 export function MessageItem({ message, me, animated = false }: MessageItemProps) {
+  const t = useTranslations("messages");
   const mine = message.sender_id === me;
 
   const Bubble = (
@@ -36,7 +38,7 @@ export function MessageItem({ message, me, animated = false }: MessageItemProps)
           {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
         {mine && (
-          <span className="ml-1" title={message.read_at ? "Leído" : "Enviado"}>
+          <span className="ml-1" title={message.read_at ? t("read") : t("sent")}>
             {message.read_at ? <CheckCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />}
           </span>
         )}

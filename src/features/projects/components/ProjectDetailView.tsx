@@ -24,6 +24,8 @@ import { DetailBackButton } from "@/components/transitions/DetailPageTransition"
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ShareMenu } from "@/components/ShareMenu";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslations } from "next-intl";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface Project {
     id: string;
@@ -105,6 +107,64 @@ export function ProjectDetailView({ id }: { id: string }) {
     const { user: currentUser } = useAuth();
     const isOwner = currentUser?.id === project?.owner_id;
     const trackProjectViewRef = useRef<Promise<void> | null>(null);
+    const t = useTranslations("projects");
+    const { locale } = useLanguage();
+
+    const formatCurrency = (amount: string | number) => {
+        if (!amount) return "";
+        const num = typeof amount === "string" ? parseFloat(amount.replace(/[^0-9.-]+/g, "")) : amount;
+        return new Intl.NumberFormat(locale === "es" ? "es-DO" : "en-US", {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0
+        }).format(num);
+    };
+
+    const getStatusLabel = (status: string | null) => {
+        const s = status?.toLowerCase() || "";
+        if (s.includes("preventa") || s.includes("presale")) return t("status.presale");
+        if (s.includes("construcción") || s.includes("construccion") || s.includes("construction")) return t("status.construction");
+        if (s.includes("entrega") || s.includes("delivery")) return t("status.delivery");
+        if (s.includes("finalizado") || s.includes("finished")) return t("status.finished");
+        if (s.includes("agotado") || s.includes("sold")) return t("status.soldOut");
+        return status;
+    };
+
+    const getAmenityLabel = (amenity: string) => {
+        // Try to find an exact match in translations
+        // If the key doesn't exist, t() usually returns the key path or just the key if configured differently.
+        // But with next-intl, if we pass a key that doesn't exist, it might return the key.
+        // A safer way is to check if the input string is one of our known keys or just rely on fallback.
+        // However, t() return value for missing keys depends on configuration.
+        // Let's assume standard behavior: if it returns the key path 'projects.amenities.X', we show original.
+        // Better yet, just try to translate. If the translation equals the key path, fallback.
+
+        // Actually simplest approach:
+        // We know what keys we added. Realistically we should strip "projects.amenities." prefix if we can check existence.
+        // But useTranslations doesn't expose 'has'.
+
+        // Alternative: Map the specific known strings we see in DB. 
+        // "2 Habitaciones" -> split -> translate "Habitaciones" -> reassemble.
+        return t.has(`amenities.${amenity}`) ? t(`amenities.${amenity}`) : amenity;
+    };
+
+    const getUnitTypeLabel = (type: string) => {
+        // Handle "2 Habitaciones", "Local Comercial", etc.
+        // We will try to translate the whole string first
+        if (t.has(`unitTypes.${type}`)) return t(`unitTypes.${type}`);
+
+        // If not, try to split parsing (e.g. "2 Habitaciones")
+        const parts = type.split(" ");
+        if (parts.length === 2 && !isNaN(Number(parts[0]))) {
+            const count = parts[0];
+            const word = parts.slice(1).join(" "); // "Habitaciones"
+            if (t.has(`unitTypes.${word}`)) {
+                return `${count} ${t(`unitTypes.${word}`)}`;
+            }
+        }
+
+        return type;
+    };
 
     // Map state
     const { isLoaded } = useJsApiLoader({
@@ -218,8 +278,8 @@ export function ProjectDetailView({ id }: { id: string }) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="text-center space-y-4">
-                    <p className="text-destructive font-serif text-xl">Error al cargar el proyecto</p>
-                    <Button onClick={() => router.back()}>Volver</Button>
+                    <p className="text-destructive font-serif text-xl">{t("details.errorTitle")}</p>
+                    <Button onClick={() => router.back()}>{t("details.return")}</Button>
                 </div>
             </div>
         );
@@ -267,7 +327,7 @@ export function ProjectDetailView({ id }: { id: string }) {
             <nav className="hidden lg:flex fixed top-4 left-6 z-50">
                 <Button asChild variant="outline" className="rounded-full bg-white/80 hover:bg-white backdrop-blur-md border shadow-sm px-6 gap-2">
                     <Link href="/projects">
-                        <ChevronLeft className="w-4 h-4" /> Volver a Proyectos
+                        <ChevronLeft className="w-4 h-4" /> {t("details.backToProjects")}
                     </Link>
                 </Button>
             </nav>
@@ -313,7 +373,7 @@ export function ProjectDetailView({ id }: { id: string }) {
                         <div className="flex flex-wrap gap-2 mb-4">
                             {project.project_status && (
                                 <Badge className="bg-primary/90 hover:bg-primary text-white border-none px-3 py-1 text-xs uppercase tracking-wider shadow-lg backdrop-blur-md">
-                                    {project.project_status}
+                                    {getStatusLabel(project.project_status)}
                                 </Badge>
                             )}
                             {project.category && (
@@ -339,75 +399,82 @@ export function ProjectDetailView({ id }: { id: string }) {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-white/50 dark:bg-black/20 backdrop-blur-xl border border-white/40 rounded-3xl shadow-lg">
                             <div className="text-center p-2 border-r border-border/50 last:border-0">
                                 <span className="block text-2xl font-bold text-primary">{project.units_count || "—"}</span>
-                                <span className="text-xs text-muted-foreground uppercase tracking-wider">Unidades</span>
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider">{t("details.units")}</span>
                             </div>
                             <div className="text-center p-2 border-r border-border/50 last:border-0">
                                 <span className="block text-2xl font-bold text-primary">{project.floors || "—"}</span>
-                                <span className="text-xs text-muted-foreground uppercase tracking-wider">Niveles</span>
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider">{t("details.levels")}</span>
                             </div>
                             <div className="text-center p-2 border-r border-border/50 last:border-0">
                                 <span className="block text-2xl font-bold text-primary">{project.land_size ? `${project.land_size}m²` : "—"}</span>
-                                <span className="text-xs text-muted-foreground uppercase tracking-wider">Terreno</span>
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider">{t("details.land")}</span>
                             </div>
                             <div className="text-center p-2">
                                 <span className="block text-2xl font-bold text-primary">{project.built_areas ? `${project.built_areas}m²` : "—"}</span>
-                                <span className="text-xs text-muted-foreground uppercase tracking-wider">Construcción</span>
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider">{t("details.construction")}</span>
                             </div>
                         </div>
 
                         <section className="prose prose-lg dark:prose-invert max-w-none">
-                            <h2 className="font-serif text-3xl font-bold text-foreground mb-4">{project.description_title || "Sobre el Proyecto"}</h2>
+                            <h2 className="font-serif text-3xl font-bold text-foreground mb-4">{project.description_title || t("details.aboutTitle")}</h2>
                             <p className="text-muted-foreground leading-relaxed text-lg font-light">
-                                {project.short_description || "Descubre un nuevo estándar de vida en este exclusivo desarrollo inmobiliario, diseñado pensando en cada detalle para ofrecer el máximo confort y estilo de vida."}
+                                {project.short_description || t("details.aboutDescDefault")}
                             </p>
                         </section>
 
                         <section>
                             <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
                                 <CheckCircle className="w-5 h-5 text-primary" />
-                                Amenidades Exclusivas
+                                {t("details.amenitiesTitle")}
                             </h3>
                             {project.amenities && project.amenities.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {project.amenities.map((amenity, i) => (
                                         <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-secondary/5 border border-transparent hover:border-primary/20 transition-all">
                                             <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
-                                            <span className="text-foreground font-medium">{amenity}</span>
+                                            <span className="text-foreground font-medium">{getAmenityLabel(amenity)}</span>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-muted-foreground italic">Información de amenidades pendiente.</p>
+                                <p className="text-muted-foreground italic">{t("details.amenitiesPending")}</p>
                             )}
                         </section>
 
                         <section>
                             <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
                                 <LayoutGrid className="w-5 h-5 text-primary" />
-                                Tipos de Unidades & Disponibilidad
+                                {t("details.unitsTitle")}
                             </h3>
                             {unitsData.length === 0 ? (
-                                <p className="text-muted-foreground italic">No hay información de unidades detallada.</p>
+                                <p className="text-muted-foreground italic">{t("details.unitsPending")}</p>
                             ) : (
                                 <div className="overflow-hidden rounded-2xl border border-border shadow-sm">
                                     <table className="w-full text-left border-collapse">
                                         <thead>
                                             <tr className="bg-muted/50 border-b border-border">
-                                                <th className="p-4 text-xs uppercase font-bold text-muted-foreground">Tipo</th>
-                                                <th className="p-4 text-xs uppercase font-bold text-muted-foreground">Tamaño</th>
-                                                <th className="p-4 text-xs uppercase font-bold text-muted-foreground text-center">Total</th>
-                                                <th className="p-4 text-xs uppercase font-bold text-muted-foreground text-right">Disponibles</th>
+                                                <th className="p-4 text-xs uppercase font-bold text-muted-foreground">{t("details.table.type")}</th>
+                                                <th className="p-4 text-xs uppercase font-bold text-muted-foreground">{t("details.table.size")}</th>
+                                                <th className="p-4 text-xs uppercase font-bold text-muted-foreground text-center">{t("details.table.total")}</th>
+                                                <th className="p-4 text-xs uppercase font-bold text-muted-foreground text-right">{t("details.table.available")}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
                                             {unitsData.map((u: any, i: number) => {
                                                 const availUnits = u.available ? parseInt(u.available) : null;
-                                                const statusLabel = (availUnits === 0) ? "Agotado" : (availUnits && availUnits <= 3) ? `Últimas ${availUnits}` : (availUnits) ? `${availUnits} disp.` : "Consultar";
+                                                const statusLabel =
+                                                    availUnits === 0
+                                                        ? t("details.unitStatus.soldOut")
+                                                        : availUnits && availUnits <= 3
+                                                            ? t("details.unitStatus.lastUnits", { count: availUnits })
+                                                            : availUnits
+                                                                ? t("details.unitStatus.available", { count: availUnits })
+                                                                : t("details.unitStatus.consult");
                                                 const statusColor = (availUnits === 0) ? "bg-red-500/10 text-red-600 border-red-200" : (availUnits && availUnits <= 3) ? "bg-amber-500/10 text-amber-600 border-amber-200" : "bg-emerald-500/10 text-emerald-600 border-emerald-200";
 
                                                 return (
                                                     <tr key={i} className="hover:bg-muted/30 transition-colors">
-                                                        <td className="p-4 font-semibold text-foreground">{u.type}</td>
+                                                        <td className="p-4 font-semibold text-foreground">{getUnitTypeLabel(u.type)}</td>
                                                         <td className="p-4 text-muted-foreground tracking-wide">{u.size ? `${u.size} m²` : "—"}</td>
                                                         <td className="p-4 text-center font-medium text-muted-foreground">{u.quantity || "—"}</td>
                                                         <td className="p-4 text-right">
@@ -428,7 +495,7 @@ export function ProjectDetailView({ id }: { id: string }) {
                             <section>
                                 <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
                                     <Building className="w-5 h-5 text-primary" />
-                                    Planos Disponibles
+                                    {t("details.plansTitle")}
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {project.plans.map((plan, i) => (
@@ -436,7 +503,7 @@ export function ProjectDetailView({ id }: { id: string }) {
                                             <img src={plan.toLowerCase().endsWith('.pdf') ? 'https://via.placeholder.com/400x300?text=VISTA+PREVIA+PDF' : plan} alt={`Plano ${i + 1}`} className="w-full h-48 object-contain bg-white/50" />
                                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <Button variant="secondary" size="sm" className="gap-2">
-                                                    <Download className="w-4 h-4" /> Ver Plano
+                                                    <Download className="w-4 h-4" /> {t("details.viewPlan")}
                                                 </Button>
                                             </div>
                                         </div>
@@ -449,7 +516,7 @@ export function ProjectDetailView({ id }: { id: string }) {
                             <section>
                                 <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-2">
                                     <MapPin className="w-5 h-5 text-primary" />
-                                    Ubicación Prestigiosa
+                                    {t("details.locationTitle")}
                                 </h3>
                                 <div className="h-[400px] w-full rounded-3xl overflow-hidden border border-border shadow-sm bg-muted/20">
                                     {isLoaded ? (
@@ -486,16 +553,16 @@ export function ProjectDetailView({ id }: { id: string }) {
                             <div className="bg-background/80 dark:bg-black/40 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-[2rem] p-6 md:p-8 overflow-hidden relative">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
                                 <div className="relative z-10">
-                                    <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">Inversión desde</p>
+                                    <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">{t("details.investmentFrom")}</p>
                                     <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary mb-6">
-                                        {project.unit_price_range ? `$${project.unit_price_range}` : "Consultar Precio"}
+                                        {project.unit_price_range ? formatCurrency(project.unit_price_range) : t("details.consultPrice")}
                                     </h2>
 
                                     <div className="space-y-3">
                                         {!isOwner && (
                                             <Button asChild className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all gap-2">
-                                                <Link href={`/messages?to=${project.owner_id}&msg=${encodeURIComponent(`Hola, me gustaría agendar una visita privada para el proyecto: ${project.project_name}`)}`}>
-                                                    <Calendar className="w-5 h-5" /> Agendar Visita Privada
+                                                <Link href={`/messages?to=${project.owner_id}&msg=${encodeURIComponent(t("details.scheduleMessage", { projectName: project.project_name }))}`}>
+                                                    <Calendar className="w-5 h-5" /> {t("details.scheduleVisit")}
                                                 </Link>
                                             </Button>
                                         )}
@@ -503,7 +570,7 @@ export function ProjectDetailView({ id }: { id: string }) {
                                             onClick={() => project.brochure?.[0] && window.open(project.brochure[0], '_blank')}
                                             disabled={!project.brochure?.length}
                                         >
-                                            <Download className="w-5 h-5" /> Descargar Brochure
+                                            <Download className="w-5 h-5" /> {t("details.downloadBrochure")}
                                         </Button>
                                     </div>
 
@@ -514,8 +581,8 @@ export function ProjectDetailView({ id }: { id: string }) {
                                             {owner?.name?.charAt(0) || "C"}
                                         </div>
                                         <div className="flex-1">
-                                            <p className="text-xs text-muted-foreground uppercase">Desarrollado por</p>
-                                            <p className="font-medium truncate">{owner?.name || "Empresa Constructora"}</p>
+                                            <p className="text-xs text-muted-foreground uppercase">{t("details.developedBy")}</p>
+                                            <p className="font-medium truncate">{owner?.name || t("details.constructionCompany")}</p>
                                         </div>
                                         <Button asChild variant="ghost" size="icon" className="rounded-full hover:bg-secondary/10 text-primary">
                                             <Link href={isOwner ? "/profile" : `/profile/view?id=${owner?.id || project?.owner_id}`}>

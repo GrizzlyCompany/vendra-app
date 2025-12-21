@@ -16,6 +16,8 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Badge } from "@/components/ui/badge";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
 import { syncUserRole } from "@/lib/roleUtils";
+import { useTranslations } from "next-intl";
+import { useLanguage } from "@/components/LanguageProvider";
 // BottomNav now rendered globally when authenticated
 
 type ProfileRow = {
@@ -30,6 +32,10 @@ type ProfileRow = {
 };
 
 export default function ProfilePage() {
+  const t = useTranslations("profile");
+  const tNav = useTranslations("nav");
+  const tCommon = useTranslations("common");
+  const { locale } = useLanguage();
   const router = useRouter();
   const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
@@ -136,12 +142,12 @@ export default function ProfilePage() {
     try {
       // Predefined premium banners (Unsplash)
       const PREDEFINED_BANNERS = [
-        { name: "Edificios Modernos", url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2670&auto=format&fit=crop" },
-        { name: "Oficina Minimalista", url: "https://images.unsplash.com/photo-1554469384-e58fac16e23a?q=80&w=2574&auto=format&fit=crop" },
-        { name: "Espacio de Trabajo", url: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2669&auto=format&fit=crop" },
-        { name: "Tecnología", url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop" },
-        { name: "Arquitectura", url: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2670&auto=format&fit=crop" },
-        { name: "Diseño Interior", url: "https://images.unsplash.com/photo-1449824913929-7b77f555872a?q=80&w=2574&auto=format&fit=crop" }
+        { name: "Banner 1", url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2670&auto=format&fit=crop" },
+        { name: "Banner 2", url: "https://images.unsplash.com/photo-1554469384-e58fac16e23a?q=80&w=2574&auto=format&fit=crop" },
+        { name: "Banner 3", url: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2669&auto=format&fit=crop" },
+        { name: "Banner 4", url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop" },
+        { name: "Banner 5", url: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2670&auto=format&fit=crop" },
+        { name: "Banner 6", url: "https://images.unsplash.com/photo-1449824913929-7b77f555872a?q=80&w=2574&auto=format&fit=crop" }
       ];
 
       // Fetch from Supabase storage
@@ -170,9 +176,9 @@ export default function ProfilePage() {
       console.debug('error listing banners', e);
       // Fallback to predefined if error
       setAvailableBanners([
-        { name: "Edificios Modernos", url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2670&auto=format&fit=crop" },
-        { name: "Oficina Minimalista", url: "https://images.unsplash.com/photo-1554469384-e58fac16e23a?q=80&w=2574&auto=format&fit=crop" },
-        { name: "Espacio de Trabajo", url: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2669&auto=format&fit=crop" }
+        { name: "Banner 1", url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2670&auto=format&fit=crop" },
+        { name: "Banner 2", url: "https://images.unsplash.com/photo-1554469384-e58fac16e23a?q=80&w=2574&auto=format&fit=crop" },
+        { name: "Banner 3", url: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2669&auto=format&fit=crop" }
       ]);
     }
   };
@@ -191,17 +197,17 @@ export default function ProfilePage() {
 
     // If Application is APPROVED => "Verificado" (unless we want "Empresa Verificada"?)
     // User said "evoluciona a verificado". So "Verificado" is the badge.
-    if (profile?.applicationStatus === 'approved') return "Verificado";
+    if (profile?.applicationStatus === 'approved') return t("verified");
 
     if (r === 'empresa_constructora' || r.includes("empresa")) {
-      return "Empresa constructora";
+      return t("constructionCompany");
     }
 
     if (hasListings && (profile?.applicationStatus === 'submitted' || r === 'vendedor_agente')) {
-      return "Vendedor/Agente";
+      return t("seller");
     }
-    return "Comprador";
-  }, [profile?.role, profile?.applicationStatus, hasListings]);
+    return t("buyer");
+  }, [profile?.role, profile?.applicationStatus, hasListings, t]);
 
   // Delete a property and its images (best-effort)
   // First-click arms confirmation; second-click performs deletion without window.confirm
@@ -234,7 +240,7 @@ export default function ProfilePage() {
         }
       }
       if (!uid) {
-        alert("No se pudo determinar el usuario actual. Intenta refrescar la página.");
+        alert(t("errorDeterminingUser"));
         return;
       }
       // No window.confirm here; already confirmed by second click
@@ -280,7 +286,7 @@ export default function ProfilePage() {
         }
         return next;
       });
-      alert("Publicación eliminada correctamente.");
+      alert(t("listingDeleted"));
     } finally {
       setDeletingId(null);
     }
@@ -292,7 +298,7 @@ export default function ProfilePage() {
       setSavingBio(true);
       const uid = sessionUserId ?? (await supabase.auth.getSession()).data.session?.user?.id ?? null;
       if (!uid) {
-        alert("No se pudo identificar al usuario. Intenta iniciar sesión nuevamente.");
+        alert(t("errorDeterminingUser"));
         return;
       }
 
@@ -309,9 +315,9 @@ export default function ProfilePage() {
       // Update local state
       setProfile(prev => prev ? { ...prev, bio: bioText || null } : prev);
       setShowBioEditor(false);
-      alert("Biografía actualizada correctamente");
+      alert(t("bioUpdated"));
     } catch (e: any) {
-      alert(`Error inesperado al guardar biografía: ${e?.message ?? e}`);
+      alert(`${t("errorSavingBio")}: ${e?.message ?? e}`);
     } finally {
       setSavingBio(false);
     }
@@ -337,7 +343,7 @@ export default function ProfilePage() {
       setShowBannerModal(false);
     } catch (e) {
       console.debug("save banner error", e);
-      alert("No se pudo guardar el banner. Intenta de nuevo.");
+      alert(t("errorSavingBanner"));
     } finally {
       setSavingBanner(false);
     }
@@ -362,7 +368,7 @@ export default function ProfilePage() {
         const created = sess.session?.user?.created_at;
         if (created) {
           const d = new Date(created);
-          setMemberSince(`${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`);
+          setMemberSince(d.toLocaleDateString(locale, { day: 'numeric', month: 'numeric', year: 'numeric' }));
         }
 
         // Fetch profile with robust error handling
@@ -516,7 +522,7 @@ export default function ProfilePage() {
     try {
       const uid = sessionUserId ?? (await supabase.auth.getSession()).data.session?.user?.id ?? null;
       if (!uid) {
-        alert("No se pudo identificar al usuario. Intenta iniciar sesión nuevamente.");
+        alert(t("errorDeterminingUser"));
         return;
       }
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -582,7 +588,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <main className="min-h-[calc(100dvh-64px)] bg-background px-4 sm:px-6 py-10 mobile-bottom-safe">
-        <div className="w-full max-w-full sm:max-w-[85%] lg:max-w-[70%] mx-auto px-4 sm:px-6 text-center text-muted-foreground">Cargando perfil…</div>
+        <div className="w-full max-w-full sm:max-w-[85%] lg:max-w-[70%] mx-auto px-4 sm:px-6 text-center text-muted-foreground">{tCommon("loading")}</div>
         {/** BottomNav is global now */}
       </main>
     );
@@ -618,7 +624,7 @@ export default function ProfilePage() {
 
           {/* Center Title */}
           <h1 className="text-lg font-serif font-bold text-primary truncate mx-2">
-            Mi Perfil
+            {t("myProfile")}
           </h1>
 
           {/* Spacer for alignment */}
@@ -696,7 +702,7 @@ export default function ProfilePage() {
                       className="w-64 p-2 rounded-2xl border border-white/20 bg-background/95 backdrop-blur-xl shadow-2xl mt-2 animate-in fade-in zoom-in-95 duration-200"
                     >
                       <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                        Configuración
+                        {t("settings")}
                       </div>
 
                       <DropdownMenuItem
@@ -706,7 +712,7 @@ export default function ProfilePage() {
                         <div className="p-1.5 bg-blue-100/50 text-blue-600 rounded-lg">
                           <UserPen className="w-4 h-4" />
                         </div>
-                        Información del perfil
+                        {tNav("profileInfo")}
                       </DropdownMenuItem>
 
                       <DropdownMenuItem
@@ -716,7 +722,7 @@ export default function ProfilePage() {
                         <div className="p-1.5 bg-amber-100/50 text-amber-600 rounded-lg">
                           <Settings className="w-4 h-4" />
                         </div>
-                        Preferencias
+                        {tNav("preferences")}
                       </DropdownMenuItem>
 
                       <DropdownMenuItem
@@ -726,7 +732,7 @@ export default function ProfilePage() {
                         <div className="p-1.5 bg-indigo-100/50 text-indigo-600 rounded-lg">
                           <UserPen className="w-4 h-4" />
                         </div>
-                        Editar biografía
+                        {t("editBio")}
                       </DropdownMenuItem>
 
                       <DropdownMenuItem
@@ -736,7 +742,7 @@ export default function ProfilePage() {
                         <div className="p-1.5 bg-purple-100/50 text-purple-600 rounded-lg">
                           <Camera className="w-4 h-4" />
                         </div>
-                        Cambiar foto de perfil
+                        {t("changeAvatar")}
                       </DropdownMenuItem>
 
                       <DropdownMenuItem
@@ -746,7 +752,7 @@ export default function ProfilePage() {
                         <div className="p-1.5 bg-emerald-100/50 text-emerald-600 rounded-lg">
                           <Image className="w-4 h-4" />
                         </div>
-                        Cambiar banner
+                        {t("changeBanner")}
                       </DropdownMenuItem>
 
                       <DropdownMenuSeparator className="my-1 bg-border/40" />
@@ -758,7 +764,7 @@ export default function ProfilePage() {
                         <div className="p-1.5 bg-red-100/50 text-red-600 rounded-lg">
                           <LogOut className="w-4 h-4" />
                         </div>
-                        Cerrar sesión
+                        {tNav("logout")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -773,13 +779,13 @@ export default function ProfilePage() {
                   </h1>
                   {(hasListings || roleBadge.toLowerCase().includes("vendedor")) && (
                     <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-none px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold shadow-sm">
-                      Vendedor
+                      {t("seller")}
                     </Badge>
                   )}
                 </div>
                 {/* Bio Snippet */}
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2 max-w-md mx-auto sm:mx-0">
-                  {profile?.bio || "Sin biografía. Añade una descripción para conectar mejor con tus clientes."}
+                  {profile?.bio || t("noBio")}
                 </p>
               </div>
 
@@ -787,11 +793,11 @@ export default function ProfilePage() {
               <div className="flex gap-2 sm:gap-4 shrink-0 mt-3 sm:mt-0">
                 <div className="text-center px-4 py-2 bg-secondary/10 rounded-2xl border border-secondary/20">
                   <div className="text-lg font-bold text-primary">{properties.length}</div>
-                  <div className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">Propiedades</div>
+                  <div className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">{t("myProperties")}</div>
                 </div>
                 <div className="text-center px-4 py-2 bg-secondary/10 rounded-2xl border border-secondary/20">
                   <div className="text-lg font-bold text-primary">{avgRating ? avgRating.toFixed(1) : "-"}</div>
-                  <div className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">Rating</div>
+                  <div className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">{t("rating")}</div>
                 </div>
               </div>
 
@@ -819,9 +825,9 @@ export default function ProfilePage() {
                 ))}
               </div>
               <div className="flex justify-end gap-3 mt-8">
-                <Button variant="ghost" onClick={() => setShowBannerModal(false)} className="rounded-full">Cancelar</Button>
+                <Button variant="ghost" onClick={() => setShowBannerModal(false)} className="rounded-full">{tCommon("cancel")}</Button>
                 <Button onClick={onSaveBanner} disabled={savingBanner || !bannerUrl} className="rounded-full px-8 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
-                  {savingBanner ? 'Guardando...' : 'Aplicar Portada'}
+                  {savingBanner ? tCommon("loading") : 'Aplicar Portada'}
                 </Button>
               </div>
             </div>
@@ -830,18 +836,18 @@ export default function ProfilePage() {
         {showBioEditor && (
           <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
             <div className="w-full max-w-xl bg-background rounded-3xl shadow-2xl border border-white/20 p-6 sm:p-8">
-              <h3 className="text-2xl font-serif font-bold text-primary mb-2">Tu Historia</h3>
+              <h3 className="text-2xl font-serif font-bold text-primary mb-2">{t("editBio")}</h3>
               <textarea
                 className="w-full mt-4 min-h-[150px] rounded-xl border-border/50 bg-secondary/5 p-4 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
                 value={bioText}
                 onChange={(e) => setBioText(e.target.value)}
-                placeholder="Cuéntanos sobre ti..."
+                placeholder="Cuéntanos más sobre ti..."
                 maxLength={500}
               />
               <div className="flex justify-end gap-3 mt-6">
-                <Button variant="ghost" onClick={() => setShowBioEditor(false)} className="rounded-full">Cancelar</Button>
+                <Button variant="ghost" onClick={() => setShowBioEditor(false)} className="rounded-full">{tCommon("cancel")}</Button>
                 <Button onClick={onSaveBio} disabled={savingBio} className="rounded-full px-8 bg-primary hover:bg-primary/90 text-white shadow-lg">
-                  Guardar Biografía
+                  {tCommon("save")}
                 </Button>
               </div>
             </div>
@@ -853,13 +859,13 @@ export default function ProfilePage() {
           <div className="flex justify-center mb-8 overflow-x-auto pb-2 scrollbar-hide px-4 -mx-4">
             <TabsList className="bg-secondary/10 p-1 rounded-full h-auto inline-flex shadow-inner min-w-max">
               <TabsTrigger className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300" value="listed">
-                <Building className="mr-2 h-4 w-4" /> Mis Propiedades
+                <Building className="mr-2 h-4 w-4" /> {t("myProperties")}
               </TabsTrigger>
               <TabsTrigger className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300" value="reviews">
-                <Star className="mr-2 h-4 w-4" /> Opiniones
+                <Star className="mr-2 h-4 w-4" /> {t("reviews")}
               </TabsTrigger>
               <TabsTrigger className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300" value="saved">
-                <Heart className="mr-2 h-4 w-4" /> Favoritos
+                <Heart className="mr-2 h-4 w-4" /> {t("favorites")}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -870,10 +876,10 @@ export default function ProfilePage() {
                 <div className="bg-background w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                   <Building className="w-8 h-8 text-muted-foreground/50" />
                 </div>
-                <h3 className="text-xl font-serif text-primary mb-2">Tu portafolio está vacío</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">Comienza a publicar propiedades hoy mismo y llega a miles de compradores.</p>
+                <h3 className="text-xl font-serif text-primary mb-2">{t("portfolioEmpty")}</h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">{t("portfolioEmptyDesc")}</p>
                 <Button asChild className="rounded-full px-8 h-12 bg-primary text-white shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 transition-all">
-                  <Link href="/properties/new">Crear primera propiedad</Link>
+                  <Link href="/properties/new">{t("publishFirstProperty")}</Link>
                 </Button>
               </div>
             ) : (
@@ -892,8 +898,8 @@ export default function ProfilePage() {
                   <div className="w-16 h-16 rounded-full bg-secondary/10 group-hover:bg-primary/10 flex items-center justify-center mb-4 transition-colors">
                     <Building className="w-8 h-8 text-primary/60 group-hover:text-primary transition-colors" />
                   </div>
-                  <span className="font-serif font-bold text-lg text-primary">Añadir Propiedad</span>
-                  <span className="text-sm text-muted-foreground mt-1">Expandir mi portafolio</span>
+                  <span className="font-serif font-bold text-lg text-primary">{t("addProperty")}</span>
+                  <span className="text-sm text-muted-foreground mt-1">{t("expandPortfolio")}</span>
                 </Link>
               </div>
             )}
@@ -906,7 +912,7 @@ export default function ProfilePage() {
                   <div className="inline-block p-4 rounded-full bg-background shadow-sm mb-4">
                     <Star className="w-8 h-8 text-muted-foreground/40" />
                   </div>
-                  <p className="text-muted-foreground">Aún no has recibido valoraciones.</p>
+                  <p className="text-muted-foreground">{t("noReviews")}</p>
                 </div>
               ) : (
                 <div className="grid gap-4">
@@ -919,8 +925,8 @@ export default function ProfilePage() {
                       </div>
                       {r.comment && (<p className="text-foreground/80 leading-relaxed italic">"{r.comment}"</p>)}
                       <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between text-xs text-muted-foreground">
-                        <span className="font-medium text-primary">Usuario Verificado</span>
-                        <time dateTime={r.created_at}>{new Date(r.created_at).toLocaleDateString()}</time>
+                        <span className="font-medium text-primary">{t("verifiedUser")}</span>
+                        <time dateTime={r.created_at}>{new Date(r.created_at).toLocaleDateString(locale)}</time>
                       </div>
                     </div>
                   ))}
@@ -933,8 +939,8 @@ export default function ProfilePage() {
             {savedProperties.length === 0 ? (
               <div className="text-center py-16 bg-secondary/5 rounded-3xl border border-dashed border-border">
                 <Heart className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-                <p className="text-primary font-medium">Tu lista de deseos está vacía.</p>
-                <p className="text-sm text-muted-foreground mt-1">Explora propiedades y guárdalas aquí para verlas después.</p>
+                <p className="text-primary font-medium">{t("wishlistEmpty")}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("wishlistEmptyDesc")}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -944,7 +950,7 @@ export default function ProfilePage() {
                     <button
                       onClick={() => handleRemoveFromSaved(property.id)}
                       className="absolute top-4 right-4 p-2 bg-white/90 hover:bg-white text-red-500 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110 z-10"
-                      title="Quitar de guardadas"
+                      title={t("removeFromSaved")}
                     >
                       <Heart className="w-5 h-5 fill-current" />
                     </button>

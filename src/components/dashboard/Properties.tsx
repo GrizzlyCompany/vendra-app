@@ -11,6 +11,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useToastContext } from "@/components/ToastProvider";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { handleSupabaseError } from "@/lib/errors";
+import { useTranslations } from "next-intl";
 
 type DashboardItem = {
   id: string;
@@ -25,6 +26,7 @@ type DashboardItem = {
 };
 
 export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
+  const t = useTranslations("dashboard.properties");
   const { user, loading: authLoading } = useAuth();
   const { error: showError, success: showSuccess } = useToastContext();
   const [items, setItems] = useState<DashboardItem[]>([]);
@@ -97,7 +99,7 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
       } catch (err) {
         if (mounted) {
           const error = handleSupabaseError(err);
-          showError("Error al cargar propiedades", error.message);
+          showError(t("loadError"), error.message);
           setLoading(false);
         }
       }
@@ -134,10 +136,11 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
 
       // Update the state to remove the deleted item
       setItems(prevItems => prevItems.filter(i => i.id !== item.id));
-      showSuccess("Eliminado", `${item.source === "property" ? "Propiedad" : "Proyecto"} eliminado correctamente`);
+      const typeLabel = item.source === "property" ? t("property") : t("project");
+      showSuccess(t("delete"), t("deleteSuccess", { type: typeLabel }));
     } catch (err) {
       const error = handleSupabaseError(err);
-      showError("Error al eliminar", error.message);
+      showError(t("deleteError"), error.message);
     }
   };
 
@@ -148,15 +151,15 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-serif font-bold text-foreground">Tu Portafolio</h2>
+        <h2 className="text-xl font-serif font-bold text-foreground">{t("title")}</h2>
         <Button onClick={onAdd} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6 shadow-lg shadow-primary/20 transition-all active:scale-95">
-          <Plus className="mr-2 size-4" /> Nuevo Proyecto
+          <Plus className="mr-2 size-4" /> {t("newProject")}
         </Button>
       </div>
 
       {!user ? (
         <div className="rounded-2xl border border-dashed border-muted-foreground/25 p-12 text-center text-muted-foreground bg-muted/5">
-          Debes iniciar sesión para ver tus propiedades
+          {t("loginRequired")}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -179,21 +182,21 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
               {/* Floating Status / Type Badge */}
               <div className="absolute top-4 left-4 z-10 flex gap-2">
                 <span className={`px-2.5 py-1 rounded-full backdrop-blur-md text-[10px] font-bold uppercase tracking-wide border shadow-sm ${p.source === 'project' ? 'bg-primary/90 text-white border-primary/20' : 'bg-secondary/90 text-secondary-foreground border-white/20'}`}>
-                  {p.source === 'project' ? 'Proyecto' : 'Propiedad'}
+                  {p.source === 'project' ? t("project") : t("property")}
                 </span>
               </div>
 
               {/* Action Buttons (Edit/Delete) - Top Right */}
               <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-4 group-hover:translate-x-0">
                 <Link href={p.source === "project" ? `/projects/${p.id}/edit` : `/properties/${p.id}/edit`}>
-                  <button className="h-9 w-9 rounded-full bg-white/10 hover:bg-white text-white hover:text-black backdrop-blur-md border border-white/20 flex items-center justify-center transition-all shadow-lg" title="Editar">
+                  <button className="h-9 w-9 rounded-full bg-white/10 hover:bg-white text-white hover:text-black backdrop-blur-md border border-white/20 flex items-center justify-center transition-all shadow-lg" title={t("edit")}>
                     <Edit className="w-4 h-4" />
                   </button>
                 </Link>
                 <button
                   onClick={() => handleDelete(p)}
                   className="h-9 w-9 rounded-full bg-white/10 hover:bg-red-500 text-white backdrop-blur-md border border-white/20 flex items-center justify-center transition-all shadow-lg"
-                  title="Eliminar"
+                  title={t("delete")}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -210,22 +213,22 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
 
                   <div className="flex items-center text-white/80 text-sm mb-4">
                     {/* Using a simple generic icon here effectively */}
-                    <span className="truncate opacity-90">{p.location || "Sin ubicación definida"}</span>
+                    <span className="truncate opacity-90">{p.location || t("noLocation")}</span>
                   </div>
 
                   <div className="flex items-center justify-between pt-4 border-t border-white/10">
                     <div className="flex flex-col">
-                      <span className="text-[10px] uppercase tracking-wider text-white/60 font-semibold">Precio</span>
+                      <span className="text-[10px] uppercase tracking-wider text-white/60 font-semibold">{t("price")}</span>
                       <span className="text-lg font-bold text-emerald-400 shadow-black drop-shadow-sm">
                         {typeof p.price === "number" && isFinite(p.price)
                           ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(p.price)
-                          : (p.priceRangeText || "Consultar")}
+                          : (p.priceRangeText || t("consult"))}
                       </span>
                     </div>
 
                     <Link href={p.source === "project" ? `/projects/${p.id}` : `/properties/view?id=${p.id}`}>
                       <div className="flex items-center gap-1 text-sm font-medium text-white hover:text-primary transition-colors">
-                        Ver detalles
+                        {t("details")}
                         {/* Simple arrow icon */}
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                       </div>
@@ -240,9 +243,9 @@ export function PropertiesSection({ onAdd }: { onAdd: () => void }) {
               <div className="mx-auto h-16 w-16 rounded-full bg-muted/20 flex items-center justify-center mb-4 text-muted-foreground">
                 <Plus className="h-8 w-8" />
               </div>
-              <h3 className="text-lg font-serif font-medium text-foreground mb-1">Aún no tienes propiedades</h3>
-              <p className="text-sm text-muted-foreground mb-6">Comienza tu viaje inmobiliario publicando tu primera propiedad o proyecto.</p>
-              <Button onClick={onAdd} variant="outline" className="rounded-full">Crear ahora</Button>
+              <h3 className="text-lg font-serif font-medium text-foreground mb-1">{t("empty")}</h3>
+              <p className="text-sm text-muted-foreground mb-6">{t("emptyDesc")}</p>
+              <Button onClick={onAdd} variant="outline" className="rounded-full">{t("createNow")}</Button>
             </div>
           )}
         </div>

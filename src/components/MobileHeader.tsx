@@ -5,8 +5,10 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useTranslations } from "next-intl";
 
 export function MobileHeader() {
+  const tAuth = useTranslations("auth");
   const { user, loading } = useAuth();
 
   // Don't show the mobile header if user is authenticated (they'll see the regular navbar)
@@ -34,7 +36,7 @@ export function MobileHeader() {
         <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full min-h-[44px] px-4">
           <Link href="/login">
             <LogIn className="size-4 mr-2" />
-            Iniciar Sesión
+            {tAuth("login")}
           </Link>
         </Button>
       </div>

@@ -6,6 +6,7 @@ import { Navbar } from "@/components/Navbar";
 import AuthenticatedBottomNav from "@/components/AuthenticatedBottomNav";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/ToastProvider";
+import { LanguageProvider } from "@/components/LanguageProvider";
 
 import { ClientLayout } from "@/components/ClientLayout";
 import { SplashScreenWrapper } from "@/components/SplashScreenWrapper";
@@ -74,20 +75,23 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ThemeProvider>
-          <SplashScreenWrapper />
-          <ErrorBoundary>
-            <ToastProvider>
-              <div className="app-container">
-                <Navbar />
-                <ClientLayout>
-                  {children}
-                </ClientLayout>
-              </div>
-              <AuthenticatedBottomNav />
-            </ToastProvider>
-          </ErrorBoundary>
+          <LanguageProvider>
+            <SplashScreenWrapper />
+            <ErrorBoundary>
+              <ToastProvider>
+                <div className="app-container">
+                  <Navbar />
+                  <ClientLayout>
+                    {children}
+                  </ClientLayout>
+                </div>
+                <AuthenticatedBottomNav />
+              </ToastProvider>
+            </ErrorBoundary>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>
   );
 }
+

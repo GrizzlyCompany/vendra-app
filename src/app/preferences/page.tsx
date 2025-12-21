@@ -20,7 +20,9 @@ import {
     Fingerprint,
     Trash2,
     AlertTriangle,
-    Clock
+    Clock,
+    Languages,
+    Check
 } from "lucide-react";
 import { usePushNotifications } from "@/features/messaging/hooks/usePushNotifications";
 import { PUSH_CONFIG } from "@/features/messaging/config/push";
@@ -30,11 +32,18 @@ import {
     enableBiometricLogin,
     disableBiometricLogin
 } from "@/lib/capacitor/biometrics";
+import { useLanguage } from "@/components/LanguageProvider";
+import { locales, localeNames, Locale } from "@/i18n/config";
+import { useTranslations } from "next-intl";
 
 export default function PreferencesPage() {
+    const t = useTranslations("preferences");
+    const tCommon = useTranslations("common");
+    const tAuth = useTranslations("auth");
     const router = useRouter();
     const { theme, setTheme, resolvedTheme } = useTheme();
     const { permission, subscribe } = usePushNotifications();
+    const { locale, setLocale } = useLanguage();
     const [mounted, setMounted] = useState(false);
     const [loading, setLoading] = useState(false);
 
@@ -103,7 +112,8 @@ export default function PreferencesPage() {
     };
 
     const handleDeleteAccount = async () => {
-        if (deleteConfirmText !== "ELIMINAR") return;
+        const confirmWord = t("deleteConfirmWord");
+        if (deleteConfirmText !== confirmWord) return;
 
         setDeleteLoading(true);
         try {
@@ -174,6 +184,7 @@ export default function PreferencesPage() {
 
             setDeletionScheduledAt(null);
             setShowDeleteConfirm(false);
+            setDeleteConfirmText("");
         } catch (error) {
             console.error("Error canceling deletion:", error);
         } finally {
@@ -197,8 +208,8 @@ export default function PreferencesPage() {
                         <ChevronLeft className="h-6 w-6" />
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-serif font-bold text-primary">Preferencias</h1>
-                        <p className="text-muted-foreground text-sm">Personaliza tu experiencia en Vendra</p>
+                        <h1 className="text-3xl font-serif font-bold text-primary">{t("title")}</h1>
+                        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
                     </div>
                 </div>
 
@@ -208,15 +219,15 @@ export default function PreferencesPage() {
                         <CardHeader className="pb-4">
                             <div className="flex items-center gap-2 mb-1">
                                 <Sun className="h-4 w-4 text-primary" />
-                                <CardTitle className="text-lg">Apariencia</CardTitle>
+                                <CardTitle className="text-lg">{t("appearance")}</CardTitle>
                             </div>
-                            <CardDescription>Personaliza visualmente la aplicación</CardDescription>
+                            <CardDescription>{t("customizeApp")}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-0.5">
-                                    <Label className="text-base">Modo Oscuro</Label>
-                                    <p className="text-xs text-muted-foreground">Cambia entre tema claro y oscuro</p>
+                                    <Label className="text-base">{t("darkMode")}</Label>
+                                    <p className="text-xs text-muted-foreground">{t("toggleTheme")}</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <Sun className={`h-4 w-4 ${!isDarkMode ? 'text-amber-500' : 'text-muted-foreground'}`} />
@@ -230,21 +241,56 @@ export default function PreferencesPage() {
                         </CardContent>
                     </Card>
 
+                    {/* Language Section */}
+                    <Card className="border-none shadow-xl bg-background/50 backdrop-blur-xl">
+                        <CardHeader className="pb-4">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Languages className="h-4 w-4 text-primary" />
+                                <CardTitle className="text-lg">{t("language")}</CardTitle>
+                            </div>
+                            <CardDescription>{t("selectLanguage")}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {locales.map((loc) => (
+                                <button
+                                    key={loc}
+                                    onClick={() => setLocale(loc)}
+                                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${locale === loc
+                                        ? 'bg-primary/10 border-2 border-primary'
+                                        : 'bg-secondary/30 border-2 border-transparent hover:bg-secondary/50'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xl">
+                                            {loc === 'es' ? '🇪🇸' : '🇺🇸'}
+                                        </span>
+                                        <span className={`font-medium ${locale === loc ? 'text-primary' : 'text-foreground'}`}>
+                                            {localeNames[loc]}
+                                        </span>
+                                    </div>
+                                    {locale === loc && (
+                                        <Check className="h-5 w-5 text-primary" />
+                                    )}
+                                </button>
+                            ))}
+                        </CardContent>
+                    </Card>
+
                     {/* Security Section (Biometrics) */}
                     {isBiometricSupported && (
                         <Card className="border-none shadow-xl bg-background/50 backdrop-blur-xl">
                             <CardHeader className="pb-4">
                                 <div className="flex items-center gap-2 mb-1">
                                     <Fingerprint className="h-4 w-4 text-primary" />
-                                    <CardTitle className="text-lg">Seguridad</CardTitle>
+                                    <CardTitle className="text-lg">{t("security")}</CardTitle>
                                 </div>
-                                <CardDescription>Protege tu acceso con biometría</CardDescription>
+                                <CardDescription>{t("securityDesc")}</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-0.5 flex-1 pr-4">
-                                        <Label className="text-base">Inicio de sesión biométrico</Label>
-                                        <p className="text-xs text-muted-foreground">Usa tu huella digital o FaceID para entrar rápidamente</p>
+                                        <Label className="text-base">{t("biometricLogin")}</Label>
+                                        <p className="text-xs text-muted-foreground">{t("biometricDesc")}</p>
                                     </div>
                                     <Switch
                                         checked={biometricEnabled}
@@ -260,20 +306,20 @@ export default function PreferencesPage() {
                         <CardHeader className="pb-4">
                             <div className="flex items-center gap-2 mb-1">
                                 <Bell className="h-4 w-4 text-primary" />
-                                <CardTitle className="text-lg">Notificaciones</CardTitle>
+                                <CardTitle className="text-lg">{t("notifications")}</CardTitle>
                             </div>
-                            <CardDescription>Controla cómo recibes avisos de la app</CardDescription>
+                            <CardDescription>{t("notificationsDesc")}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-0.5 flex-1 pr-4">
                                     <Label className="text-base flex items-center gap-2">
-                                        Notificaciones Push
+                                        {t("pushNotifications")}
                                         {permission === 'granted' && (
-                                            <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Activo</span>
+                                            <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t("active")}</span>
                                         )}
                                     </Label>
-                                    <p className="text-xs text-muted-foreground">Recibe alertas al instante sobre nuevos mensajes o actividad</p>
+                                    <p className="text-xs text-muted-foreground">{t("pushDesc")}</p>
                                 </div>
                                 <Button
                                     size="sm"
@@ -282,7 +328,7 @@ export default function PreferencesPage() {
                                     onClick={handlePushToggle}
                                     className="rounded-full px-5"
                                 >
-                                    {permission === 'granted' ? 'Configurado' : loading ? 'Configurando...' : 'Activar'}
+                                    {permission === 'granted' ? t("configured") : loading ? t("configuring") : t("activate")}
                                 </Button>
                             </div>
                         </CardContent>
@@ -293,15 +339,15 @@ export default function PreferencesPage() {
                         <CardHeader className="pb-4">
                             <div className="flex items-center gap-2 mb-1">
                                 <ShieldCheck className="h-4 w-4 text-primary" />
-                                <CardTitle className="text-lg">Privacidad</CardTitle>
+                                <CardTitle className="text-lg">{t("privacy")}</CardTitle>
                             </div>
-                            <CardDescription>Gestiona quién puede ver tu información</CardDescription>
+                            <CardDescription>{t("privacyDesc")}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-0.5">
-                                    <Label className="text-base">Perfil Público</Label>
-                                    <p className="text-xs text-muted-foreground">Permitir que otros vean tu perfil y propiedades</p>
+                                    <Label className="text-base">{t("publicProfile")}</Label>
+                                    <p className="text-xs text-muted-foreground">{t("publicProfileDesc")}</p>
                                 </div>
                                 <Switch
                                     checked={isPublic}
@@ -311,8 +357,8 @@ export default function PreferencesPage() {
 
                             <div className="flex items-center justify-between">
                                 <div className="space-y-0.5">
-                                    <Label className="text-base">Mostrar Email</Label>
-                                    <p className="text-xs text-muted-foreground">Mostrar tu correo en tu perfil público</p>
+                                    <Label className="text-base">{t("showEmail")}</Label>
+                                    <p className="text-xs text-muted-foreground">{t("showEmailDesc")}</p>
                                 </div>
                                 <Switch
                                     checked={showEmail}
@@ -326,7 +372,7 @@ export default function PreferencesPage() {
                     <div className="pt-4 px-2 space-y-4">
                         <div className="flex items-center gap-3 text-muted-foreground/60">
                             <Smartphone className="h-4 w-4" />
-                            <span className="text-xs">Versión de la aplicación: 1.0.2 (Build 20251220)</span>
+                            <span className="text-xs">{t("appVersion")}: 1.0.2 (Build 20251220)</span>
                         </div>
                     </div>
 
@@ -335,9 +381,9 @@ export default function PreferencesPage() {
                         <CardHeader className="pb-4">
                             <div className="flex items-center gap-2 mb-1">
                                 <Trash2 className="h-4 w-4 text-red-600" />
-                                <CardTitle className="text-lg text-red-700 dark:text-red-400">Zona de Peligro</CardTitle>
+                                <CardTitle className="text-lg text-red-700 dark:text-red-400">{t("dangerZone")}</CardTitle>
                             </div>
-                            <CardDescription className="text-red-600/70">Acciones irreversibles para tu cuenta</CardDescription>
+                            <CardDescription className="text-red-600/70">{t("dangerZoneDesc")}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {deletionScheduledAt ? (
@@ -345,10 +391,10 @@ export default function PreferencesPage() {
                                     <div className="flex items-start gap-3">
                                         <Clock className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                                         <div>
-                                            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Eliminación programada</p>
+                                            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">{t("deletionScheduled")}</p>
                                             <p className="text-xs text-amber-600/80 mt-1">
-                                                Tu cuenta se eliminará permanentemente el <strong>{new Date(deletionScheduledAt).toLocaleDateString("es-DO", { day: '2-digit', month: 'long', year: 'numeric' })}</strong>.
-                                                Puedes cancelar este proceso en cualquier momento antes de esa fecha.
+                                                {t("deletionScheduledDesc")} <strong>{new Date(deletionScheduledAt).toLocaleDateString(locale === 'en' ? "en-US" : "es-DO", { day: '2-digit', month: 'long', year: 'numeric' })}</strong>.
+                                                {tAuth('loginWillReactivate')}
                                             </p>
                                         </div>
                                     </div>
@@ -359,14 +405,14 @@ export default function PreferencesPage() {
                                         disabled={deleteLoading}
                                         className="w-full rounded-full border-amber-300 text-amber-700 hover:bg-amber-100"
                                     >
-                                        {deleteLoading ? "Cancelando..." : "Cancelar eliminación y reactivar cuenta"}
+                                        {deleteLoading ? t("canceling") : t("cancelDeletion")}
                                     </Button>
                                 </div>
                             ) : !showDeleteConfirm ? (
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-0.5 flex-1 pr-4">
-                                        <Label className="text-base text-red-700 dark:text-red-400">Eliminar mi cuenta</Label>
-                                        <p className="text-xs text-red-600/70">Esta acción programará la eliminación permanente de tu cuenta en 30 días</p>
+                                        <Label className="text-base text-red-700 dark:text-red-400">{t("deleteAccount")}</Label>
+                                        <p className="text-xs text-red-600/70">{t("deleteAccountDesc")}</p>
                                     </div>
                                     <Button
                                         variant="destructive"
@@ -374,7 +420,7 @@ export default function PreferencesPage() {
                                         onClick={() => setShowDeleteConfirm(true)}
                                         className="rounded-full px-5"
                                     >
-                                        Eliminar Cuenta
+                                        {t("deleteAccountButton")}
                                     </Button>
                                 </div>
                             ) : (
@@ -382,19 +428,19 @@ export default function PreferencesPage() {
                                     <div className="flex items-start gap-3">
                                         <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
                                         <div>
-                                            <p className="text-sm font-medium text-red-700 dark:text-red-400">¿Estás seguro?</p>
+                                            <p className="text-sm font-medium text-red-700 dark:text-red-400">{t("areYouSure")}</p>
                                             <p className="text-xs text-red-600/80 mt-1">
-                                                Tu cuenta será desactivada inmediatamente y eliminada permanentemente en 30 días.
+                                                {t("accountWillBeDeleted")}
                                             </p>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-xs text-red-700 dark:text-red-400">Escribe ELIMINAR para confirmar:</Label>
+                                        <Label className="text-xs text-red-700 dark:text-red-400">{t("typeDeleteConfirm")}</Label>
                                         <input
                                             type="text"
                                             value={deleteConfirmText}
                                             onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
-                                            placeholder="ELIMINAR"
+                                            placeholder={t("deleteConfirmWord")}
                                             className="w-full px-3 py-2 text-sm border border-red-300 dark:border-red-800 rounded-lg bg-white dark:bg-red-950/50 text-red-700 dark:text-red-300 placeholder:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-500"
                                         />
                                     </div>
@@ -405,16 +451,16 @@ export default function PreferencesPage() {
                                             onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }}
                                             className="flex-1 rounded-full"
                                         >
-                                            Cancelar
+                                            {tCommon("cancel")}
                                         </Button>
                                         <Button
                                             variant="destructive"
                                             size="sm"
                                             onClick={handleDeleteAccount}
-                                            disabled={deleteConfirmText !== "ELIMINAR" || deleteLoading}
+                                            disabled={deleteConfirmText !== t("deleteConfirmWord") || deleteLoading}
                                             className="flex-1 rounded-full"
                                         >
-                                            {deleteLoading ? "Programando..." : "Confirmar Eliminación"}
+                                            {deleteLoading ? t("scheduling") : t("confirmDeletion")}
                                         </Button>
                                     </div>
                                 </div>

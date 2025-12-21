@@ -8,8 +8,10 @@ import { useStatsCharts } from "@/hooks/useStatsCharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ViewsTrendChart } from "./ViewsTrendChart";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 export function StatsSection() {
+  const t = useTranslations("dashboard.stats");
   const { stats, propertyViews, projectViews, loading, error } = useStats();
   const { monthlyViews, loading: chartsLoading, error: chartsError, refetchMonthlyViews } = useStatsCharts();
   const [period, setPeriod] = useState("6");
@@ -22,7 +24,7 @@ export function StatsSection() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <h2 className="font-serif text-2xl text-[#1C4B2E]">Estadísticas</h2>
+        <h2 className="font-serif text-2xl text-[#1C4B2E]">{t("title")}</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="rounded-2xl border shadow-md">
@@ -39,11 +41,11 @@ export function StatsSection() {
   if (error) {
     return (
       <div className="space-y-4">
-        <h2 className="font-serif text-2xl text-[#1C4B2E]">Estadísticas</h2>
+        <h2 className="font-serif text-2xl text-[#1C4B2E]">{t("title")}</h2>
         <Card className="rounded-2xl border shadow-md">
           <CardContent className="p-4">
             <div className="text-center text-red-600">
-              Error al cargar estadísticas: {error}
+              {t("loadError")}: {error}
             </div>
           </CardContent>
         </Card>
@@ -58,20 +60,20 @@ export function StatsSection() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-serif text-2xl text-[#1C4B2E]">Estadísticas</h2>
+        <h2 className="font-serif text-2xl text-[#1C4B2E]">{t("title")}</h2>
         <div className="flex items-center gap-3">
           <select
             value={period}
             onChange={(e) => handlePeriodChange(e.target.value)}
             className="h-10 w-[180px] rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="3">Últimos 3 meses</option>
-            <option value="6">Últimos 6 meses</option>
-            <option value="12">Último año</option>
+            <option value="3">{t("periods.3months")}</option>
+            <option value="6">{t("periods.6months")}</option>
+            <option value="12">{t("periods.1year")}</option>
           </select>
           <Button variant="outline" size="sm">
             <Download className="size-4 mr-2" />
-            Exportar
+            {t("export")}
           </Button>
         </div>
       </div>
@@ -81,7 +83,7 @@ export function StatsSection() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-[#6B7280]">Propiedades activas</div>
+                <div className="text-sm text-[#6B7280]">{t("activeProperties")}</div>
                 <div className="text-2xl font-semibold text-[#1C4B2E]">
                   {stats?.activeProperties || 0}
                 </div>
@@ -94,7 +96,7 @@ export function StatsSection() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-[#6B7280]">Proyectos activos</div>
+                <div className="text-sm text-[#6B7280]">{t("activeProjects")}</div>
                 <div className="text-2xl font-semibold text-[#1C4B2E]">
                   {stats?.activeProjects || 0}
                 </div>
@@ -107,7 +109,7 @@ export function StatsSection() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-[#6B7280]">Visualizaciones totales</div>
+                <div className="text-sm text-[#6B7280]">{t("totalViews")}</div>
                 <div className="text-2xl font-semibold text-[#1C4B2E]">
                   {totalViews.toLocaleString()}
                 </div>
@@ -120,7 +122,7 @@ export function StatsSection() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-[#6B7280]">Visualizaciones este mes</div>
+                <div className="text-sm text-[#6B7280]">{t("viewsThisMonth")}</div>
                 <div className="text-2xl font-semibold text-[#1C4B2E]">
                   {totalViewsThisMonth.toLocaleString()}
                 </div>
@@ -135,7 +137,7 @@ export function StatsSection() {
       <ViewsTrendChart
         data={monthlyViews}
         loading={chartsLoading}
-        title={`Tendencia de visualizaciones - ${period === "3" ? "3 meses" : period === "12" ? "1 año" : "6 meses"}`}
+        title={t("trend", { period: period === "3" ? t("periods.3months") : period === "12" ? t("periods.1year") : t("periods.6months") })}
       />
 
       {/* Property-specific view statistics */}
@@ -144,7 +146,7 @@ export function StatsSection() {
           <CardHeader>
             <CardTitle className="font-serif flex items-center gap-2">
               <BarChart3 className="size-5" />
-              Visualizaciones por propiedad
+              {t("viewsPerProperty")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -156,7 +158,7 @@ export function StatsSection() {
                       {property.title}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Publicado: {new Date(property.inserted_at).toLocaleDateString('es-ES')}
+                      {t("published")}: {new Date(property.inserted_at).toLocaleDateString()}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -169,7 +171,7 @@ export function StatsSection() {
               ))}
               {propertyViews.length > 10 && (
                 <div className="text-center text-sm text-gray-500 pt-2">
-                  Y {propertyViews.length - 10} propiedades más...
+                  {t("moreProperties", { count: propertyViews.length - 10 })}
                 </div>
               )}
             </div>
@@ -183,7 +185,7 @@ export function StatsSection() {
           <CardHeader>
             <CardTitle className="font-serif flex items-center gap-2">
               <Building className="size-5" />
-              Visualizaciones por proyecto
+              {t("viewsPerProject")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -195,7 +197,7 @@ export function StatsSection() {
                       {project.title}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Publicado: {new Date(project.inserted_at).toLocaleDateString('es-ES')}
+                      {t("published")}: {new Date(project.inserted_at).toLocaleDateString()}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -208,7 +210,7 @@ export function StatsSection() {
               ))}
               {projectViews.length > 10 && (
                 <div className="text-center text-sm text-gray-500 pt-2">
-                  Y {projectViews.length - 10} proyectos más...
+                  {t("moreProjects", { count: projectViews.length - 10 })}
                 </div>
               )}
             </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import { getTranslations } from "next-intl/server";
 import { ChevronLeft, Search, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
@@ -25,6 +26,7 @@ async function getEmpresaProjects() {
 
 export default async function ProjectsIndexPage() {
   const projects = await getEmpresaProjects();
+  const t = await getTranslations("projects");
 
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-background mobile-bottom-safe">
@@ -41,7 +43,7 @@ export default async function ProjectsIndexPage() {
               <ChevronLeft className="w-6 h-6" />
             </Link>
           </Button>
-          <span className="font-serif font-bold text-lg">Proyectos</span>
+          <span className="font-serif font-bold text-lg">{t("title")}</span>
           <div className="w-10"></div> {/* Spacer */}
         </div>
       </DetailBackButton>
@@ -51,11 +53,10 @@ export default async function ProjectsIndexPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-4">
           <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold text-primary tracking-tight">
-            Desarrollos Exclusivos
+            {t("heroTitle")}
           </h1>
           <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto font-light leading-relaxed">
-            Explora nuestra colección curada de proyectos inmobiliarios de vanguardia.
-            El hogar de tus sueños, diseñado por las mejores constructoras.
+            {t("heroDesc")}
           </p>
 
           {/* Search/Filter Bar Placeholder - Visual Only */}
@@ -64,7 +65,7 @@ export default async function ProjectsIndexPage() {
               <Search className="w-5 h-5" />
             </div>
             <Input
-              placeholder="Buscar por ciudad o nombre..."
+              placeholder={t("searchPlaceholder")}
               className="border-none bg-transparent shadow-none focus-visible:ring-0 h-10 text-base"
             />
             <Button size="icon" variant="ghost" className="rounded-full hover:bg-black/5">
@@ -81,8 +82,8 @@ export default async function ProjectsIndexPage() {
             <div className="w-24 h-24 bg-secondary/10 rounded-full flex items-center justify-center mb-4">
               <Building2 className="w-10 h-10 text-primary/40" />
             </div>
-            <h3 className="font-serif text-xl font-bold text-primary">Próximamente</h3>
-            <p className="text-muted-foreground mt-2">Estamos curando los mejores proyectos para ti.</p>
+            <h3 className="font-serif text-xl font-bold text-primary">{t("comingSoonTitle")}</h3>
+            <p className="text-muted-foreground mt-2">{t("comingSoonDesc")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">

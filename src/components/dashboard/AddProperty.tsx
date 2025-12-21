@@ -9,8 +9,12 @@ import { supabase } from "@/lib/supabase/client";
 import { ImageSelector } from "@/components/dashboard/ImageSelector";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import { MapPin, Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function AddPropertySection() {
+  const t = useTranslations("forms.property");
+  const tProj = useTranslations("projects"); // Reuse amenities/unit types
+
   const [form, setForm] = useState({
     // 1. Información General
     projectName: "",
@@ -218,13 +222,13 @@ export function AddPropertySection() {
     setError(null);
     setSuccess(null);
     if (!uid) {
-      setError("Debes iniciar sesión para publicar.");
+      setError(t("feedback.authError"));
       return;
     }
 
     // Validaciones mínimas
     if (!form.projectName || !form.category) {
-      setError("Nombre del proyecto y categoría son obligatorios.");
+      setError(t("feedback.requiredError"));
       return;
     }
 
@@ -244,7 +248,7 @@ export function AddPropertySection() {
           const path = `${uid}/projects/${Date.now()}-${i}-${Math.random().toString(36).slice(2)}.${ext}`;
           const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: false, cacheControl: "3600" });
           if (upErr) {
-            setError(`Error al subir imagen: ${upErr.message}`);
+            setError(t("feedback.uploadError", { fileType: "imagen", message: upErr.message }));
             setUploading(false);
             return;
           }
@@ -263,7 +267,7 @@ export function AddPropertySection() {
           const path = `${uid}/projects/${Date.now()}-plan-${i}-${Math.random().toString(36).slice(2)}.${ext}`;
           const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: false, cacheControl: "3600" });
           if (upErr) {
-            setError(`Error al subir plano: ${upErr.message}`);
+            setError(t("feedback.uploadError", { fileType: "plano", message: upErr.message }));
             setUploading(false);
             return;
           }
@@ -282,7 +286,7 @@ export function AddPropertySection() {
           const path = `${uid}/projects/${Date.now()}-brochure-${i}-${Math.random().toString(36).slice(2)}.${ext}`;
           const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: false, cacheControl: "3600" });
           if (upErr) {
-            setError(`Error al subir brochure: ${upErr.message}`);
+            setError(t("feedback.uploadError", { fileType: "brochure", message: upErr.message }));
             setUploading(false);
             return;
           }
@@ -328,11 +332,11 @@ export function AddPropertySection() {
       const { error: insertError } = await supabase.from("projects").insert(payload);
       if (insertError) throw insertError;
 
-      setSuccess("Proyecto publicado correctamente.");
+      setSuccess(t("feedback.success"));
       // Opcional: reset del formulario
       // setForm({ ...estadoInicial })
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al publicar el proyecto.");
+      setError(err instanceof Error ? err.message : t("feedback.genericError"));
     } finally {
       setSaving(false);
     }
@@ -342,8 +346,8 @@ export function AddPropertySection() {
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
       <div className="text-center space-y-2 mb-8">
-        <h2 className="font-serif text-3xl font-bold text-foreground">Crear Nuevo Proyecto</h2>
-        <p className="text-muted-foreground text-sm max-w-lg mx-auto">Completa la información detallada para presentar tu desarrollo inmobiliario al mercado.</p>
+        <h2 className="font-serif text-3xl font-bold text-foreground">{t("title")}</h2>
+        <p className="text-muted-foreground text-sm max-w-lg mx-auto">{t("subtitle")}</p>
       </div>
 
       <form className="space-y-8" onSubmit={onSubmit}>
@@ -367,20 +371,20 @@ export function AddPropertySection() {
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
-              Información General
+              {t("sections.general")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="grid gap-2 md:col-span-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="projectName">Nombre del proyecto</label>
-              <Input id="projectName" name="projectName" value={form.projectName} onChange={onChange} placeholder='Ej: "Residencial Vendra Towers"' className="h-11 bg-background/50" />
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="projectName">{t("labels.projectName")}</label>
+              <Input id="projectName" name="projectName" value={form.projectName} onChange={onChange} placeholder={t("placeholders.projectName")} className="h-11 bg-background/50" />
             </div>
             <div className="grid gap-2 md:col-span-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="descriptionTitle">Título Publicitario</label>
-              <Input id="descriptionTitle" name="descriptionTitle" value={form.descriptionTitle} onChange={onChange} placeholder='Ej: "Vive en la Cima del Lujo Urbano"' className="h-11 bg-background/50" />
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="descriptionTitle">{t("labels.adTitle")}</label>
+              <Input id="descriptionTitle" name="descriptionTitle" value={form.descriptionTitle} onChange={onChange} placeholder={t("placeholders.adTitle")} className="h-11 bg-background/50" />
             </div>
             <div className="grid gap-2 md:col-span-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="shortDescription">Descripción Breve</label>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="shortDescription">{t("labels.shortDesc")}</label>
               <textarea
                 id="shortDescription"
                 name="shortDescription"
@@ -389,22 +393,22 @@ export function AddPropertySection() {
                 onChange={onChange}
                 rows={3}
                 className="rounded-md border bg-background/50 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
-                placeholder="Describe los puntos clave que hacen único a este proyecto..."
+                placeholder={t("placeholders.shortDesc")}
               />
               <div className="text-xs text-right text-muted-foreground">{form.shortDescription.length}/300</div>
             </div>
             <div className="grid gap-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Categoría</label>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">{t("labels.category")}</label>
               <FormSelect
                 value={form.category}
                 onChange={(val) => setForm(p => ({ ...p, category: val }))}
-                placeholder="Seleccionar Tipo..."
+                placeholder={t("placeholders.selectType")}
                 options={[
-                  { value: "Residencial", label: "Residencial" },
-                  { value: "Comercial", label: "Comercial" },
-                  { value: "Mixto", label: "Mixto" },
-                  { value: "Turístico", label: "Turístico" },
-                  { value: "Otro", label: "Otro" }
+                  { value: "Residencial", label: t("options.residential") },
+                  { value: "Comercial", label: t("options.commercial") },
+                  { value: "Mixto", label: t("options.mixed") },
+                  { value: "Turístico", label: t("options.tourist") },
+                  { value: "Otro", label: t("options.other") }
                 ]}
               />
             </div>
@@ -416,7 +420,7 @@ export function AddPropertySection() {
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
-              Ubicación
+              {t("sections.location")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
@@ -441,29 +445,29 @@ export function AddPropertySection() {
                 <div className="w-full h-full flex items-center justify-center bg-muted/20">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                    <span className="text-sm font-medium">Cargando Mapa...</span>
+                    <span className="text-sm font-medium">{t("actions.mapMap")}</span>
                   </div>
                 </div>
               )}
               {!markerPos && isLoaded && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-xs font-medium backdrop-blur-sm pointer-events-none">
-                  Toca en el mapa para ubicar el proyecto
+                  {t("actions.mapHint")}
                 </div>
               )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="grid gap-2 md:col-span-2">
-                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="address">Dirección Exacta</label>
-                <Input id="address" name="address" value={form.address} onChange={onChange} placeholder="Ej: Av. Winston Churchill #123" className="h-11 bg-background/50 icon-map" />
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="address">{t("labels.address")}</label>
+                <Input id="address" name="address" value={form.address} onChange={onChange} placeholder={t("placeholders.address")} className="h-11 bg-background/50 icon-map" />
               </div>
               <div className="grid gap-2">
-                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="cityProvince">Ciudad / Provincia</label>
-                <Input id="cityProvince" name="cityProvince" value={form.cityProvince} onChange={onChange} placeholder="Ej: Santo Domingo" className="h-11 bg-background/50" />
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="cityProvince">{t("labels.city")}</label>
+                <Input id="cityProvince" name="cityProvince" value={form.cityProvince} onChange={onChange} placeholder={t("placeholders.city")} className="h-11 bg-background/50" />
               </div>
               <div className="grid gap-2">
-                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="zoneSector">Sector / Zona</label>
-                <Input id="zoneSector" name="zoneSector" value={form.zoneSector} onChange={onChange} placeholder="Ej: Piantini" className="h-11 bg-background/50" />
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="zoneSector">{t("labels.sector")}</label>
+                <Input id="zoneSector" name="zoneSector" value={form.zoneSector} onChange={onChange} placeholder={t("placeholders.sector")} className="h-11 bg-background/50" />
               </div>
             </div>
           </CardContent>
@@ -474,42 +478,42 @@ export function AddPropertySection() {
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
-              Detalles del Proyecto
+              {t("sections.details")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="grid gap-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Estado de Obra</label>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">{t("labels.status")}</label>
               <FormSelect
                 value={form.projectStatus}
                 onChange={(val) => setForm(p => ({ ...p, projectStatus: val }))}
-                placeholder="Seleccionar..."
+                placeholder={t("placeholders.select")}
                 options={[
-                  { value: "En planos", label: "En planos" },
-                  { value: "En construcción", label: "En construcción" },
-                  { value: "En preventa", label: "En preventa" },
-                  { value: "Terminado", label: "Terminado" }
+                  { value: "En planos", label: t("options.plans") },
+                  { value: "En construcción", label: t("options.construction") },
+                  { value: "En preventa", label: t("options.presale") },
+                  { value: "Terminado", label: t("options.ready") }
                 ]}
               />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm text-foreground/80 font-medium" htmlFor="deliveryDate">Fecha de Entrega</label>
+              <label className="text-sm text-foreground/80 font-medium" htmlFor="deliveryDate">{t("labels.deliveryDate")}</label>
               <Input type="date" id="deliveryDate" name="deliveryDate" value={form.deliveryDate} onChange={onChange} className="h-11 bg-background/50" />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm text-foreground/80 font-medium" htmlFor="unitsCount">Total Unidades</label>
+              <label className="text-sm text-foreground/80 font-medium" htmlFor="unitsCount">{t("labels.totalUnits")}</label>
               <Input type="number" min="0" id="unitsCount" name="unitsCount" value={form.unitsCount} onChange={onChange} placeholder="0" className="h-11 bg-background/50" />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm text-foreground/80 font-medium" htmlFor="floors">Niveles / Pisos</label>
+              <label className="text-sm text-foreground/80 font-medium" htmlFor="floors">{t("labels.floors")}</label>
               <Input type="number" min="0" id="floors" name="floors" value={form.floors} onChange={onChange} placeholder="0" className="h-11 bg-background/50" />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm text-foreground/80 font-medium" htmlFor="landSize">Terreno (m²)</label>
+              <label className="text-sm text-foreground/80 font-medium" htmlFor="landSize">{t("labels.landSize")}</label>
               <Input type="number" min="0" id="landSize" name="landSize" value={form.landSize} onChange={onChange} placeholder="0" className="h-11 bg-background/50" />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm text-foreground/80 font-medium" htmlFor="builtAreas">Constr. Total (m²)</label>
+              <label className="text-sm text-foreground/80 font-medium" htmlFor="builtAreas">{t("labels.builtArea")}</label>
               <Input type="number" min="0" id="builtAreas" name="builtAreas" value={form.builtAreas} onChange={onChange} placeholder="0" className="h-11 bg-background/50" />
             </div>
           </CardContent>
@@ -520,36 +524,36 @@ export function AddPropertySection() {
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">4</span>
-              Unidades & Distribución
+              {t("sections.units")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
-            <p className="text-sm text-muted-foreground mb-2">Agrega los diferentes tipos de unidades que ofrece este proyecto.</p>
+            <p className="text-sm text-muted-foreground mb-2">{t("unitsHint")}</p>
 
             {form.unitEntries.map((entry, index) => (
               <div key={index} className="flex flex-col sm:flex-row gap-3 p-4 rounded-xl border border-border/50 bg-background/30">
                 <div className="flex-1 grid gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Tipo de Unidad</label>
+                  <label className="text-xs font-medium text-muted-foreground">{t("labels.unitType")}</label>
                   <FormSelect
                     value={entry.type}
                     onChange={(val) => updateUnitEntry(index, "type", val)}
-                    placeholder="Seleccionar..."
+                    placeholder={t("placeholders.select")}
                     options={[
-                      { value: "Estudio", label: "Estudio" },
-                      { value: "1 Habitación", label: "1 Habitación" },
-                      { value: "2 Habitaciones", label: "2 Habitaciones" },
-                      { value: "3 Habitaciones", label: "3 Habitaciones" },
-                      { value: "4+ Habitaciones", label: "4+ Habitaciones" },
-                      { value: "Penthouse", label: "Penthouse" },
-                      { value: "Local Comercial", label: "Local Comercial" },
-                      { value: "Oficina", label: "Oficina" },
-                      { value: "Otro", label: "Otro" }
+                      { value: "Estudio", label: tProj("unitTypes.Studio") },
+                      { value: "1 Habitación", label: tProj("unitTypes.1Bedroom") },
+                      { value: "2 Habitaciones", label: tProj("unitTypes.2Bedrooms") },
+                      { value: "3 Habitaciones", label: tProj("unitTypes.3Bedrooms") },
+                      { value: "4+ Habitaciones", label: tProj("unitTypes.4PlusBedrooms") },
+                      { value: "Penthouse", label: tProj("unitTypes.Penthouse") },
+                      { value: "Local Comercial", label: tProj("unitTypes.Local Comercial") },
+                      { value: "Oficina", label: tProj("unitTypes.Office") },
+                      { value: "Otro", label: t("options.other") }
                     ]}
                   />
                 </div>
 
                 <div className="w-full sm:w-28 grid gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Cantidad</label>
+                  <label className="text-xs font-medium text-muted-foreground">{t("labels.quantity")}</label>
                   <Input
                     type="number"
                     min="1"
@@ -561,7 +565,7 @@ export function AddPropertySection() {
                 </div>
 
                 <div className="w-full sm:w-32 grid gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Tamaño (m²)</label>
+                  <label className="text-xs font-medium text-muted-foreground">{t("labels.size")}</label>
                   <Input
                     type="number"
                     min="1"
@@ -573,7 +577,7 @@ export function AddPropertySection() {
                 </div>
 
                 <div className="w-full sm:w-28 grid gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Disponibles</label>
+                  <label className="text-xs font-medium text-muted-foreground">{t("labels.available")}</label>
                   <Input
                     type="number"
                     min="0"
@@ -603,7 +607,7 @@ export function AddPropertySection() {
               className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 transition-all"
             >
               <Plus className="w-4 h-4" />
-              <span className="text-sm font-medium">Agregar Tipo de Unidad</span>
+              <span className="text-sm font-medium">{t("actions.addUnit")}</span>
             </button>
           </CardContent>
         </Card>
@@ -613,13 +617,13 @@ export function AddPropertySection() {
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">5</span>
-              Amenidades
+              {t("sections.amenities")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {[
-                "Piscina Inifinity", "Gimnasio Equipado", "Lobby Climatizado", "Terraza Social", "Area BBQ",
+                "Piscina Infinity", "Gimnasio Equipado", "Lobby Climatizado", "Terraza Social", "Area BBQ",
                 "Parque Infantil", "Seguridad 24/7", "Parqueo Techado", "Planta Eléctrica", "Ascensor",
                 "Cine", "Coworking", "Pet Friendly"
               ].map((a) => (
@@ -633,23 +637,23 @@ export function AddPropertySection() {
                     onChange={() => toggleAmenity(a)}
                     className="hidden"
                   />
-                  <span className={`text-sm font-medium ${form.amenities.has(a) ? "text-primary" : "text-muted-foreground"}`}>{a}</span>
+                  <span className={`text-sm font-medium ${form.amenities.has(a) ? "text-primary" : "text-muted-foreground"}`}>{tProj(`amenities.${a}`) || a}</span>
                 </label>
               ))}
             </div>
 
             <div className="pt-4 border-t border-border/40">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground block mb-3">Otras Amenidades</label>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground block mb-3">{t("labels.otherAmenities")}</label>
               <div className="flex gap-2 mb-3">
                 <Input
                   type="text"
                   value={form.customAmenity}
                   onChange={handleCustomAmenityChange}
-                  placeholder="Escribe una amenidad personalizada..."
+                  placeholder={t("placeholders.customAmenity")}
                   className="h-11 flex-1 bg-background/50"
                 />
                 <Button type="button" onClick={addCustomAmenity} variant="secondary" className="px-6">
-                  Agregar
+                  {t("actions.add")}
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -679,17 +683,17 @@ export function AddPropertySection() {
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">6</span>
-              Galería Multimedia
+              {t("sections.media")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <div className="space-y-4">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground block">Renderings & Fotos (Máx 5)</label>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground block">{t("labels.images")}</label>
               <div className="bg-muted/10 rounded-xl p-6 border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors">
                 <ImageSelector
                   onImagesChange={setImagesFiles}
                   maxImages={5}
-                  label="Arrastra imágenes aquí o haz clic para seleccionar"
+                  label={t("dragDrop")}
                   id="imagesFiles"
                 />
               </div>
@@ -697,11 +701,11 @@ export function AddPropertySection() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
               <div className="grid gap-2">
-                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="promoVideo">Link de Video (YouTube/Vimeo)</label>
-                <Input id="promoVideo" name="promoVideo" value={form.promoVideo} onChange={onChange} placeholder="https://..." className="h-11 bg-background/50" />
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="promoVideo">{t("labels.video")}</label>
+                <Input id="promoVideo" name="promoVideo" value={form.promoVideo} onChange={onChange} placeholder={t("placeholders.video")} className="h-11 bg-background/50" />
               </div>
               <div className="grid gap-2">
-                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="plansFiles">Planos (PDF/Imagen)</label>
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="plansFiles">{t("labels.plans")}</label>
                 <input
                   id="plansFiles"
                   name="plansFiles"
@@ -712,11 +716,11 @@ export function AddPropertySection() {
                   className="file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20 text-sm text-muted-foreground cursor-pointer"
                 />
                 {(plansFiles?.length || 0) > 0 && (
-                  <div className="text-xs text-primary font-medium mt-1">✓ {plansFiles!.length} archivos seleccionados</div>
+                  <div className="text-xs text-primary font-medium mt-1">{t("filesSelected", { count: plansFiles!.length })}</div>
                 )}
               </div>
               <div className="grid gap-2">
-                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="brochureFiles">Brochure/Folleto (PDF/Imagen)</label>
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="brochureFiles">{t("labels.brochure")}</label>
                 <input
                   id="brochureFiles"
                   name="brochureFiles"
@@ -727,7 +731,7 @@ export function AddPropertySection() {
                   className="file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20 text-sm text-muted-foreground cursor-pointer"
                 />
                 {(brochureFiles?.length || 0) > 0 && (
-                  <div className="text-xs text-primary font-medium mt-1">✓ {brochureFiles!.length} archivos seleccionados</div>
+                  <div className="text-xs text-primary font-medium mt-1">{t("filesSelected", { count: brochureFiles!.length })}</div>
                 )}
               </div>
             </div>
@@ -739,23 +743,23 @@ export function AddPropertySection() {
           <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
             <CardTitle className="font-serif text-xl flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">7</span>
-              Inversión & Finanzas
+              {t("sections.finance")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="grid gap-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="unitPriceRange">Rango de Precios</label>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="unitPriceRange">{t("labels.priceRange")}</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                <Input id="unitPriceRange" name="unitPriceRange" value={form.unitPriceRange} onChange={onChange} placeholder="120,000 – 350,000" className="h-11 bg-background/50 pl-7" />
+                <Input id="unitPriceRange" name="unitPriceRange" value={form.unitPriceRange} onChange={onChange} placeholder={t("placeholders.priceRange")} className="h-11 bg-background/50 pl-7" />
               </div>
             </div>
             <div className="grid gap-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Moneda</label>
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">{t("labels.currency")}</label>
               <FormSelect
                 value={form.currency}
                 onChange={(val) => setForm(p => ({ ...p, currency: val }))}
-                placeholder="Seleccionar..."
+                placeholder={t("placeholders.select")}
                 options={[
                   { value: "USD", label: "USD (Dólares)" },
                   { value: "DOP", label: "DOP (Pesos)" },
@@ -764,12 +768,12 @@ export function AddPropertySection() {
               />
             </div>
             <div className="grid gap-2 md:col-span-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="paymentMethods">Plan de Pagos / Métodos</label>
-              <Input id="paymentMethods" name="paymentMethods" value={form.paymentMethods} onChange={onChange} placeholder="Ej: Reserva 5%, Separación 10%..." className="h-11 bg-background/50" />
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="paymentMethods">{t("labels.paymentPlan")}</label>
+              <Input id="paymentMethods" name="paymentMethods" value={form.paymentMethods} onChange={onChange} placeholder={t("placeholders.paymentPlan")} className="h-11 bg-background/50" />
             </div>
             <div className="grid gap-2 md:col-span-2">
-              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="partnerBank">Fideicomiso / Banco Aliado</label>
-              <Input id="partnerBank" name="partnerBank" value={form.partnerBank} onChange={onChange} placeholder="Ej: Fiduciaria Banreservas" className="h-11 bg-background/50" />
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground" htmlFor="partnerBank">{t("labels.trust")}</label>
+              <Input id="partnerBank" name="partnerBank" value={form.partnerBank} onChange={onChange} placeholder={t("placeholders.trust")} className="h-11 bg-background/50" />
             </div>
           </CardContent>
         </Card>
@@ -782,7 +786,7 @@ export function AddPropertySection() {
             className="w-full sm:w-auto h-12 px-8 rounded-full border-2 hover:bg-muted"
             onClick={() => window.history.back()}
           >
-            Cancelar
+            {t("actions.cancel")}
           </Button>
           <Button
             type="submit"
@@ -792,9 +796,9 @@ export function AddPropertySection() {
             {saving || uploading ? (
               <span className="flex items-center gap-2">
                 <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                {uploading ? "Subiendo archivos..." : "Guardando..."}
+                {uploading ? t("actions.uploading") : t("actions.saving")}
               </span>
-            ) : "Publicar Proyecto"}
+            ) : t("actions.publish")}
           </Button>
         </div>
       </form>

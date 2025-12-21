@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 type Owner = {
   id: string;
@@ -15,6 +16,7 @@ type Owner = {
 };
 
 export function OwnerCard({ ownerId }: { ownerId: string | null | undefined }) {
+  const t = useTranslations("properties");
   const [owner, setOwner] = useState<Owner | null>(null);
   const [loading, setLoading] = useState(true);
   const [selfId, setSelfId] = useState<string | null>(null);
@@ -101,17 +103,17 @@ export function OwnerCard({ ownerId }: { ownerId: string | null | undefined }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-4">
-        <Avatar src={owner?.avatar_url ?? null} alt={owner?.name ?? "Propietario"} className="w-14 h-14 border bg-muted" />
+        <Avatar src={owner?.avatar_url ?? null} alt={owner?.name ?? t("owner")} className="w-14 h-14 border bg-muted" />
         <div>
-          <p className="font-medium">{owner?.name || (loading ? "Cargando…" : "Propietario")}</p>
+          <p className="font-medium">{owner?.name || (loading ? t("loading") : t("owner"))}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {(() => {
               const raw = (owner?.role || '').toLowerCase();
-              if ((listingsCount ?? 0) > 0) return 'Vendedor/Agente';
-              if (raw.includes('empresa')) return 'Empresa constructora';
-              if (raw.includes('vendedor') || raw.includes('agente')) return 'Vendedor/Agente';
+              if ((listingsCount ?? 0) > 0) return t("sellerAgent");
+              if (raw.includes('empresa')) return t("constructionCompany");
+              if (raw.includes('vendedor') || raw.includes('agente')) return t("sellerAgent");
               if (raw) return raw.charAt(0).toUpperCase() + raw.slice(1);
-              return 'comprador';
+              return t("buyer");
             })()}
           </p>
         </div>
@@ -120,7 +122,7 @@ export function OwnerCard({ ownerId }: { ownerId: string | null | undefined }) {
       {owner?.id ? (
         <Button asChild className="w-full justify-center bg-primary text-primary-foreground hover:bg-primary/90">
           <Link href={owner.id === selfId ? "/profile" : `/profile/view?id=${owner.id}`}>
-            {owner.id === selfId ? "Ir a mi perfil" : "Ver perfil"}
+            {owner.id === selfId ? t("goToMyProfile") : t("viewProfile")}
           </Link>
         </Button>
       ) : null}

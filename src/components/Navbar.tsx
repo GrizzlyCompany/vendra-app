@@ -23,8 +23,15 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useUnreadMessages } from "@/features/messaging/hooks/useUnreadMessages";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { useTranslations } from "next-intl";
 
 export function Navbar() {
+  const t = useTranslations();
+  const tNav = useTranslations("nav");
+  const tAuth = useTranslations("auth");
+  const tCommon = useTranslations("common");
+  const tSearch = useTranslations("search");
   const { user, loading, signOut } = useAuth();
   const { avatarUrl } = useUserAvatar(user);
   const { unreadCount } = useUnreadMessages();
@@ -93,9 +100,9 @@ export function Navbar() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      showError("Sesión cerrada correctamente");
+      showError(tAuth("logout")); // Assuming we want to show a generic message or actually use a specific one
     } catch {
-      showError("Error al cerrar sesión");
+      showError(tCommon("error"));
     }
   };
 
@@ -138,7 +145,7 @@ export function Navbar() {
                 className="relative h-10 w-full justify-start rounded-xl border-muted-foreground/20 bg-muted/50 px-4 py-2 text-sm text-muted-foreground shadow-none hover:bg-muted/80 hover:text-foreground transition-all duration-200"
               >
                 <Search className="mr-2 h-4 w-4" />
-                <span className="inline-flex">Buscar propiedades...</span>
+                <span className="inline-flex">{tNav("searchProperties")}</span>
                 <kbd className="pointer-events-none absolute right-2 top-2.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
                   <span className="text-xs">⌘</span>K
                 </kbd>
@@ -153,7 +160,7 @@ export function Navbar() {
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && onSearch()}
-                    placeholder="¿Qué estás buscando?"
+                    placeholder={tSearch("whatLookingFor")}
                     className="flex-1 border-none bg-transparent px-0 py-0 text-base shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/70"
                     autoFocus
                   />
@@ -162,7 +169,7 @@ export function Navbar() {
               <div className="p-2 space-y-4">
                 {q.length === 0 && (
                   <div className="px-2 py-4">
-                    <p className="text-xs font-medium text-muted-foreground mb-3 px-2">Sugerencias rápidas</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-3 px-2">{tSearch("quickSuggestions")}</p>
                     <div className="grid grid-cols-2 gap-2">
                       <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { setQ("Departamento en alquiler"); onSearch(); }}>
                         <div className="flex items-center gap-3">
@@ -170,8 +177,8 @@ export function Navbar() {
                             <Building2 className="h-4 w-4" />
                           </div>
                           <div className="text-left">
-                            <div className="text-sm font-medium">Departamentos</div>
-                            <div className="text-xs text-muted-foreground">Ver opciones disponibles</div>
+                            <div className="text-sm font-medium">{tSearch("apartments")}</div>
+                            <div className="text-xs text-muted-foreground">{tSearch("seeOptions")}</div>
                           </div>
                         </div>
                       </Button>
@@ -181,8 +188,8 @@ export function Navbar() {
                             <Home className="h-4 w-4" />
                           </div>
                           <div className="text-left">
-                            <div className="text-sm font-medium">Casas</div>
-                            <div className="text-xs text-muted-foreground">Encuentra tu hogar</div>
+                            <div className="text-sm font-medium">{tSearch("houses")}</div>
+                            <div className="text-xs text-muted-foreground">{tSearch("findHome")}</div>
                           </div>
                         </div>
                       </Button>
@@ -192,8 +199,8 @@ export function Navbar() {
                             <Briefcase className="h-4 w-4" />
                           </div>
                           <div className="text-left">
-                            <div className="text-sm font-medium">Agentes</div>
-                            <div className="text-xs text-muted-foreground">Contacta profesionales</div>
+                            <div className="text-sm font-medium">{tSearch("agents")}</div>
+                            <div className="text-xs text-muted-foreground">{tSearch("contactPros")}</div>
                           </div>
                         </div>
                       </Button>
@@ -203,8 +210,8 @@ export function Navbar() {
                             <Building2 className="h-4 w-4" />
                           </div>
                           <div className="text-left">
-                            <div className="text-sm font-medium">Proyectos</div>
-                            <div className="text-xs text-muted-foreground">Nuevos desarrollos</div>
+                            <div className="text-sm font-medium">{tNav("projects")}</div>
+                            <div className="text-xs text-muted-foreground">{tSearch("newDevelopments")}</div>
                           </div>
                         </div>
                       </Button>
@@ -213,7 +220,7 @@ export function Navbar() {
                 )}
                 <div className="flex justify-end px-2 pt-2 border-t border-border/40">
                   <Button size="sm" onClick={() => onSearch()} className="gap-2 rounded-lg">
-                    Buscar ahora <Search className="h-3 w-3" />
+                    {tSearch("searchNow")} <Search className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
@@ -224,14 +231,15 @@ export function Navbar() {
         {/* Right Section */}
         {!user ? (
           <nav className="hidden md:flex items-center gap-3">
+            <LanguageSelector />
             <Button asChild variant="ghost" className="text-foreground hover:bg-muted/60 hover:text-primary transition-colors">
               <Link href="/login">
-                <LogIn className="mr-2 size-4" /> Iniciar Sesión
+                <LogIn className="mr-2 size-4" /> {tAuth("login")}
               </Link>
             </Button>
             <Button asChild className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300">
               <Link href="/signup">
-                <UserPlus className="mr-2 size-4" /> Registrarse
+                <UserPlus className="mr-2 size-4" /> {tAuth("signup")}
               </Link>
             </Button>
           </nav>
@@ -278,7 +286,7 @@ export function Navbar() {
                   className="absolute right-0 mt-3 w-56 transform rounded-xl border border-border/50 bg-background/95 p-1 backdrop-blur-xl shadow-xl transition-all animate-in fade-in zoom-in-95 duration-200"
                 >
                   <div className="px-2 py-2 mb-1 border-b border-border/50">
-                    <p className="text-sm font-medium text-foreground">Mi cuenta</p>
+                    <p className="text-sm font-medium text-foreground">{tNav("myAccount")}</p>
                     <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                   <div className="p-1 space-y-0.5">
@@ -287,28 +295,28 @@ export function Navbar() {
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/80"
                       onClick={() => setMenuOpen(false)}
                     >
-                      <User className="h-4 w-4" /> Perfil
+                      <User className="h-4 w-4" /> {tNav("profile")}
                     </Link>
                     <Link
                       href="/profile/edit"
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/80"
                       onClick={() => setMenuOpen(false)}
                     >
-                      <UserPen className="h-4 w-4" /> Información del perfil
+                      <UserPen className="h-4 w-4" /> {tNav("profileInfo")}
                     </Link>
                     <Link
                       href="/preferences"
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/80"
                       onClick={() => setMenuOpen(false)}
                     >
-                      <Settings className="h-4 w-4" /> Preferencias
+                      <Settings className="h-4 w-4" /> {tNav("preferences")}
                     </Link>
                     <Link
                       href="/reports"
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/80"
                       onClick={() => setMenuOpen(false)}
                     >
-                      <AlertCircle className="h-4 w-4" /> Reportes
+                      <AlertCircle className="h-4 w-4" /> {tNav("reports")}
                     </Link>
                   </div>
                   <div className="mt-1 border-t border-border/50 p-1">
@@ -316,7 +324,7 @@ export function Navbar() {
                       onClick={() => { setMenuOpen(false); handleSignOut(); }}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
                     >
-                      <LogOut className="size-4" /> Cerrar sesión
+                      <LogOut className="size-4" /> {tAuth("logout")}
                     </button>
                   </div>
                 </div>
@@ -338,7 +346,7 @@ export function Navbar() {
           </Button>
           {!user ? (
             <Button asChild size="sm" className="rounded-full">
-              <Link href="/login">Entrar</Link>
+              <Link href="/login">{tNav("enter")}</Link>
             </Button>
           ) : (
             <Link href="/profile" className="relative h-8 w-8 overflow-hidden rounded-full border border-border">

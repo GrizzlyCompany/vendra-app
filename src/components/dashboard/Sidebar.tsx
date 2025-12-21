@@ -8,20 +8,22 @@ import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 export type DashboardSection = "mis" | "agregar" | "estadisticas" | "perfil" | "mensajes";
 
-const menuItems = [
-  { id: "mis" as const, label: "Mis Propiedades", icon: Home },
-  { id: "agregar" as const, label: "Agregar Proyecto", icon: PlusCircle },
-  { id: "estadisticas" as const, label: "Estadísticas", icon: BarChart3 },
-  { id: "mensajes" as const, label: "Mensajes", icon: MessageCircle },
-  { id: "perfil" as const, label: "Perfil", icon: User2 },
-];
-
 export function Sidebar({ section, onChange }: { section: DashboardSection; onChange: (s: DashboardSection) => void }) {
+  const t = useTranslations("dashboard.sidebar");
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const menuItems = [
+    { id: "mis" as const, label: t("myProperties"), icon: Home },
+    { id: "agregar" as const, label: t("addProject"), icon: PlusCircle },
+    { id: "estadisticas" as const, label: t("stats"), icon: BarChart3 },
+    { id: "mensajes" as const, label: t("messages"), icon: MessageCircle },
+    { id: "perfil" as const, label: t("profile"), icon: User2 },
+  ];
 
   const NavItem = ({ id, label, icon: Icon }: { id: DashboardSection; label: string; icon: React.ComponentType<{ className?: string }> }) => (
     <button
@@ -75,7 +77,7 @@ export function Sidebar({ section, onChange }: { section: DashboardSection; onCh
                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-serif font-bold text-xl">V</div>
                 <h2 className="text-2xl font-serif font-bold text-foreground tracking-tight">VENDRA</h2>
               </div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider pl-11">Empresa Constructora</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider pl-11">{t("company")}</p>
             </div>
 
             <nav className="flex-1 px-4 space-y-2">
@@ -93,7 +95,7 @@ export function Sidebar({ section, onChange }: { section: DashboardSection; onCh
                 }}
               >
                 <LogOut className="h-5 w-5" />
-                Cerrar Sesión
+                {t("logout")}
               </Button>
             </div>
           </div>
@@ -114,7 +116,7 @@ export function Sidebar({ section, onChange }: { section: DashboardSection; onCh
           </div>
           <div className="flex items-center gap-2 pl-1">
             <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></div>
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Dashboard Panel</p>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">{t("panel")}</p>
           </div>
         </div>
 
@@ -130,8 +132,8 @@ export function Sidebar({ section, onChange }: { section: DashboardSection; onCh
               <User2 className="h-5 w-5" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-semibold text-sidebar-foreground truncate">Mi Cuenta</p>
-              <p className="text-xs text-muted-foreground truncate">Ver perfil</p>
+              <p className="text-sm font-semibold text-sidebar-foreground truncate">{t("myAccount")}</p>
+              <p className="text-xs text-muted-foreground truncate">{t("viewProfile")}</p>
             </div>
           </div>
           <button
@@ -143,7 +145,7 @@ export function Sidebar({ section, onChange }: { section: DashboardSection; onCh
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all duration-300"
           >
             <LogOut className="size-3.5" />
-            Cerrar Sesión
+            {t("logout")}
           </button>
         </div>
       </aside>

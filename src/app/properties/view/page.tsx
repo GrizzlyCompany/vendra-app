@@ -6,17 +6,19 @@ import { PropertyDetailView } from "@/features/properties/components/PropertyDet
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 function PropertyDetailContent() {
+    const t = useTranslations("properties");
     const searchParams = useSearchParams();
     const id = searchParams.get("id");
 
     if (!id) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
-                <p className="text-muted-foreground mb-4">No se especificó ninguna propiedad.</p>
+                <p className="text-muted-foreground mb-4">{t("noPropertySpecified")}</p>
                 <Button asChild>
-                    <Link href="/main">Volver al inicio</Link>
+                    <Link href="/main">{t("backToHome")}</Link>
                 </Button>
             </div>
         );
