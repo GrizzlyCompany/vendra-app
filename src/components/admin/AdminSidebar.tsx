@@ -14,7 +14,8 @@ import {
   X,
   User,
   LogOut,
-  Users2
+  Users2,
+  Flag
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 
@@ -23,6 +24,7 @@ export type AdminSection =
   | 'properties'
   | 'requests'
   | 'messages'
+  | 'reports'
   | 'users'
   | 'settings'
 
@@ -38,7 +40,8 @@ const navigationItems = [
     category: 'General',
     items: [
       { id: 'dashboard' as AdminSection, label: 'Dashboard', icon: BarChart3 },
-      { id: 'messages' as AdminSection, label: 'Mensajes', icon: MessageSquare },
+      { id: 'messages' as AdminSection, label: 'Soporte', icon: MessageSquare },
+      { id: 'reports' as AdminSection, label: 'Reportes', icon: Flag },
       { id: 'requests' as AdminSection, label: 'Solicitudes', icon: FileText },
     ]
   },

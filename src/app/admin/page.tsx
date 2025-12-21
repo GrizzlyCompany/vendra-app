@@ -16,6 +16,7 @@ import { SettingsPanel } from "@/components/admin/SettingsPanel"
 import { ContactFormsTable } from "@/components/admin/ContactFormsTable"
 import { ApplicationsTable } from "@/components/admin/ApplicationsTable"
 import { UsersTable } from "@/components/admin/UsersTable"
+import { ReportsTable } from "@/components/admin/ReportsTable"
 import { supabase } from "@/lib/supabase/client"
 
 export default function AdminPage() {
@@ -65,6 +66,8 @@ export default function AdminPage() {
         return <ApplicationsTable />
       case 'messages':
         return <MessagesTable />
+      case 'reports':
+        return <ReportsTable />
       case 'users':
         return <UsersTable />
       case 'settings':

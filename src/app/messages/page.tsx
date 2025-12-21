@@ -13,7 +13,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ConversationList } from "@/features/messaging/components/ConversationList";
 import { MessageItem } from "@/features/messaging/components/MessageItem";
 import { ChatView } from "@/features/messaging/components/ChatView";
+import { ChatViewWithBlock } from "@/features/messaging/components/ChatViewWithBlock";
 import { usePushNotifications } from "@/features/messaging/hooks/usePushNotifications";
+import { useBlockStatus } from "@/features/messaging/hooks/useUserBlocks";
 import { PUSH_CONFIG } from "@/features/messaging/config/push";
 
 interface Message {
@@ -928,7 +930,7 @@ function MessagesContent() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" suppressHydrationWarning></div>
             </div>
           ) : targetId ? (
-            <ChatView
+            <ChatViewWithBlock
               target={target}
               messages={messages}
               me={me}
@@ -943,6 +945,7 @@ function MessagesContent() {
               isOnline={targetId ? onlineUsers.has(targetId) : false}
               subscribePush={() => subscribePush(PUSH_CONFIG.vapidPublicKey)}
               pushPermission={pushPermission}
+              targetId={targetId}
             />
           ) : (
             <div className="h-full w-full bg-white/20 backdrop-blur-md rounded-[2rem] border border-white/20 flex flex-col items-center justify-center text-center p-8 text-muted-foreground/60 shadow-lg">
@@ -974,7 +977,7 @@ function MessagesContent() {
           </div>
         ) : targetId && !loading ? (
           <div className="h-full p-0">
-            <ChatView
+            <ChatViewWithBlock
               key="chat-view"
               target={target}
               messages={messages}
@@ -990,6 +993,7 @@ function MessagesContent() {
               isOnline={targetId ? onlineUsers.has(targetId) : false}
               subscribePush={() => subscribePush(PUSH_CONFIG.vapidPublicKey)}
               pushPermission={pushPermission}
+              targetId={targetId}
             />
           </div>
         ) : loading ? (

@@ -1,10 +1,31 @@
-import { RefObject, useEffect } from "react";
+import { RefObject, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Menu, ChevronLeft, AlertCircle, Send, MoreVertical, Phone, Video } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Menu, ChevronLeft, AlertCircle, Send, MoreVertical, Phone, Video, Ban, UserX, Flag, Loader2 } from "lucide-react";
 import { MessageItem } from "./MessageItem";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase/client";
+import { useToastContext } from "@/components/ToastProvider";
+
+// Report reason options
+const REPORT_REASONS = [
+  { value: 'harassment', label: 'Acoso o amenazas' },
+  { value: 'spam', label: 'Spam o mensajes no solicitados' },
+  { value: 'fraud', label: 'Intento de estafa o fraude' },
+  { value: 'fake_listing', label: 'Propiedad falsa o engañosa' },
+  { value: 'inappropriate', label: 'Contenido inapropiado' },
+  { value: 'impersonation', label: 'Suplantación de identidad' },
+  { value: 'other', label: 'Otro motivo' },
+] as const;
 
 interface Message {
   id: string;
@@ -13,6 +34,12 @@ interface Message {
   content: string;
   created_at: string;
   read_at: string | null;
+}
+
+interface BlockStatus {
+  i_blocked_them: boolean;
+  they_blocked_me: boolean;
+  any_block: boolean;
 }
 
 interface ChatViewProps {
@@ -30,6 +57,10 @@ interface ChatViewProps {
   isOnline?: boolean;
   subscribePush?: () => void;
   pushPermission?: NotificationPermission;
+  // New block-related props
+  blockStatus?: BlockStatus | null;
+  onBlockToggle?: () => Promise<boolean>;
+  isBlockLoading?: boolean;
 }
 
 export function ChatView({
@@ -47,7 +78,22 @@ export function ChatView({
   isOnline = false,
   subscribePush,
   pushPermission = 'default',
+  blockStatus = null,
+  onBlockToggle,
+  isBlockLoading = false,
 }: ChatViewProps) {
+  const { error: showError, success: showSuccess } = useToastContext();
+
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState<string>('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [isReporting, setIsReporting] = useState(false);
+
+  // Determine if messaging is disabled due to block
+  const isBlocked = blockStatus?.any_block ?? false;
+  const iBlockedThem = blockStatus?.i_blocked_them ?? false;
+  const theyBlockedMe = blockStatus?.they_blocked_me ?? false;
 
   // Auto-scroll to bottom whenever messages (length) change
   // This handles both initial load and new messages
@@ -67,6 +113,63 @@ export function ChatView({
       document.body.classList.remove('hide-bottom-nav');
     };
   }, []);
+
+  const handleBlockToggle = async () => {
+    if (!onBlockToggle) return;
+
+    if (iBlockedThem) {
+      // Unblocking - no confirmation needed
+      await onBlockToggle();
+    } else {
+      // Blocking - show confirmation
+      setShowBlockConfirm(true);
+    }
+  };
+
+  const confirmBlock = async () => {
+    if (onBlockToggle) {
+      await onBlockToggle();
+    }
+    setShowBlockConfirm(false);
+  };
+
+  const handleReport = async () => {
+    if (!target?.id || !reportReason) return;
+
+    setIsReporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/report-conversation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+        },
+        body: JSON.stringify({
+          reported_user_id: target.id,
+          reason: reportReason,
+          description: reportDescription || undefined
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al enviar el reporte');
+      }
+
+      showSuccess('Reporte enviado correctamente. Nuestro equipo lo revisará pronto.');
+      setShowReportModal(false);
+      setReportReason('');
+      setReportDescription('');
+    } catch (err: any) {
+      console.error('Error reporting:', err);
+      showError(err.message || 'Error al enviar el reporte');
+    } finally {
+      setIsReporting(false);
+    }
+  };
 
   return (
     <motion.div
@@ -106,7 +209,9 @@ export function ChatView({
               <div className="font-serif font-bold text-base text-foreground hover:underline decoration-primary/30 underline-offset-4">{target?.name ?? 'Usuario'}</div>
             </Link>
             <div className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block transition-colors duration-500 ${isOnline ? 'text-emerald-600 bg-emerald-100/50' : 'text-muted-foreground/60 bg-muted/50'}`}>
-              {isOnline ? 'En línea' : 'Desconectado'}
+              {isBlocked ? (
+                <span className="text-red-500">Bloqueado</span>
+              ) : isOnline ? 'En línea' : 'Desconectado'}
             </div>
           </div>
         </div>
@@ -118,11 +223,199 @@ export function ChatView({
           <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:bg-black/5 hidden sm:flex hover:text-primary transition-colors">
             <Video className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:bg-black/5 hover:text-primary transition-colors">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
+
+          {/* Options Dropdown Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:bg-black/5 hover:text-primary transition-colors">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-2xl">
+              <DropdownMenuItem className="cursor-pointer p-0">
+                <Link href={target?.id ? `/profile/view?id=${target.id}` : '#'} className="w-full px-2 py-1.5">
+                  Ver Perfil
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {onBlockToggle && (
+                <DropdownMenuItem
+                  onClick={handleBlockToggle}
+                  disabled={isBlockLoading}
+                  className={`cursor-pointer ${iBlockedThem ? 'text-emerald-600' : 'text-red-600'}`}
+                >
+                  {iBlockedThem ? (
+                    <>
+                      <UserX className="h-4 w-4 mr-2" />
+                      Desbloquear Usuario
+                    </>
+                  ) : (
+                    <>
+                      <Ban className="h-4 w-4 mr-2" />
+                      Bloquear Usuario
+                    </>
+                  )}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShowReportModal(true)}
+                className="cursor-pointer text-amber-600"
+              >
+                <Flag className="h-4 w-4 mr-2" />
+                Reportar Conversación
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {/* Block Confirmation Modal */}
+      {showBlockConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-6 mx-4 max-w-sm w-full shadow-2xl"
+          >
+            <div className="flex items-center justify-center mb-4">
+              <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center">
+                <Ban className="h-8 w-8 text-red-500" />
+              </div>
+            </div>
+            <h3 className="font-bold text-lg text-center mb-2">¿Bloquear a {target?.name ?? 'este usuario'}?</h3>
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              No podrán enviarse mensajes entre ustedes. Puedes desbloquear en cualquier momento.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowBlockConfirm(false)}
+                className="flex-1 rounded-full"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={confirmBlock}
+                disabled={isBlockLoading}
+                className="flex-1 rounded-full bg-red-500 hover:bg-red-600 text-white"
+              >
+                {isBlockLoading ? 'Bloqueando...' : 'Bloquear'}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Report Conversation Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-6 mx-4 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-center mb-4">
+              <div className="h-16 w-16 bg-amber-100 rounded-full flex items-center justify-center">
+                <Flag className="h-8 w-8 text-amber-500" />
+              </div>
+            </div>
+            <h3 className="font-bold text-lg text-center mb-2">Reportar a {target?.name ?? 'este usuario'}</h3>
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              Selecciona el motivo del reporte. Nuestro equipo revisará el caso.
+            </p>
+
+            {/* Reason Selection */}
+            <div className="space-y-2 mb-4">
+              <label className="text-sm font-medium text-gray-700">Motivo del reporte *</label>
+              <div className="grid gap-2">
+                {REPORT_REASONS.map((reason) => (
+                  <button
+                    key={reason.value}
+                    onClick={() => setReportReason(reason.value)}
+                    className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm ${reportReason === reason.value
+                      ? 'border-amber-500 bg-amber-50 text-amber-800 font-medium'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                  >
+                    {reason.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2 mb-6">
+              <label className="text-sm font-medium text-gray-700">Descripción adicional (opcional)</label>
+              <Textarea
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+                placeholder="Proporciona más detalles sobre el problema..."
+                className="min-h-[80px] rounded-xl resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportReason('');
+                  setReportDescription('');
+                }}
+                className="flex-1 rounded-full"
+                disabled={isReporting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleReport}
+                disabled={!reportReason || isReporting}
+                className="flex-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white"
+              >
+                {isReporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  'Enviar Reporte'
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Block Banner - when user is blocked or has blocked the target */}
+      {isBlocked && !isClosedConversation && (
+        <div className="px-6 pt-4">
+          <div className={`rounded-2xl p-4 flex items-start gap-4 mb-2 shadow-sm ${theyBlockedMe ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'}`}>
+            <Ban className={`h-5 w-5 flex-shrink-0 mt-0.5 ${theyBlockedMe ? 'text-red-600' : 'text-amber-600'}`} />
+            <div className="flex-1">
+              <h3 className={`font-bold text-sm mb-1 ${theyBlockedMe ? 'text-red-800' : 'text-amber-800'}`}>
+                {theyBlockedMe ? 'No puedes enviar mensajes' : 'Has bloqueado a este usuario'}
+              </h3>
+              <p className={`text-xs leading-relaxed ${theyBlockedMe ? 'text-red-700' : 'text-amber-700'}`}>
+                {theyBlockedMe
+                  ? 'No puedes enviar mensajes a este usuario en este momento.'
+                  : 'No pueden enviarse mensajes entre ustedes mientras esté bloqueado.'}
+              </p>
+              {iBlockedThem && onBlockToggle && (
+                <Button
+                  onClick={onBlockToggle}
+                  disabled={isBlockLoading}
+                  className="mt-3 bg-amber-600 hover:bg-amber-700 text-white gap-2 h-8 text-xs rounded-full shadow-md shadow-amber-900/10"
+                  size="sm"
+                >
+                  <UserX className="h-3 w-3" />
+                  Desbloquear
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Closed Case Banner */}
       {isClosedConversation && (
@@ -150,7 +443,7 @@ export function ChatView({
       )}
 
       {/* Notification Request Banner */}
-      {!isClosedConversation && pushPermission === 'default' && subscribePush && (
+      {!isClosedConversation && !isBlocked && pushPermission === 'default' && subscribePush && (
         <div className="px-6 pt-4">
           <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
             <div className="flex items-center gap-3">
@@ -205,25 +498,25 @@ export function ChatView({
       <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] md:pb-4 bg-white/80 border-t border-white/50 backdrop-blur-xl z-40">
         <div className="flex items-center gap-2 max-w-4xl mx-auto bg-white/50 border border-black/5 p-2 rounded-full shadow-sm hover:shadow-md hover:bg-white transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30">
           <Input
-            value={isClosedConversation ? "" : text}
-            onChange={(e) => !isClosedConversation && setText(e.target.value)}
-            onFocus={() => !isClosedConversation && setIsInputFocused(true)}
+            value={isClosedConversation || isBlocked ? "" : text}
+            onChange={(e) => !isClosedConversation && !isBlocked && setText(e.target.value)}
+            onFocus={() => !isClosedConversation && !isBlocked && setIsInputFocused(true)}
             onBlur={() => setIsInputFocused(false)}
             onKeyDown={(e) => {
-              if (!isClosedConversation && e.key === 'Enter' && !e.shiftKey) {
+              if (!isClosedConversation && !isBlocked && e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 onSend();
               }
             }}
-            placeholder={isClosedConversation ? "Chat cerrado" : "Escribe un mensaje..."}
-            disabled={isClosedConversation}
+            placeholder={isClosedConversation ? "Chat cerrado" : isBlocked ? "Chat bloqueado" : "Escribe un mensaje..."}
+            disabled={isClosedConversation || isBlocked}
             className="border-0 bg-transparent flex-1 ml-3 focus-visible:ring-0 shadow-none h-10 text-base md:text-sm placeholder:text-muted-foreground/40 font-medium"
           />
           <Button
             onClick={onSend}
-            disabled={!canSend || isClosedConversation}
+            disabled={!canSend || isClosedConversation || isBlocked}
             size="icon"
-            className={`rounded-full h-10 w-10 shrink-0 transition-all duration-300 shadow-md ${canSend && !isClosedConversation ? 'bg-primary hover:bg-primary/90 text-white hover:scale-105 active:scale-95 shadow-primary/20' : 'bg-muted text-muted-foreground opacity-30 shadow-none'}`}
+            className={`rounded-full h-10 w-10 shrink-0 transition-all duration-300 shadow-md ${canSend && !isClosedConversation && !isBlocked ? 'bg-primary hover:bg-primary/90 text-white hover:scale-105 active:scale-95 shadow-primary/20' : 'bg-muted text-muted-foreground opacity-30 shadow-none'}`}
           >
             <Send className="h-4 w-4 ml-0.5" />
           </Button>

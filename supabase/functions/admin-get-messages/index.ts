@@ -77,6 +77,17 @@ serve(async (req) => {
       throw new Error('Admin user not found')
     }
 
+    // Log admin access to messages
+    await supabaseClient
+      .from('admin_access_logs')
+      .insert({
+        admin_id: user.id,
+        access_type: 'view_conversations',
+        access_reason: 'Viewing admin-user support conversations',
+        ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+        user_agent: req.headers.get('user-agent')
+      })
+
     // Get all messages with admin
     const { data: messagesData, error: messagesError } = await supabaseClient
       .from('messages')
@@ -131,7 +142,7 @@ serve(async (req) => {
     const conversationMap = new Map<string, any>()
     messagesData.forEach((msg: any) => {
       const otherUserId = msg.sender_id === adminUser.id ? msg.recipient_id : msg.sender_id
-      const userInfo = userMap.get(otherUserId)
+      const userInfo = userMap.get(otherUserId) as { name: string, email: string } | undefined
       const isFromAdmin = msg.sender_id === adminUser.id
 
       if (!conversationMap.has(otherUserId)) {
@@ -159,7 +170,7 @@ serve(async (req) => {
     // Transform to final format
     const conversations: Conversation[] = Array.from(conversationMap.values()).map((conv: any) => {
       conv.messages.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      const latestMessage = conv.messages[0]
+      const latestMessage = conv.messages[0] as { content: string, created_at: string, sender_id: string }
 
       return {
         id: conv.user_id,

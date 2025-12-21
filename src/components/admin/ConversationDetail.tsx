@@ -1,13 +1,26 @@
 // Improved ConversationDetail component with better message visibility
 import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, Send, AlertCircle, MessageCircle } from "lucide-react";
+import { ChevronLeft, Send, AlertCircle, MessageCircle, Flag, Loader2, ArrowUpRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useToastContext } from "@/components/ToastProvider";
 import { MessageItem } from "@/features/messaging/components/MessageItem";
+
+// Report reason options for escalation
+const REPORT_REASONS = [
+  { value: 'harassment', label: 'Acoso o amenazas' },
+  { value: 'spam', label: 'Spam o mensajes no solicitados' },
+  { value: 'fraud', label: 'Intento de estafa o fraude' },
+  { value: 'fake_listing', label: 'Propiedad falsa o engañosa' },
+  { value: 'inappropriate', label: 'Contenido inapropiado' },
+  { value: 'impersonation', label: 'Suplantación de identidad' },
+  { value: 'other', label: 'Otro motivo' },
+] as const;
 
 interface Message {
   id: string;
@@ -44,6 +57,12 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
   const listRef = useRef<HTMLDivElement | null>(null);
   const prevMessagesLength = useRef(messages.length);
   const lastMessageId = useRef<string | null>(null);
+
+  // Escalation state
+  const [showEscalateModal, setShowEscalateModal] = useState(false);
+  const [escalateReason, setEscalateReason] = useState<string>('');
+  const [escalateDescription, setEscalateDescription] = useState('');
+  const [isEscalating, setIsEscalating] = useState(false);
 
   // Auto scroll to bottom when NEW messages are added
   useEffect(() => {
@@ -339,6 +358,46 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  // Handle escalation to reports
+  const handleEscalate = async () => {
+    if (!user?.id || !escalateReason) return;
+
+    setIsEscalating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-escalate-to-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+        },
+        body: JSON.stringify({
+          user_id: user.id,  // The user who contacted support becomes the reporter
+          reported_user_id: user.id,  // For now, we escalate about the same user - admin will specify in description
+          reason: escalateReason,
+          description: escalateDescription || `Escalado desde ticket de soporte de ${user.name || user.email}`
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al escalar el caso');
+      }
+
+      showSuccess('Caso escalado a reportes exitosamente');
+      setShowEscalateModal(false);
+      setEscalateReason('');
+      setEscalateDescription('');
+    } catch (err: any) {
+      console.error('Error escalating:', err);
+      showError(err.message || 'Error al escalar el caso');
+    } finally {
+      setIsEscalating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -394,7 +453,114 @@ export function ConversationDetail({ conversationId, onBack }: ConversationDetai
             <div className="text-xs text-muted-foreground">{user?.email ?? ''}</div>
           </div>
         </div>
+
+        {/* Escalate to Reports Button */}
+        {!isClosedConversation && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEscalateModal(true)}
+            className="gap-2 text-amber-600 border-amber-200 hover:bg-amber-50 hover:border-amber-300"
+          >
+            <ArrowUpRight className="h-4 w-4" />
+            <span className="hidden sm:inline">Escalar a Reportes</span>
+            <span className="sm:hidden">Escalar</span>
+          </Button>
+        )}
       </div>
+
+      {/* Escalation Modal */}
+      {showEscalateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-6 mx-4 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-center mb-4">
+              <div className="h-16 w-16 bg-amber-100 rounded-full flex items-center justify-center">
+                <Flag className="h-8 w-8 text-amber-500" />
+              </div>
+            </div>
+            <h3 className="font-bold text-lg text-center mb-2">Escalar a Reportes</h3>
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              Este caso de soporte se convertirá en un reporte para moderación.
+            </p>
+
+            {/* User Info */}
+            <div className="bg-gray-50 rounded-xl p-3 mb-4 flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-blue-100 text-blue-600">
+                  {getInitials(user?.name ?? null)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="font-medium text-sm">{user?.name}</div>
+                <div className="text-xs text-muted-foreground">{user?.email}</div>
+              </div>
+            </div>
+
+            {/* Reason Selection */}
+            <div className="space-y-2 mb-4">
+              <label className="text-sm font-medium text-gray-700">Categoría del reporte *</label>
+              <div className="grid gap-2 max-h-48 overflow-y-auto">
+                {REPORT_REASONS.map((reason) => (
+                  <button
+                    key={reason.value}
+                    onClick={() => setEscalateReason(reason.value)}
+                    className={`w-full text-left px-4 py-2.5 rounded-xl border transition-all text-sm ${escalateReason === reason.value
+                        ? 'border-amber-500 bg-amber-50 text-amber-800 font-medium'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                  >
+                    {reason.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2 mb-6">
+              <label className="text-sm font-medium text-gray-700">Notas adicionales (opcional)</label>
+              <Textarea
+                value={escalateDescription}
+                onChange={(e) => setEscalateDescription(e.target.value)}
+                placeholder="Describe el problema o proporciona contexto..."
+                className="min-h-[80px] rounded-xl resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEscalateModal(false);
+                  setEscalateReason('');
+                  setEscalateDescription('');
+                }}
+                className="flex-1 rounded-full"
+                disabled={isEscalating}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleEscalate}
+                disabled={!escalateReason || isEscalating}
+                className="flex-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white"
+              >
+                {isEscalating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Escalando...
+                  </>
+                ) : (
+                  'Escalar Caso'
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Messages Area */}
       <div

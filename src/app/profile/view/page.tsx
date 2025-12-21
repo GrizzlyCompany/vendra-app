@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building, Star, MessageSquare, ChevronLeft, ShieldCheck, Globe, Phone, MapPin as MapPinIcon, Facebook, Instagram, Linkedin } from "lucide-react";
+import { Building, Star, MessageSquare, ChevronLeft, ShieldCheck, Globe, Phone, MapPin as MapPinIcon, Facebook, Instagram, Linkedin, Ban, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { ProjectCard } from "@/features/projects/components/ProjectCard";
 import { usePublicProfile } from "@/hooks/usePublicProfile";
 import { useUserListings } from "@/features/properties/hooks/useUserListings";
 import { useUserRatings } from "@/features/properties/hooks/useUserRatings";
+import { useBlockStatus } from "@/features/messaging/hooks/useUserBlocks";
 import { ReviewsTabContent } from "@/components/profile/ReviewsTabContent";
 
 function PublicProfileContent() {
@@ -62,6 +63,14 @@ function PublicProfileContent() {
         showRateForm,
         setShowRateForm,
     } = useUserRatings(userId, currentUserId);
+
+    // Block status hook
+    const {
+        blockStatus,
+        loading: isBlockLoading,
+        iBlockedThem,
+        toggleBlock,
+    } = useBlockStatus(currentUserId !== userId ? userId : null);
 
     const handleChatClick = async () => {
         const { data: sess } = await supabase.auth.getSession();
@@ -233,9 +242,32 @@ function PublicProfileContent() {
 
                             {/* Actions */}
                             <div className="flex gap-2 shrink-0 mt-3 sm:mt-0 w-full sm:w-auto">
+                                {/* Block/Unblock Button */}
+                                {currentUserId && currentUserId !== userId && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={toggleBlock}
+                                        disabled={isBlockLoading}
+                                        className={`rounded-full border transition-all hover:-translate-y-0.5 ${iBlockedThem
+                                            ? 'border-emerald-500/30 text-emerald-600 hover:bg-emerald-50'
+                                            : 'border-red-500/30 text-red-600 hover:bg-red-50'
+                                            }`}
+                                        title={iBlockedThem ? 'Desbloquear usuario' : 'Bloquear usuario'}
+                                    >
+                                        {iBlockedThem ? (
+                                            <><UserX className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Desbloquear</span></>
+                                        ) : (
+                                            <><Ban className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Bloquear</span></>
+                                        )}
+                                    </Button>
+                                )}
                                 <Button
                                     onClick={handleChatClick}
-                                    className="flex-1 sm:flex-none rounded-full bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5"
+                                    disabled={blockStatus?.any_block}
+                                    className={`flex-1 sm:flex-none rounded-full shadow-lg transition-all hover:-translate-y-0.5 ${blockStatus?.any_block
+                                        ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
+                                        : 'bg-primary hover:bg-primary/90 text-white shadow-primary/20'
+                                        }`}
                                 >
                                     <MessageSquare className="w-4 h-4 mr-2" /> Chat
                                 </Button>

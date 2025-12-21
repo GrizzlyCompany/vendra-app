@@ -282,7 +282,7 @@ export function MessagesTable({ onRefreshStats }: MessagesTableProps) {
       </div>
 
       {/* List */}
-      <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-xl shadow-sm">
         {loading ? (
           <div className="p-4 space-y-4">
             {[...Array(5)].map((_, i) => (
