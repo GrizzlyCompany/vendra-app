@@ -156,28 +156,39 @@ function PublicProfileContent() {
 
             <div className="w-full max-w-5xl mx-auto space-y-8 sm:space-y-12">
 
-                {/* Premium Floating Header */}
-                <div className="relative mb-24 sm:mb-28">
-                    {/* Banner */}
+                {/* Premium Floating Header - Same style as private profile */}
+                <div className="relative mb-32 sm:mb-40">
+                    {/* Banner - Same as private profile */}
                     <div
-                        className="h-48 sm:h-64 rounded-[2rem] shadow-xl overflow-hidden relative group"
+                        className="h-64 sm:h-[450px] rounded-[2.5rem] shadow-2xl overflow-hidden relative group transition-all duration-700"
                         style={{
                             backgroundImage: stats?.bannerUrl ? `url(${stats.bannerUrl})` : undefined,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
-                            backgroundColor: 'hsl(40, 20%, 95%)',
+                            backgroundColor: stats?.bannerUrl ? undefined : 'hsl(40, 20%, 95%)',
                         }}
                     >
+                        {/* Ambient Shadow Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-700" />
+
+                        {/* Parallax-like scale effect on hover */}
+                        <div className="absolute inset-0 group-hover:scale-105 transition-transform duration-1000 ease-out"
+                            style={{
+                                backgroundImage: 'inherit',
+                                backgroundSize: 'inherit',
+                                backgroundPosition: 'inherit'
+                            }}
+                        />
+
                         {!stats?.bannerUrl && (
                             <div className="absolute inset-0 flex items-center justify-center opacity-30">
                                 <Building className="w-16 h-16 text-muted-foreground" />
                             </div>
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                     </div>
 
                     {/* Avatar & Info Card */}
-                    <div className="absolute -bottom-16 sm:-bottom-20 left-0 right-0 px-4 sm:px-8 flex justify-center">
+                    <div className="absolute -bottom-28 sm:-bottom-32 left-0 right-0 px-1 sm:px-8 flex justify-center z-20">
                         <div className="bg-background/90 backdrop-blur-xl border border-white/40 shadow-2xl rounded-3xl p-4 sm:p-6 flex flex-col sm:flex-row items-center sm:items-end gap-4 max-w-3xl w-full mx-auto">
 
                             {/* Avatar */}

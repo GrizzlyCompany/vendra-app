@@ -2,18 +2,23 @@
 
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function TermsPage() {
+    const router = useRouter();
+
     return (
         <main className="min-h-screen bg-background px-4 py-8 mobile-top-safe mobile-bottom-safe">
             <div className="max-w-3xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
-                    <Button asChild variant="ghost" size="icon" className="rounded-full">
-                        <Link href="/main">
-                            <ChevronLeft className="w-5 h-5" />
-                        </Link>
+                    <Button
+                        onClick={() => router.back()}
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full"
+                    >
+                        <ChevronLeft className="w-5 h-5" />
                     </Button>
                     <h1 className="text-2xl font-serif font-bold text-primary">Términos y Condiciones</h1>
                 </div>
