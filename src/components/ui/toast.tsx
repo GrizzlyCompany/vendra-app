@@ -39,7 +39,7 @@ export function ToastComponent({ toast, onRemove }: ToastProps) {
 
   useEffect(() => {
     setIsVisible(true);
-    
+
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(() => onRemove(toast.id), 300);
@@ -78,7 +78,13 @@ export function ToastComponent({ toast, onRemove }: ToastProps) {
 
 export function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm w-full">
+    <div
+      className="fixed right-4 z-50 space-y-2 max-w-sm w-full"
+      style={{
+        top: 'max(1rem, env(safe-area-inset-top, 1rem))',
+        paddingRight: 'env(safe-area-inset-right, 0px)'
+      }}
+    >
       {toasts.map((toast) => (
         <ToastComponent key={toast.id} toast={toast} onRemove={onRemove} />
       ))}
