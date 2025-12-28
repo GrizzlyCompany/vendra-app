@@ -112,7 +112,8 @@
         "reports": "Reportes",
         "projects": "Proyectos",
         "enter": "Entrar",
-        "logout": "Cerrar sesión"
+        "logout": "Cerrar sesión",
+        "pricing": "Planes"
     },
     "landing": {
         "heroTitle": "Encuentra tu propiedad",
@@ -171,7 +172,10 @@
             "apartamento": "Apartamento",
             "terreno": "Terreno",
             "comercial": "Local Comercial",
-            "condominio": "Condominio"
+            "condominio": "Condominio",
+            "penthouse": "Penthouse",
+            "studio": "Estudio",
+            "office": "Oficina"
         },
         "details": {
             "bedrooms": "Habitaciones",
@@ -659,6 +663,75 @@
             "3Bedrooms": "3 Habitaciones",
             "4PlusBedrooms": "4+ Habitaciones",
             "Office": "Oficina"
+        }
+    },
+    "pricing": {
+        "title": "Planes y Precios",
+        "subtitle": "Elige el plan que mejor se adapte a tus necesidades",
+        "monthly": "Mensual",
+        "yearly": "Anual",
+        "save": "Ahorra",
+        "getStarted": "Empezar ahora",
+        "currentPlan": "Plan actual",
+        "contactSales": "Contactar Ventas",
+        "mostPopular": "Más Popular",
+        "plans": {
+            "buyer": {
+                "name": "Comprador",
+                "description": "Encuentra tu hogar ideal sin costo alguno.",
+                "price": "Gratis",
+                "features": [
+                    "Búsqueda ilimitada de propiedades",
+                    "Guardar favoritos y alertas",
+                    "Chat directo con vendedores",
+                    "Acceso a tours virtuales"
+                ]
+            },
+            "seller": {
+                "name": "Vendedor",
+                "description": "Maximiza tus oportunidades de venta.",
+                "price": "$10",
+                "features": [
+                    "Publicación de hasta 3 propiedades",
+                    "Estadísticas básicas de visitas",
+                    "Chat directo con compradores",
+                    "Verificación de identidad",
+                    "Soporte por email"
+                ]
+            },
+            "agent_pro": {
+                "name": "Agente Pro",
+                "description": "Potencia tu marca personal y cierra más tratos.",
+                "price": "$30",
+                "features": [
+                    "Hasta 20 propiedades activas",
+                    "Insignia de Agente Verificado",
+                    "Posicionamiento prioritario en búsqueda",
+                    "Estadísticas avanzadas de mercado",
+                    "Soporte prioritario",
+                    "Acceso a red de contactos"
+                ]
+            },
+            "business": {
+                "name": "Empresas",
+                "description": "Solución integral para inmobiliarias y desarrolladores.",
+                "price": "$80",
+                "features": [
+                    "Propiedades ilimitadas",
+                    "Gestión de equipos y roles",
+                    "Panel de control corporativo",
+                    "API para integración CRM",
+                    "Branding personalizado",
+                    "Gerente de cuenta dedicado"
+                ]
+            }
+        },
+        "faq": {
+            "title": "Preguntas Frecuentes",
+            "q1": "¿Puedo cambiar de plan después?",
+            "a1": "Sí, puedes mejorar o cambiar tu plan en cualquier momento desde tu configuración.",
+            "q2": "¿Hay contrato de permanencia?",
+            "a2": "No, nuestros planes son mensuales. Puedes cancelar cuando quieras sin penalidad."
         }
     },
     "forms": {

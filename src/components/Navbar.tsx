@@ -90,7 +90,8 @@ export function Navbar() {
     '/properties/view',
     '/seller/apply',
     '/about',
-    '/admin'
+    '/admin',
+    '/pricing'
   ];
 
   const hasCustomMobileHeader = routesWithCustomHeader.includes(normalizedPathname);
@@ -231,6 +232,11 @@ export function Navbar() {
         {/* Right Section */}
         {!user ? (
           <nav className="hidden md:flex items-center gap-3">
+            <Button asChild variant="ghost" className="text-foreground hover:bg-muted/60 hover:text-primary transition-colors">
+              <Link href="/pricing">
+                {tNav("pricing")}
+              </Link>
+            </Button>
             <LanguageSelector />
             <Button asChild variant="ghost" className="text-foreground hover:bg-muted/60 hover:text-primary transition-colors">
               <Link href="/login">

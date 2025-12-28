@@ -112,7 +112,8 @@
         "reports": "Reports",
         "projects": "Projects",
         "enter": "Enter",
-        "logout": "Log out"
+        "logout": "Log out",
+        "pricing": "Pricing"
     },
     "landing": {
         "heroTitle": "Find your ideal",
@@ -171,7 +172,10 @@
             "apartamento": "Apartment",
             "terreno": "Land",
             "comercial": "Commercial",
-            "condominio": "Condo"
+            "condominio": "Condo",
+            "penthouse": "Penthouse",
+            "studio": "Studio",
+            "office": "Office"
         },
         "details": {
             "bedrooms": "Bedrooms",
@@ -659,6 +663,75 @@
             "3Bedrooms": "3 Bedrooms",
             "4PlusBedrooms": "4+ Bedrooms",
             "Office": "Office"
+        }
+    },
+    "pricing": {
+        "title": "Plans & Pricing",
+        "subtitle": "Choose the plan that best suits your needs",
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "save": "Save",
+        "getStarted": "Get Started",
+        "currentPlan": "Current Plan",
+        "contactSales": "Contact Sales",
+        "mostPopular": "Most Popular",
+        "plans": {
+            "buyer": {
+                "name": "Buyer",
+                "description": "Find your dream home at no cost.",
+                "price": "Free",
+                "features": [
+                    "Unlimited property search",
+                    "Save favorites & alerts",
+                    "Chat directly with sellers",
+                    "Access to virtual tours"
+                ]
+            },
+            "seller": {
+                "name": "Seller",
+                "description": "Maximize your sales opportunities.",
+                "price": "$10",
+                "features": [
+                    "List up to 3 properties",
+                    "Basic visit statistics",
+                    "Chat directly with buyers",
+                    "Identity verification",
+                    "Email support"
+                ]
+            },
+            "agent_pro": {
+                "name": "Agent Pro",
+                "description": "Boost your personal brand and close more deals.",
+                "price": "$30",
+                "features": [
+                    "Up to 20 active listings",
+                    "Verified Agent Badge",
+                    "Priority search placement",
+                    "Advanced market analytics",
+                    "Priority support",
+                    "Network access"
+                ]
+            },
+            "business": {
+                "name": "Business",
+                "description": "Complete solution for agencies and developers.",
+                "price": "$80",
+                "features": [
+                    "Unlimited listings",
+                    "Team & role management",
+                    "Corporate dashboard",
+                    "CRM integration API",
+                    "Custom branding",
+                    "Dedicated account manager"
+                ]
+            }
+        },
+        "faq": {
+            "title": "Frequently Asked Questions",
+            "q1": "Can I upgrade my plan later?",
+            "a1": "Yes, you can upgrade or downgrade your plan at any time from your account settings.",
+            "q2": "Is there a long-term contract?",
+            "a2": "No, our plans are month-to-month. You can cancel at any time."
         }
     },
     "forms": {
