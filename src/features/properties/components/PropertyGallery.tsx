@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Expand, Grid3X3 } from "lucide-react";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 
 export function PropertyGallery({ images }: { images: string[] }) {
   const items = useMemo(() => (images && images.length ? images : [
@@ -126,6 +126,7 @@ export function PropertyGallery({ images }: { images: string[] }) {
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-[100vw] w-full h-[100dvh] bg-black/95 border-none p-0 flex items-center justify-center focus:outline-none [&>button]:text-white [&>button]:top-6 [&>button]:right-6 [&>button]:w-12 [&>button]:h-12 [&>button]:bg-white/10 [&>button]:hover:bg-white/20 [&>button]:opacity-100 [&>button]:rounded-full [&>button]:flex [&>button]:items-center [&>button]:justify-center" onKeyDown={handleKeyDown}>
+          <DialogTitle className="sr-only">Galería de imágenes</DialogTitle>
           <div className="relative w-full h-full flex items-center justify-center">
             {/* Close button is handled by DialogContent default, but we can customize if needed. 
                 Shadcn DialogContent usually has a close X. We might want to ensure it's visible on black. */}
