@@ -11,6 +11,8 @@ import { LanguageProvider } from "@/components/LanguageProvider";
 import { ClientLayout } from "@/components/ClientLayout";
 import { SplashScreenWrapper } from "@/components/SplashScreenWrapper";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthGuard } from "@/components/auth/AuthGuard";
+import { Suspense } from "react";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -80,10 +82,14 @@ export default function RootLayout({
             <ErrorBoundary>
               <ToastProvider>
                 <div className="app-container">
-                  <Navbar />
-                  <ClientLayout>
-                    {children}
-                  </ClientLayout>
+                  <Suspense fallback={<div className="min-h-screen bg-background" />}>
+                    <AuthGuard>
+                      <Navbar />
+                      <ClientLayout>
+                        {children}
+                      </ClientLayout>
+                    </AuthGuard>
+                  </Suspense>
                 </div>
                 <AuthenticatedBottomNav />
               </ToastProvider>
@@ -94,4 +100,3 @@ export default function RootLayout({
     </html>
   );
 }
-

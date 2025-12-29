@@ -18,6 +18,7 @@ import { usePublicProfile } from "@/hooks/usePublicProfile";
 import { useUserListings } from "@/features/properties/hooks/useUserListings";
 import { useUserRatings } from "@/features/properties/hooks/useUserRatings";
 import { useBlockStatus } from "@/features/messaging/hooks/useUserBlocks";
+import { useFavorites } from "@/features/properties/hooks/useFavorites";
 import { ReviewsTabContent } from "@/components/profile/ReviewsTabContent";
 
 function PublicProfileContent() {
@@ -69,8 +70,12 @@ function PublicProfileContent() {
         blockStatus,
         loading: isBlockLoading,
         iBlockedThem,
+        theyBlockedMe,
         toggleBlock,
     } = useBlockStatus(currentUserId !== userId ? userId : null);
+
+    // Favorites hook
+    const { isFavorite, toggleFavorite } = useFavorites();
 
     const handleChatClick = async () => {
         const { data: sess } = await supabase.auth.getSession();
@@ -123,6 +128,23 @@ function PublicProfileContent() {
                         <p>{profileError}</p>
                     </div>
                     <Button className="mt-4" onClick={() => router.push('/main')}>Volver al inicio</Button>
+                </div>
+            </main>
+        );
+    }
+
+    if (theyBlockedMe) {
+        return (
+            <main className="min-h-[calc(100dvh-64px)] bg-background px-4 sm:px-6 py-10 mobile-bottom-safe">
+                <div className="max-w-md mx-auto text-center mt-20">
+                    <div className="bg-secondary/20 p-8 rounded-3xl border border-border">
+                        <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                            <UserX className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <h2 className="text-xl font-serif font-bold mb-2">Perfil no disponible</h2>
+                        <p className="text-muted-foreground mb-6">No puedes ver el perfil de este usuario en este momento.</p>
+                        <Button onClick={() => router.push('/main')}>Volver al inicio</Button>
+                    </div>
                 </div>
             </main>
         );
@@ -248,38 +270,30 @@ function PublicProfileContent() {
                                         variant="outline"
                                         onClick={toggleBlock}
                                         disabled={isBlockLoading}
-                                        className={`rounded-full border transition-all hover:-translate-y-0.5 ${iBlockedThem
+                                        className={`rounded-full border transition-all hover:-translate-y-0.5 justify-center ${iBlockedThem
                                             ? 'border-emerald-500/30 text-emerald-600 hover:bg-emerald-50'
                                             : 'border-red-500/30 text-red-600 hover:bg-red-50'
                                             }`}
                                         title={iBlockedThem ? 'Desbloquear usuario' : 'Bloquear usuario'}
                                     >
                                         {iBlockedThem ? (
-                                            <><UserX className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Desbloquear</span></>
+                                            <><UserX className="w-4 h-4" /><span className="hidden sm:inline">Desbloquear</span></>
                                         ) : (
-                                            <><Ban className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Bloquear</span></>
+                                            <><Ban className="w-4 h-4" /><span className="hidden sm:inline">Bloquear</span></>
                                         )}
                                     </Button>
                                 )}
                                 <Button
                                     onClick={handleChatClick}
                                     disabled={blockStatus?.any_block}
-                                    className={`flex-1 sm:flex-none rounded-full shadow-lg transition-all hover:-translate-y-0.5 ${blockStatus?.any_block
+                                    className={`flex-1 sm:flex-none rounded-full shadow-lg transition-all hover:-translate-y-0.5 justify-center ${blockStatus?.any_block
                                         ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
                                         : 'bg-primary hover:bg-primary/90 text-white shadow-primary/20'
                                         }`}
                                 >
-                                    <MessageSquare className="w-4 h-4 mr-2" /> Chat
+                                    <MessageSquare className="w-4 h-4" /> <span>Chat</span>
                                 </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setShowRateForm(true);
-                                    }}
-                                    className="flex-1 sm:flex-none rounded-full border-primary/20 text-primary hover:bg-primary/5"
-                                >
-                                    <Star className="w-4 h-4 mr-2" /> Valorar
-                                </Button>
+
                             </div>
 
                         </div>
@@ -426,7 +440,12 @@ function PublicProfileContent() {
                                     ))
                                 ) : (
                                     properties.map((p) => (
-                                        <PropertyCard key={p.id} property={p} />
+                                        <PropertyCard
+                                            key={p.id}
+                                            property={p}
+                                            isFavorite={isFavorite(p.id)}
+                                            onToggleFavorite={toggleFavorite}
+                                        />
                                     ))
                                 )}
                             </div>

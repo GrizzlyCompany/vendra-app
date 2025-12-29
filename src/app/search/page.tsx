@@ -59,9 +59,10 @@ function SearchContent() {
       setError(null);
 
       if (searchType === "property") {
-        let pQuery = supabase
+        let pQuery: any = supabase
           .from("properties")
-          .select("id,title,description,price,location,images,owner_id,type")
+          .select("id,title,description,price,location,images,owner_id,type,role_priority")
+          .order("role_priority", { ascending: false })
           .order("inserted_at", { ascending: false });
 
         const term = (q || "").trim();
@@ -101,7 +102,31 @@ function SearchContent() {
               setError(aErr.message);
               setAgents([]);
             } else {
-              setAgents((aData ?? []) as any);
+              // Now verify these users against seller_applications to ensure they are actually agents
+              const users = (aData ?? []) as any[];
+              if (users.length > 0) {
+                const userIds = users.map(u => u.id);
+                const { data: appData } = await supabase
+                  .from("seller_applications")
+                  .select("user_id, status")
+                  .in("user_id", userIds);
+
+                const validApps = new Set(
+                  appData?.filter(app => app.status === 'approved' || app.status === 'submitted').map(app => app.user_id)
+                );
+
+                // Map users, downgrading role if no valid app exists
+                const verifiedUsers = users.map(u => {
+                  // If role is agent/seller/company but no valid app, downgrade to null or comprador
+                  if ((u.role === 'agente' || u.role === 'vendedor' || u.role === 'empresa_constructora') && !validApps.has(u.id)) {
+                    return { ...u, role: 'comprador' };
+                  }
+                  return u;
+                });
+                setAgents(verifiedUsers);
+              } else {
+                setAgents([]);
+              }
             }
           } catch (err) {
             if (!active) return;

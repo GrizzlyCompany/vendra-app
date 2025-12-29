@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { validateSignupForm, SignupFormData } from "@/lib/validation";
 import { handleSupabaseError } from "@/lib/errors";
 import { useToastContext } from "@/components/ToastProvider";
-import { LogIn, ArrowLeft, Building2, User, Key, Quote } from "lucide-react";
+import { LogIn, ArrowLeft, Building2, User, Key, Quote, Shield } from "lucide-react";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useTranslations } from "next-intl";
 
@@ -154,7 +154,8 @@ function SignupPageContent() {
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { val: "comprador", icon: User, label: tAuth('buyer') },
-                    { val: "vendedor_agente", icon: Key, label: tAuth('agent') },
+                    { val: "vendedor", icon: Key, label: tAuth('seller') },
+                    { val: "agente", icon: Shield, label: tAuth('agent') },
                     { val: "empresa_constructora", icon: Building2, label: tAuth('company') }
                   ].map((opt) => (
                     <button

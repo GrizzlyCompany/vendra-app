@@ -20,6 +20,7 @@ export const PropertySchema = z.object({
   longitude: z.number().nullable().optional(),
   inserted_at: z.string().datetime(),
   updated_at: z.string().datetime().optional(),
+  role_priority: z.number().int().optional().default(0),
 });
 
 export const UserSchema = z.object({
@@ -27,7 +28,7 @@ export const UserSchema = z.object({
   email: z.string().email('Invalid email address'),
   name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long').nullable().optional(),
   bio: z.string().max(500, 'Bio is too long').nullable().optional(),
-  role: z.enum(['comprador', 'vendedor_agente', 'empresa_constructora', 'admin'], {
+  role: z.enum(['comprador', 'vendedor', 'agente', 'empresa_constructora', 'admin'], {
     message: 'Invalid user role'
   }).nullable().optional(),
   avatar_url: z.string().url('Invalid avatar URL').nullable().optional(),
@@ -104,7 +105,7 @@ export const SignupFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['comprador', 'vendedor_agente', 'empresa_constructora', 'admin'], {
+  role: z.enum(['comprador', 'vendedor', 'agente', 'empresa_constructora', 'admin'], {
     message: 'Please select a valid role'
   }),
 });

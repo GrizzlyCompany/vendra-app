@@ -7,14 +7,30 @@ import { useStats } from "@/hooks/useStats";
 import { useStatsCharts } from "@/hooks/useStatsCharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ViewsTrendChart } from "./ViewsTrendChart";
+import { MarketComparisonChart } from "./MarketComparisonChart";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+
 export function StatsSection() {
   const t = useTranslations("dashboard.stats");
+  const supabase = createClientComponentClient();
   const { stats, propertyViews, projectViews, loading, error } = useStats();
   const { monthlyViews, loading: chartsLoading, error: chartsError, refetchMonthlyViews } = useStatsCharts();
   const [period, setPeriod] = useState("6");
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useState(() => {
+    const fetchRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (data) setUserRole(data.role);
+      }
+    };
+    fetchRole();
+  });
 
   const handlePeriodChange = (value: string) => {
     setPeriod(value);
@@ -134,11 +150,22 @@ export function StatsSection() {
       </div>
 
       {/* Charts section */}
-      <ViewsTrendChart
-        data={monthlyViews}
-        loading={chartsLoading}
-        title={t("trend", { period: period === "3" ? t("periods.3months") : period === "12" ? t("periods.1year") : t("periods.6months") })}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-3"> {/* Temporarily full width if alone, or adjust grid */}
+          <ViewsTrendChart
+            data={monthlyViews}
+            loading={chartsLoading}
+            title={t("trend", { period: period === "3" ? t("periods.3months") : period === "12" ? t("periods.1year") : t("periods.6months") })}
+          />
+        </div>
+
+        {/* Only show Analytics for Agents and Business */}
+        <div className="lg:col-span-3">
+          {(userRole === 'agente' || userRole === 'empresa_constructora') && (
+            <MarketComparisonChart />
+          )}
+        </div>
+      </div>
 
       {/* Property-specific view statistics */}
       {propertyViews.length > 0 && (

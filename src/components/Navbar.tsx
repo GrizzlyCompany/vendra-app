@@ -138,96 +138,99 @@ export function Navbar() {
         </Link>
 
         {/* Search Bar - Desktop Command Palette Trigger */}
-        <div className="hidden md:flex flex-1 max-w-xl items-center">
-          <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="relative h-10 w-full justify-start rounded-xl border-muted-foreground/20 bg-muted/50 px-4 py-2 text-sm text-muted-foreground shadow-none hover:bg-muted/80 hover:text-foreground transition-all duration-200"
-              >
-                <Search className="mr-2 h-4 w-4" />
-                <span className="inline-flex">{tNav("searchProperties")}</span>
-                <kbd className="pointer-events-none absolute right-2 top-2.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[550px] p-0 gap-0 overflow-hidden rounded-xl border-none shadow-2xl bg-background/95 backdrop-blur-3xl ring-1 ring-black/5 dark:ring-white/10">
-              <DialogHeader className="px-4 py-3 border-b border-border/40">
-                <DialogTitle className="sr-only">Buscar</DialogTitle>
-                <div className="flex items-center gap-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && onSearch()}
-                    placeholder={tSearch("whatLookingFor")}
-                    className="flex-1 border-none bg-transparent px-0 py-0 text-base shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/70"
-                    autoFocus
-                  />
-                </div>
-              </DialogHeader>
-              <div className="p-2 space-y-4">
-                {q.length === 0 && (
-                  <div className="px-2 py-4">
-                    <p className="text-xs font-medium text-muted-foreground mb-3 px-2">{tSearch("quickSuggestions")}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { setQ("Departamento en alquiler"); onSearch(); }}>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                            <Building2 className="h-4 w-4" />
-                          </div>
-                          <div className="text-left">
-                            <div className="text-sm font-medium">{tSearch("apartments")}</div>
-                            <div className="text-xs text-muted-foreground">{tSearch("seeOptions")}</div>
-                          </div>
-                        </div>
-                      </Button>
-                      <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { setQ("Casas en venta"); onSearch(); }}>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                            <Home className="h-4 w-4" />
-                          </div>
-                          <div className="text-left">
-                            <div className="text-sm font-medium">{tSearch("houses")}</div>
-                            <div className="text-xs text-muted-foreground">{tSearch("findHome")}</div>
-                          </div>
-                        </div>
-                      </Button>
-                      <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { router.push('/search?type=agent'); setSearchOpen(false); }}>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
-                            <Briefcase className="h-4 w-4" />
-                          </div>
-                          <div className="text-left">
-                            <div className="text-sm font-medium">{tSearch("agents")}</div>
-                            <div className="text-xs text-muted-foreground">{tSearch("contactPros")}</div>
-                          </div>
-                        </div>
-                      </Button>
-                      <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { router.push('/projects'); setSearchOpen(false); }}>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
-                            <Building2 className="h-4 w-4" />
-                          </div>
-                          <div className="text-left">
-                            <div className="text-sm font-medium">{tNav("projects")}</div>
-                            <div className="text-xs text-muted-foreground">{tSearch("newDevelopments")}</div>
-                          </div>
-                        </div>
-                      </Button>
-                    </div>
+        {/* Search Bar - Desktop Command Palette Trigger */}
+        {user && (
+          <div className="hidden md:flex flex-1 max-w-xl items-center">
+            <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="relative h-10 w-full justify-start rounded-xl border-muted-foreground/20 bg-muted/50 px-4 py-2 text-sm text-muted-foreground shadow-none hover:bg-muted/80 hover:text-foreground transition-all duration-200"
+                >
+                  <Search className="mr-2 h-4 w-4" />
+                  <span className="inline-flex">{tNav("searchProperties")}</span>
+                  <kbd className="pointer-events-none absolute right-2 top-2.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                    <span className="text-xs">⌘</span>K
+                  </kbd>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[550px] p-0 gap-0 overflow-hidden rounded-xl border-none shadow-2xl bg-background/95 backdrop-blur-3xl ring-1 ring-black/5 dark:ring-white/10">
+                <DialogHeader className="px-4 py-3 border-b border-border/40">
+                  <DialogTitle className="sr-only">Buscar</DialogTitle>
+                  <div className="flex items-center gap-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+                      placeholder={tSearch("whatLookingFor")}
+                      className="flex-1 border-none bg-transparent px-0 py-0 text-base shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/70"
+                      autoFocus
+                    />
                   </div>
-                )}
-                <div className="flex justify-end px-2 pt-2 border-t border-border/40">
-                  <Button size="sm" onClick={() => onSearch()} className="gap-2 rounded-lg">
-                    {tSearch("searchNow")} <Search className="h-3 w-3" />
-                  </Button>
+                </DialogHeader>
+                <div className="p-2 space-y-4">
+                  {q.length === 0 && (
+                    <div className="px-2 py-4">
+                      <p className="text-xs font-medium text-muted-foreground mb-3 px-2">{tSearch("quickSuggestions")}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { setQ("Departamento en alquiler"); onSearch(); }}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                              <Building2 className="h-4 w-4" />
+                            </div>
+                            <div className="text-left">
+                              <div className="text-sm font-medium">{tSearch("apartments")}</div>
+                              <div className="text-xs text-muted-foreground">{tSearch("seeOptions")}</div>
+                            </div>
+                          </div>
+                        </Button>
+                        <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { setQ("Casas en venta"); onSearch(); }}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                              <Home className="h-4 w-4" />
+                            </div>
+                            <div className="text-left">
+                              <div className="text-sm font-medium">{tSearch("houses")}</div>
+                              <div className="text-xs text-muted-foreground">{tSearch("findHome")}</div>
+                            </div>
+                          </div>
+                        </Button>
+                        <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { router.push('/search?type=agent'); setSearchOpen(false); }}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                              <Briefcase className="h-4 w-4" />
+                            </div>
+                            <div className="text-left">
+                              <div className="text-sm font-medium">{tSearch("agents")}</div>
+                              <div className="text-xs text-muted-foreground">{tSearch("contactPros")}</div>
+                            </div>
+                          </div>
+                        </Button>
+                        <Button variant="ghost" className="justify-start h-auto py-3 px-3 rounded-lg hover:bg-muted/80" onClick={() => { router.push('/projects'); setSearchOpen(false); }}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                              <Building2 className="h-4 w-4" />
+                            </div>
+                            <div className="text-left">
+                              <div className="text-sm font-medium">{tNav("projects")}</div>
+                              <div className="text-xs text-muted-foreground">{tSearch("newDevelopments")}</div>
+                            </div>
+                          </div>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex justify-end px-2 pt-2 border-t border-border/40">
+                    <Button size="sm" onClick={() => onSearch()} className="gap-2 rounded-lg">
+                      {tSearch("searchNow")} <Search className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
 
         {/* Right Section */}
         {!user ? (

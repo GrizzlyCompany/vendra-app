@@ -7,6 +7,7 @@ import { Check, X, Shield, Star, Zap, Gem } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { MobileHeader } from "@/components/MobileHeader";
+import { Footer } from "@/components/Footer";
 
 export default function PricingPage() {
     const t = useTranslations("pricing");
@@ -121,11 +122,6 @@ export default function PricingPage() {
                             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
                         >
                             {plans.map((plan) => {
-                                const priceKey = billingCycle === "monthly" ? "price" : "priceYearly"; // Assuming we might add yearly prices later, using monthly for now but logic stands
-                                // For this demo, let's just use the 'price' from json which is static string like '$29', 
-                                // but in a real app we'd calculate or have separate keys. 
-                                // Since json only has "price", we'll stick to that but maybe visually discount it if 'yearly' logic was real.
-
                                 return (
                                     <motion.div
                                         key={plan.key}
@@ -168,7 +164,6 @@ export default function PricingPage() {
                                         </div>
 
                                         <div className="space-y-3 mb-8 flex-1 text-left">
-                                            {/* We need to cast the features result because TypeScript doesn't know the exact shape from useTranslations for arrays sometimes if not typed strictly */}
                                             {(t.raw(`plans.${plan.key}.features`) as string[]).map((feature: string, idx: number) => (
                                                 <div key={idx} className="flex items-start gap-3 group">
                                                     <div className={`mt-0.5 min-w-[16px] h-[16px] rounded-full flex items-center justify-center transition-colors ${plan.popular ? 'bg-green-100 text-green-600 group-hover:bg-green-200' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'}`}>
@@ -188,7 +183,7 @@ export default function PricingPage() {
                                                 }`}
                                             variant={plan.popular ? "default" : "outline"}
                                         >
-                                            <Link href={plan.key === 'buyer' ? '/signup' : '/signin'}> {/* Adjusted links */}
+                                            <Link href={plan.key === 'buyer' ? '/signup' : '/signin'}>
                                                 {t("getStarted")}
                                             </Link>
                                         </Button>
@@ -208,44 +203,19 @@ export default function PricingPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="bg-background p-6 rounded-2xl border border-border/50">
-                            <h3 className="font-bold text-lg mb-2">{t("faq.q1")}</h3>
-                            <p className="text-muted-foreground">{t("faq.a1")}</p>
-                        </div>
-                        <div className="bg-background p-6 rounded-2xl border border-border/50">
-                            <h3 className="font-bold text-lg mb-2">{t("faq.q2")}</h3>
-                            <p className="text-muted-foreground">{t("faq.a2")}</p>
-                        </div>
-                        <div className="bg-background p-6 rounded-2xl border border-border/50">
-                            {/* Hardcoding some common FAQs since I didn't add more keys yet, but good for visual filler */}
-                            <h3 className="font-bold text-lg mb-2">{t.raw("faq.title") === "Preguntas Frecuentes" ? "¿Ofrecen reembolsos?" : "Do you offer refunds?"}</h3>
-                            <p className="text-muted-foreground">
-                                {t.raw("faq.title") === "Preguntas Frecuentes"
-                                    ? "Sí, ofrecemos una garantía de devolución de 7 días si no estás satisfecho con nuestros planes premium."
-                                    : "Yes, we offer a 7-day money-back guarantee if you are not satisfied with our premium plans."}
-                            </p>
-                        </div>
-                        <div className="bg-background p-6 rounded-2xl border border-border/50">
-                            <h3 className="font-bold text-lg mb-2">{t.raw("faq.title") === "Preguntas Frecuentes" ? "¿Necesito tarjeta de crédito?" : "Do I need a credit card?"}</h3>
-                            <p className="text-muted-foreground">
-                                {t.raw("faq.title") === "Preguntas Frecuentes"
-                                    ? "No para el plan Básico. Para los planes Pro y Empresa, aceptamos todas las tarjetas principales."
-                                    : "Not for the Basic plan. For Pro and Business plans, we accept all major credit cards."}
-                            </p>
-                        </div>
+                        {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                            <div key={num} className="bg-background p-6 rounded-2xl border border-border/50">
+                                <h3 className="font-bold text-lg mb-2">{t(`faq.q${num}`)}</h3>
+                                <p className="text-muted-foreground">{t(`faq.a${num}`)}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>
 
-            {/* Shield / Trust Footer Section */}
-            <section className="py-12 border-t border-border">
-                <div className="container mx-auto px-4 text-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/10 rounded-full text-green-700 dark:text-green-400 font-medium text-sm">
-                        <Shield className="w-4 h-4" />
-                        <span>Secure Payment with Stripe</span>
-                    </div>
-                </div>
-            </section>
+
+
+            <Footer />
         </div>
     );
 }

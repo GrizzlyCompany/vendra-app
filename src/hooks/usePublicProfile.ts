@@ -325,39 +325,14 @@ export function usePublicProfile(userId: string | null): UsePublicProfileReturn 
             const r = (profile?.role || "").trim().toLowerCase();
             const isCompany = r === 'empresa_constructora' || r.includes("empresa");
 
-            // Role Evolution Logic:
-            // 1. "Verificado": Application APPROVED (Highest status for ALL roles)
-            // 2. "Empresa constructora": Static Role (No degradation)
-            // 3. "Vendedor/Agente": Application SUBMITTED + Posted Listings.
-            // 4. "Comprador": Default
-
-            let appStatus: string | null = null;
-            try {
-              const { data: apps } = await supabase
-                .from("seller_applications")
-                .select("status")
-                .eq("user_id", userId)
-                .in("status", ["approved", "submitted"])
-                .order("created_at", { ascending: false })
-                .limit(1);
-
-              if (apps && apps.length > 0) {
-                appStatus = apps[0].status;
-              }
-            } catch { }
-
-            const isApproved = appStatus === 'approved';
-            // If we can't see the app status (RLS), treat the 'vendedor_agente' role as 'submitted'
-            const isSubmitted = appStatus === 'submitted' || r === 'vendedor_agente';
-
-            if (isApproved) {
-              roleBadge = "Verificado";
+            if (r === 'agente') {
+              roleBadge = "Agente Pro";
+            } else if (r === 'vendedor') {
+              roleBadge = "Vendedor";
             } else if (isCompany) {
-              roleBadge = "Empresa constructora";
-            } else if (hasListings && (isSubmitted || isApproved)) {
-              roleBadge = "Vendedor/Agente";
+              roleBadge = "Empresa";
             } else {
-              roleBadge = "Comprador";
+              roleBadge = "Miembro";
             }
           }
         } catch {

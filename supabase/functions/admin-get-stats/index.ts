@@ -58,7 +58,7 @@ serve(async (req) => {
     // Get the authorization header from the request
     const authHeader = req.headers.get('Authorization')
     console.log('🔍 Authorization header:', authHeader ? 'Present' : 'Missing')
-    
+
     if (!authHeader) {
       console.log('❌ No authorization header provided')
       return new Response(
@@ -76,7 +76,7 @@ serve(async (req) => {
 
     // Verify the user is authenticated and is admin
     const token = authHeader.replace('Bearer ', '')
-    console.log('🔍 Validating token...', { 
+    console.log('🔍 Validating token...', {
       tokenPrefix: token.substring(0, Math.min(20, token.length)) + (token.length > 20 ? '...' : ''),
       tokenLength: token.length
     })
@@ -131,10 +131,10 @@ serve(async (req) => {
 
     // Check if user has admin access (either by email or user metadata)
     const isAdmin = user.email === 'admin@vendra.com' ||
-                    user.email?.endsWith('@admin.com') ||
-                    user.email?.endsWith('@vendra.com') ||
-                    user.user_metadata?.role === 'admin' ||
-                    false
+      user.email?.endsWith('@admin.com') ||
+      user.email?.endsWith('@vendra.com') ||
+      user.user_metadata?.role === 'admin' ||
+      false
 
     console.log('🔍 Admin check:', {
       email: user.email,
@@ -238,7 +238,7 @@ serve(async (req) => {
     const stats: DashboardStats = {
       activeProperties: activeProperties || 0,
       buyersCount: roleCounts['comprador'] || 0,
-      agentsCount: roleCounts['vendedor_agente'] || 0,
+      agentsCount: (roleCounts['vendedor'] || 0) + (roleCounts['agente'] || 0),
       companiesCount: roleCounts['empresa_constructora'] || 0,
       websiteVisits: websiteVisits || 0,
       propertiesWithAgents: propertiesWithAgents || 0

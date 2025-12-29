@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Home, PlusCircle, BarChart3, User2, LogOut, Menu, X, MessageCircle } from "lucide-react";
+import { Home, PlusCircle, BarChart3, User2, LogOut, Menu, X, MessageCircle, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
@@ -10,17 +10,22 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 
-export type DashboardSection = "mis" | "agregar" | "estadisticas" | "perfil" | "mensajes";
+export type DashboardSection = "mis" | "agregar" | "estadisticas" | "perfil" | "mensajes" | "equipo";
 
-export function Sidebar({ section, onChange }: { section: DashboardSection; onChange: (s: DashboardSection) => void }) {
+export function Sidebar({ section, onChange, role }: { section: DashboardSection; onChange: (s: DashboardSection) => void; role?: string }) {
   const t = useTranslations("dashboard.sidebar");
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [
     { id: "mis" as const, label: t("myProperties"), icon: Home },
-    { id: "agregar" as const, label: t("addProject"), icon: PlusCircle },
-    { id: "estadisticas" as const, label: t("stats"), icon: BarChart3 },
+    ...(role === "empresa_constructora" ? [
+      { id: "agregar" as const, label: t("addProject"), icon: PlusCircle },
+      { id: "estadisticas" as const, label: t("stats"), icon: BarChart3 },
+      { id: "equipo" as const, label: "Mi Equipo", icon: Users }
+    ] : [
+      { id: "agregar" as const, label: t("addProject"), icon: PlusCircle },
+    ]),
     { id: "mensajes" as const, label: t("messages"), icon: MessageCircle },
     { id: "perfil" as const, label: t("profile"), icon: User2 },
   ];

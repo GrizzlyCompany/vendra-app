@@ -9,9 +9,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { PropertyCard } from "@/features/properties/components/PropertyCard";
 import { useFavorites } from "@/features/properties/hooks/useFavorites";
 import type { Property } from "@/types";
-import { Star, Settings, Heart, CheckCircle, Building, LogOut, ChevronLeft, UserPen, Camera, Image, MoreVertical } from "lucide-react";
+import { Star, Settings, Heart, CheckCircle, Building, LogOut, ChevronLeft, UserPen, Camera, Image, MoreVertical, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StatsSection } from "@/components/dashboard/Stats";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { DetailBackButton } from "@/components/transitions/DetailPageTransition";
@@ -203,7 +204,7 @@ export default function ProfilePage() {
       return t("constructionCompany");
     }
 
-    if (hasListings && (profile?.applicationStatus === 'submitted' || r === 'vendedor_agente')) {
+    if (hasListings && (profile?.applicationStatus === 'submitted' || r === 'vendedor' || r === 'agente')) {
       return t("seller");
     }
     return t("buyer");
@@ -429,7 +430,7 @@ export default function ProfilePage() {
         // Fetch user's properties
         const { data: props, error: propsError } = await supabase
           .from("properties")
-          .select("id,title,description,price,location,images,owner_id,type,inserted_at")
+          .select("id,title,description,price,location,images,owner_id,type,inserted_at,role_priority")
           .eq("owner_id", uid)
           .order("inserted_at", { ascending: false });
 
@@ -447,6 +448,7 @@ export default function ProfilePage() {
             owner_id: String(p.owner_id),
             type: p.type ?? null,
             inserted_at: (p.inserted_at as string) ?? new Date().toISOString(),
+            role_priority: p.role_priority ?? 0,
           }));
           setProperties(normalized);
         }
@@ -855,52 +857,103 @@ export default function ProfilePage() {
         )}
 
         {/* Content Tabs - Minimalist Pill Style */}
-        <Tabs defaultValue="listed" className="w-full">
+        <Tabs defaultValue="properties" className="w-full">
           <div className="flex justify-center mb-8 overflow-x-auto pb-2 scrollbar-hide px-4 -mx-4">
             <TabsList className="bg-secondary/10 p-1 rounded-full h-auto inline-flex shadow-inner min-w-max">
-              <TabsTrigger className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300" value="listed">
-                <Building className="mr-2 h-4 w-4" /> {t("myProperties")}
+              <TabsTrigger
+                value="properties"
+                className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 flex items-center gap-2"
+              >
+                <Building className="w-4 h-4" />
+                {t("myProperties")}
+                <span className="ml-1 text-xs bg-white/20 text-current px-2 py-0.5 rounded-full">
+                  {properties.length}
+                </span>
               </TabsTrigger>
-              <TabsTrigger className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300" value="reviews">
-                <Star className="mr-2 h-4 w-4" /> {t("reviews")}
+
+              <TabsTrigger
+                value="saved"
+                className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 flex items-center gap-2"
+              >
+                <Heart className="w-4 h-4" />
+                {t("favorites")}
+                {savedProperties.length > 0 && (
+                  <span className="ml-1 text-xs bg-white/20 text-current px-2 py-0.5 rounded-full">
+                    {savedProperties.length}
+                  </span>
+                )}
               </TabsTrigger>
-              <TabsTrigger className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300" value="saved">
-                <Heart className="mr-2 h-4 w-4" /> {t("favorites")}
+              <TabsTrigger
+                value="reviews"
+                className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 flex items-center gap-2"
+              >
+                <Star className="w-4 h-4" />
+                {t("reviews")}
               </TabsTrigger>
+
+              {(['agente', 'vendedor', 'vendedor_agente', 'empresa_constructora'].some(r => (profile?.role || "").includes(r)) || hasListings) && (
+                <TabsTrigger
+                  value="stats"
+                  className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 flex items-center gap-2"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  {t("stats") || "Estadísticas"}
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
 
-          <TabsContent value="listed" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {properties.length === 0 ? (
-              <div className="text-center py-20 bg-secondary/5 rounded-3xl border border-dashed border-border">
-                <div className="bg-background w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                  <Building className="w-8 h-8 text-muted-foreground/50" />
-                </div>
-                <h3 className="text-xl font-serif text-primary mb-2">{t("portfolioEmpty")}</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">{t("portfolioEmptyDesc")}</p>
-                <Button asChild className="rounded-full px-8 h-12 bg-primary text-white shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 transition-all">
-                  <Link href="/properties/new">{t("publishFirstProperty")}</Link>
-                </Button>
-              </div>
-            ) : (
+          {/* Properties Tab Content */}
+          <TabsContent value="properties" className="mt-8 sm:mt-12 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {properties.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                {properties.map((p) => (
+                {properties.map((property) => (
                   <PropertyCard
-                    key={p.id}
-                    property={p}
-                    showEdit
-                    onDelete={onDeleteProperty}
-                    state={deletingId === p.id ? 'deleting' : confirmId === p.id ? 'confirm-pending' : 'idle'}
+                    key={property.id}
+                    property={property}
+                    showEdit={true}
+                    onDelete={() => onDeleteProperty(property)}
+                    state={deletingId === property.id ? 'deleting' : confirmId === property.id ? 'confirm-pending' : 'idle'}
                   />
                 ))}
-                {/* Add New Card */}
-                <Link href="/properties/new" className="group flex flex-col items-center justify-center h-full min-h-[300px] rounded-2xl border-2 border-dashed border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer">
-                  <div className="w-16 h-16 rounded-full bg-secondary/10 group-hover:bg-primary/10 flex items-center justify-center mb-4 transition-colors">
-                    <Building className="w-8 h-8 text-primary/60 group-hover:text-primary transition-colors" />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 sm:py-24 px-4 text-center border-2 border-dashed border-border/50 rounded-3xl bg-secondary/5">
+                <div className="w-20 h-20 bg-background rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+                  <Building className="w-10 h-10 text-muted-foreground/50" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-serif font-bold text-foreground mb-3">{t("portfolioEmpty")}</h3>
+                <p className="text-muted-foreground max-w-md mx-auto mb-8 text-sm sm:text-base">
+                  {t("portfolioEmptyDesc")}
+                </p>
+                <Button onClick={() => router.push("/properties/new")} className="bg-primary hover:bg-primary/90 text-white rounded-full px-8 py-6 text-base shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
+                  {t("publishFirstProperty")}
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="saved" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {savedProperties.length === 0 ? (
+              <div className="text-center py-16 bg-secondary/5 rounded-3xl border border-dashed border-border">
+                <Heart className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                <p className="text-primary font-medium">{t("wishlistEmpty")}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("wishlistEmptyDesc")}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {savedProperties.map((property) => (
+                  <div key={property.id} className="relative group">
+                    <PropertyCard property={property} />
+                    <button
+                      onClick={() => handleRemoveFromSaved(property.id)}
+                      className="absolute top-4 right-4 p-2 bg-white/90 hover:bg-white text-red-500 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110 z-10"
+                      title={t("removeFromSaved")}
+                    >
+                      <Heart className="w-5 h-5 fill-current" />
+                    </button>
                   </div>
-                  <span className="font-serif font-bold text-lg text-primary">{t("addProperty")}</span>
-                  <span className="text-sm text-muted-foreground mt-1">{t("expandPortfolio")}</span>
-                </Link>
+                ))}
               </div>
             )}
           </TabsContent>

@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [section, setSection] = useState<DashboardSection>("mis");
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [role, setRole] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function DashboardPage() {
 
         if (effectiveRole === "empresa_constructora") {
           setAuthorized(true);
+          setRole(effectiveRole);
         } else {
           showError(t("noPermissions"));
           router.push("/profile");
@@ -81,7 +83,7 @@ export default function DashboardPage() {
       <div className="hidden md:block fixed inset-y-0 left-0 w-72 bg-gradient-to-br from-sidebar via-sidebar/95 to-background z-0" />
 
       {/* Sidebar Component */}
-      <Sidebar section={section} onChange={setSection} />
+      <Sidebar section={section} onChange={setSection} role={role} />
 
       {/* Main content Area */}
       <div className="md:pl-72 transition-all duration-300 relative z-10">
@@ -95,6 +97,7 @@ export default function DashboardPage() {
                 {section === "agregar" && t("newProject")}
                 {section === "estadisticas" && t("analytics")}
                 {section === "mensajes" && t("sidebar.messages")}
+                {section === "equipo" && "Mi Equipo"}
                 {section === "perfil" && t("sidebar.profile")}
               </h1>
               <p className="text-xs text-muted-foreground font-medium hidden md:block mt-0.5">
@@ -102,6 +105,7 @@ export default function DashboardPage() {
                 {section === "agregar" && t("publishProperty")}
                 {section === "estadisticas" && t("analyzePerformance")}
                 {section === "mensajes" && t("communicateClients")}
+                {section === "equipo" && "Gestiona miembros y permisos"}
                 {section === "perfil" && t("accountSettings")}
               </p>
             </div>
@@ -126,6 +130,7 @@ export default function DashboardPage() {
             {section === "agregar" && <DynamicAddPropertySection />}
             {section === "estadisticas" && <DynamicStatsSection />}
             {section === "mensajes" && <DynamicMessagesSection />}
+            {section === "equipo" && <DynamicTeamSection />}
             {section === "perfil" && <DynamicProfileSection />}
           </div>
         </main>
@@ -152,6 +157,11 @@ const DynamicMessagesSection = dynamic(
 const DynamicProfileSection = dynamic(
   () => import("@/components/dashboard/Profile").then(m => m.ProfileSection),
   { loading: () => <DeferredLoader namespace="dashboard" keyName="loadingProfile" /> }
+);
+
+const DynamicTeamSection = dynamic(
+  () => import("@/components/dashboard/Team").then(m => m.TeamSection),
+  { loading: () => <DeferredLoader namespace="dashboard" keyName="loadingTeam" /> }
 );
 
 function DeferredLoader({ namespace, keyName }: { namespace: string; keyName: string }) {

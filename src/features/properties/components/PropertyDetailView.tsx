@@ -8,7 +8,7 @@ import Link from "next/link";
 import { PropertyGallery } from "@/features/properties/components/PropertyGallery";
 import { OwnerCard } from "@/features/properties/components/OwnerCard";
 import { Button } from "@/components/ui/button";
-import { MapPin, Castle, Ruler, Bath, Bed, Heart, ArrowLeft, Share2, ShieldCheck, Clock } from "lucide-react";
+import { MapPin, Castle, Ruler, Bath, Bed, Heart, ArrowLeft, Share2, ShieldCheck, Clock, UserX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useFavorites } from "@/features/properties/hooks/useFavorites";
 import type { Property } from "@/types";
@@ -17,6 +17,7 @@ import { DetailPageTransition } from "@/components/transitions/DetailPageTransit
 import { ShareMenu } from "@/components/ShareMenu";
 import { useTranslations } from "next-intl";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useBlockStatus } from "@/features/messaging/hooks/useUserBlocks";
 
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 
@@ -43,6 +44,9 @@ export function PropertyDetailView({ id }: { id: string }) {
     const [showShareMenu, setShowShareMenu] = useState(false);
 
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+    // Block status
+    const { theyBlockedMe, loading: blockLoading } = useBlockStatus(property?.owner_id ?? null);
 
     // Map state
     const { isLoaded } = useJsApiLoader({
@@ -175,6 +179,21 @@ export function PropertyDetailView({ id }: { id: string }) {
             <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
                 <h1 className="text-2xl font-serif mb-4">{t("notFound")}</h1>
                 <Button onClick={() => router.push('/main')}>{t("backToHome")}</Button>
+            </div>
+        );
+    }
+
+    if (theyBlockedMe) {
+        return (
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+                <div className="bg-secondary/20 p-8 rounded-3xl border border-border max-w-md w-full text-center">
+                    <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                        <UserX className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h2 className="text-xl font-serif font-bold mb-2">Propiedad no disponible</h2>
+                    <p className="text-muted-foreground mb-6">No puedes ver esta propiedad porque el propietario te ha bloqueado.</p>
+                    <Button onClick={() => router.push('/main')}>Volver al inicio</Button>
+                </div>
             </div>
         );
     }

@@ -54,7 +54,7 @@ export function useUserListings(userId: string | null, userRole: string | null):
           // Fetch properties for other users
           const { data: props, error: propsErr } = await supabase
             .from("properties")
-            .select("id,title,description,price,location,images,owner_id,type,inserted_at")
+            .select("id,title,description,price,location,images,owner_id,type,inserted_at,role_priority")
             .eq("owner_id", userId)
             .order("inserted_at", { ascending: false });
           listingsData = props ?? [];
@@ -92,6 +92,7 @@ export function useUserListings(userId: string | null, userRole: string | null):
             owner_id: String(prop.owner_id),
             type: prop.type ?? null,
             inserted_at: (prop.inserted_at as string) ?? new Date().toISOString(),
+            role_priority: prop.role_priority ?? 0,
           }));
           setProperties(normalizedProperties);
           setProjects([]); // Clear projects for regular users

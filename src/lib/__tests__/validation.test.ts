@@ -65,7 +65,7 @@ describe('Schema Validation', () => {
         email: 'test@example.com',
         name: 'John Doe',
         bio: 'A real estate professional',
-        role: 'vendedor_agente' as const,
+        role: 'agente' as const,
         avatar_url: 'https://example.com/avatar.jpg',
         subscription_active: true,
         rating: 4.5,

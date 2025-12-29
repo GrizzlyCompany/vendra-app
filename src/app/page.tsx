@@ -74,7 +74,8 @@ const featuredProperties: Property[] = [
     bedrooms: 3,
     bathrooms: 2,
     area: 120,
-    inserted_at: new Date().toISOString()
+    inserted_at: new Date().toISOString(),
+    role_priority: 0
   },
   {
     id: "featured-2",
@@ -88,7 +89,8 @@ const featuredProperties: Property[] = [
     bedrooms: 2,
     bathrooms: 2,
     area: 85,
-    inserted_at: new Date().toISOString()
+    inserted_at: new Date().toISOString(),
+    role_priority: 0
   },
   {
     id: "featured-3",
@@ -102,7 +104,8 @@ const featuredProperties: Property[] = [
     bedrooms: 4,
     bathrooms: 4,
     area: 250,
-    inserted_at: new Date().toISOString()
+    inserted_at: new Date().toISOString(),
+    role_priority: 0
   }
 ];
 

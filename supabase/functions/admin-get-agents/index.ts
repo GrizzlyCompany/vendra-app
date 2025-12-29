@@ -57,10 +57,10 @@ serve(async (req) => {
 
     // Check if user has admin access (either by email or user metadata)
     const isAdmin = user.email === 'admin@vendra.com' ||
-                    user.email?.endsWith('@admin.com') ||
-                    user.email?.endsWith('@vendra.com') ||
-                    user.user_metadata?.role === 'admin' ||
-                    false
+      user.email?.endsWith('@admin.com') ||
+      user.email?.endsWith('@vendra.com') ||
+      user.user_metadata?.role === 'admin' ||
+      false
 
     console.log('🔍 Admin check:', {
       email: user.email,
@@ -72,10 +72,10 @@ serve(async (req) => {
 
     if (!isAdmin) {
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'Unauthorized - Admin access required',
           details: 'User does not have admin privileges',
-          user_email: user.email 
+          user_email: user.email
         }),
         {
           status: 403,
@@ -84,11 +84,11 @@ serve(async (req) => {
       )
     }
 
-    // Get all agents (users with role 'vendedor_agente')
+    // Get all agents (users with role 'vendedor' or 'agente')
     const { data: agentsData, error: agentsError } = await supabaseClient
       .from('users')
       .select('id, name, email, primary_phone, updated_at')
-      .eq('role', 'vendedor_agente')
+      .in('role', ['vendedor', 'agente'])
       .order('name')
 
     if (agentsError) {

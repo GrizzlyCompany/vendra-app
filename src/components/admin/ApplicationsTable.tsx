@@ -23,7 +23,9 @@ import {
   FileText,
   Image as ImageIcon,
   ZoomIn,
-  X
+  X,
+  Building2,
+  ExternalLink
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useToastContext } from '@/components/ToastProvider'
@@ -56,6 +58,10 @@ interface SellerApplication {
   selfie_url: string | null
   id_document_type: string | null
   id_document_number: string | null
+  // Company fields
+  company_name: string | null
+  company_tax_id: string | null
+  website_url: string | null
 }
 
 interface ApplicationsTableProps {
@@ -210,6 +216,7 @@ export function ApplicationsTable({ onRefreshStats }: ApplicationsTableProps) {
     switch (role) {
       case 'agente_inmobiliario': return 'Agente Inmobiliario'
       case 'vendedor_particular': return 'Vendedor Particular'
+      case 'empresa_constructora': return 'Empresa Constructora'
       default: return role || 'N/A'
     }
   }
@@ -517,8 +524,40 @@ export function ApplicationsTable({ onRefreshStats }: ApplicationsTableProps) {
                 </div>
               </div>
 
+              {/* Company Details */}
+              {selectedApplication.role_choice === 'empresa_constructora' && (
+                <div className="space-y-2 border-t pt-4 mt-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Building2 className="h-5 w-5 text-blue-600" />
+                    <h4 className="font-semibold text-lg">Información de la Empresa</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-500">Nombre de la Empresa</label>
+                      <Card><CardContent className="p-3"><p>{selectedApplication.company_name || 'N/A'}</p></CardContent></Card>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-500">RNC</label>
+                      <Card><CardContent className="p-3"><p>{selectedApplication.company_tax_id || 'N/A'}</p></CardContent></Card>
+                    </div>
+                    {selectedApplication.website_url && (
+                      <div className="col-span-1 md:col-span-2 space-y-1">
+                        <label className="text-sm font-medium text-gray-500">Sitio Web</label>
+                        <Card>
+                          <CardContent className="p-3">
+                            <a href={selectedApplication.website_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                              {selectedApplication.website_url} <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Application Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Tipo de solicitud</label>
                   <Card>

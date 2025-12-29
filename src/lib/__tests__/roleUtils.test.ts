@@ -55,7 +55,7 @@ describe('roleUtils', () => {
 
       const mockDbUser = {
         data: {
-          role: 'vendedor_agente',
+          role: 'agente',
         },
       };
 

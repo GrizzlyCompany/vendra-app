@@ -65,6 +65,7 @@ export function UsersTable() {
     const [processingRequest, setProcessingRequest] = useState<string | null>(null);
     const [roleFilter, setRoleFilter] = useState("all");
     const [stats, setStats] = useState<Record<string, { properties?: number; favorites?: number }>>({});
+    const [verifications, setVerifications] = useState<Record<string, string>>({});
     const pageSize = 10;
 
 
@@ -115,6 +116,20 @@ export function UsersTable() {
                     .from("favorites")
                     .select("user_id")
                     .in("user_id", userIds);
+
+                // Check verification status (seller_applications)
+                const { data: verificationStats } = await supabase
+                    .from("seller_applications")
+                    .select("user_id, status")
+                    .in("user_id", userIds)
+                    .in("status", ["approved", "submitted"]);
+
+                // Map verification status
+                const verificationMap: Record<string, string> = {};
+                verificationStats?.forEach(v => {
+                    verificationMap[v.user_id] = v.status;
+                });
+                setVerifications(verificationMap);
 
                 // Count properties
                 propStats?.forEach(p => {
@@ -274,14 +289,34 @@ export function UsersTable() {
         }
     };
 
-    const getRoleBadge = (role: string | null) => {
-        switch (role) {
-            case "admin":
-                return <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">Admin</Badge>;
-            case "vendedor_agente":
-                return <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Agente</Badge>;
+    const getRoleBadge = (user: UserRecord) => {
+        const verificationStatus = verifications[user.id];
+        const isVerified = verificationStatus === "approved";
+        const isSubmitted = verificationStatus === "submitted";
+
+        // Logic: specific roles NEED verification to be true professionals
+        const needsVerification = ["agente", "vendedor", "empresa_constructora"].includes(user.role || "");
+
+        if (user.role === "admin") {
+            return <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">Admin</Badge>;
+        }
+
+        // Unverified Professional handling
+        if (needsVerification && !isVerified) {
+            if (isSubmitted) {
+                return <Badge variant="outline" className="border-blue-200 text-blue-600 bg-blue-50">Solicitud Enviada</Badge>;
+            }
+            // If they have the role but no application, it's an anomaly or pre-application
+            return <Badge variant="outline" className="border-orange-200 text-orange-600 bg-orange-50">No Verificado</Badge>;
+        }
+
+        switch (user.role) {
+            case "agente":
+                return <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Agente Pro</Badge>;
+            case "vendedor":
+                return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Vendedor</Badge>;
             case "empresa_constructora":
-                return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Empresa</Badge>;
+                return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Empresa Constructora</Badge>;
             case "comprador":
             default:
                 return <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">Comprador</Badge>;
@@ -309,7 +344,8 @@ export function UsersTable() {
                         <Tabs value={roleFilter} onValueChange={setRoleFilter} className="w-full md:w-auto">
                             <TabsList className="grid grid-cols-2 md:inline-flex md:w-auto h-auto p-1 bg-muted/50">
                                 <TabsTrigger value="all" className="px-4 py-2">Todos</TabsTrigger>
-                                <TabsTrigger value="vendedor_agente" className="px-4 py-2">Agentes</TabsTrigger>
+                                <TabsTrigger value="vendedor" className="px-4 py-2">Vendedores</TabsTrigger>
+                                <TabsTrigger value="agente" className="px-4 py-2">Agentes</TabsTrigger>
                                 <TabsTrigger value="empresa_constructora" className="px-4 py-2">Empresas</TabsTrigger>
                                 <TabsTrigger value="comprador" className="px-4 py-2">Compradores</TabsTrigger>
                                 <TabsTrigger value="admin" className="px-4 py-2">Admins</TabsTrigger>
@@ -350,11 +386,22 @@ export function UsersTable() {
                 </Card>
                 <Card className="border-none shadow-md">
                     <CardContent className="p-4 flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                            <User className="h-5 w-5 text-blue-500" />
+                        <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                            <User className="h-5 w-5 text-green-500" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold">{users.filter(u => u.role === "vendedor_agente").length}</p>
+                            <p className="text-2xl font-bold">{users.filter(u => u.role === "vendedor").length}</p>
+                            <p className="text-xs text-muted-foreground">Vendedores</p>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="border-none shadow-md">
+                    <CardContent className="p-4 flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                            <Shield className="h-5 w-5 text-blue-500" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold">{users.filter(u => u.role === "agente").length}</p>
                             <p className="text-xs text-muted-foreground">Agentes</p>
                         </div>
                     </CardContent>
@@ -594,11 +641,11 @@ export function UsersTable() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            {getRoleBadge(user.role)}
+                                            {getRoleBadge(user)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex flex-col gap-1">
-                                                {(user.role === "vendedor_agente" || user.role === "empresa_constructora") && (
+                                                {(user.role === "vendedor" || user.role === "agente" || user.role === "empresa_constructora") && (
                                                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                         <Building2 className="h-3.5 w-3.5 text-blue-500" />
                                                         <span>{stats[user.id]?.properties || 0} propiedades</span>

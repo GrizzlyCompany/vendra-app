@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { 
-  PropertySchema, 
-  UserSchema, 
+import {
+  PropertySchema,
+  UserSchema,
   ProjectSchema,
   PropertyFormSchema,
   SearchFiltersSchema
@@ -15,7 +15,7 @@ export type PropertyFormData = z.infer<typeof PropertyFormSchema>;
 export type SearchFilters = z.infer<typeof SearchFiltersSchema>;
 
 // User roles
-export type UserRole = 'comprador' | 'vendedor_agente' | 'empresa_constructora';
+export type UserRole = 'comprador' | 'vendedor' | 'agente' | 'empresa_constructora' | 'admin';
 
 // Dashboard types
 export interface DashboardItem {
@@ -110,4 +110,26 @@ export interface SellerApplication {
   reviewed_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Team types
+export interface Team {
+  id: string;
+  owner_id: string;
+  name: string;
+  branding_settings: {
+    primaryColor?: string;
+    logoUrl?: string;
+    slug?: string;
+  };
+  created_at: string;
+}
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'admin' | 'agent';
+  joined_at: string;
+  user?: User; // Joined user data
 }

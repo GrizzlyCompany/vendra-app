@@ -132,61 +132,8 @@ export default function NewPropertyPage() {
       // Eligibility check: allow empresa_constructora or approved seller application
       try {
         const { data: prof } = await supabase.from("users").select("role").eq("id", userId).maybeSingle();
-        const role = prof?.role ?? null;
-        if (role === "empresa_constructora") {
-          // Check if empresa_constructora has complete profile (company_name, rnc)
-          const { data: userProfile } = await supabase
-            .from("users")
-            .select("company_name, rnc, phone")
-            .eq("id", userId)
-            .maybeSingle();
-
-          const hasCompleteProfile = userProfile?.company_name && userProfile?.rnc;
-
-          if (!hasCompleteProfile) {
-            // Redirect to profile edit to complete company info
-            router.replace("/profile/edit?complete=company");
-            return;
-          }
-
-          setUid(userId);
-          setLoading(false);
-          return;
-        }
-        // If user is vendedor_agente but hasn't completed seller application, redirect to apply
-        if (role === "vendedor_agente") {
-          const { data: app } = await supabase
-            .from("seller_applications")
-            .select("id,status")
-            .eq("user_id", userId)
-            .in("status", ["approved", "submitted"] as any)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          if (!app) {
-            // Fallback: si existe una solicitud reciente (posible latencia/replicación), permitir y mostrar banner
-            const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-            const { data: recent } = await supabase
-              .from("seller_applications")
-              .select("id,status,created_at")
-              .eq("user_id", userId)
-              .gte("created_at", tenMinAgo)
-              .order("created_at", { ascending: false })
-              .limit(1);
-            if (!recent || recent.length === 0) {
-              router.replace("/seller/apply");
-              return;
-            }
-            setPendingReview(true);
-          }
-          if ((app as any).status === "submitted") {
-            setPendingReview(true);
-          }
-          setUid(userId);
-          setLoading(false);
-          return;
-        }
-        // For comprador users, check if they have an approved or submitted application
+        // We verify everyone against the seller_applications table. 
+        // Detailed check: To publish, you must have at least submitted an application.
         const { data: app } = await supabase
           .from("seller_applications")
           .select("id,status")
@@ -195,8 +142,9 @@ export default function NewPropertyPage() {
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+
         if (!app) {
-          // Fallback: si existe una solicitud reciente (posible latencia/replicación), permitir y mostrar banner
+          // Fallback: Check for very recent application (latency/consistency)
           const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const { data: recent } = await supabase
             .from("seller_applications")
@@ -205,15 +153,25 @@ export default function NewPropertyPage() {
             .gte("created_at", tenMinAgo)
             .order("created_at", { ascending: false })
             .limit(1);
+
           if (!recent || recent.length === 0) {
             router.replace("/seller/apply");
             return;
           }
           setPendingReview(true);
-        }
-        if ((app as any).status === "submitted") {
+        } else if ((app as any).status === "submitted") {
           setPendingReview(true);
         }
+
+        // Additional check for Empresa Constructora profile completeness (optional but good for data integrity)
+        if (prof?.role === "empresa_constructora") {
+          const { data: userProfile } = await supabase.from("users").select("company_name, rnc").eq("id", userId).maybeSingle();
+          if (!userProfile?.company_name || !userProfile?.rnc) {
+            router.replace("/profile/edit?complete=company");
+            return;
+          }
+        }
+
         setUid(userId);
       } finally {
         setLoading(false);
@@ -359,18 +317,26 @@ export default function NewPropertyPage() {
         });
 
       if (insertError) {
-        setError(insertError.message);
+        if (insertError.message.includes('Property limit reached')) {
+          setError("Has alcanzado el límite de propiedades para tu plan actual. Actualiza tu plan para publicar más.");
+          // Ideally show a link to /pricing here or a modal
+        } else {
+          setError(insertError.message);
+        }
         setSaving(false);
         return;
       }
 
-      // Promote role to vendedor_agente if user is not empresa_constructora
+      // Promote role to vendedor if user is comprador (basic selling tier)
       try {
         await supabase
           .from("users")
-          .update({ role: "vendedor_agente" })
+          .update({ role: "vendedor" })
           .eq("id", uid)
-          .neq("role", "empresa_constructora");
+          .eq("role", "comprador");
+
+        // Refresh session to reflect new role
+        await supabase.auth.refreshSession();
       } catch { }
 
       // success

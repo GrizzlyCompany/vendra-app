@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { Trash2, MapPin, Edit, ArrowRight, Heart, BedDouble, Bath, Ruler, User } from "lucide-react";
+import { Trash2, MapPin, Edit, ArrowRight, Heart, BedDouble, Bath, Ruler, User, ShieldCheck } from "lucide-react";
 import { Property } from "@/types";
 import { memo, useCallback } from "react";
 import { usePerformanceMonitor } from "@/hooks/usePerformance";
@@ -184,6 +184,16 @@ export const PropertyCard = memo<PropertyCardProps>(function PropertyCard({
               >
                 {t(`types.${property.type.toLowerCase() as any}`, { fallback: property.type })}
               </span>
+            </div>
+          )}
+
+          {/* Verified Agent Badge */}
+          {(property.role_priority || 0) >= 20 && (
+            <div className="absolute left-3 top-12 z-20">
+              <div className="flex items-center gap-1 bg-emerald-500/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-sm ring-1 ring-white/20 uppercase tracking-wide">
+                <ShieldCheck className="w-3 h-3" />
+                <span>Verificado</span>
+              </div>
             </div>
           )}
 

@@ -61,6 +61,7 @@
         "recoveryInstructionsEmail": "Te enviaremos las instrucciones a tu correo",
         "accountType": "Tipo de cuenta",
         "buyer": "Comprador",
+        "seller": "Vendedor",
         "agent": "Agente",
         "company": "Empresa",
         "createAccount": "Crear cuenta",
@@ -318,6 +319,8 @@
         "memberSince": "Miembro desde",
         "verified": "Verificado",
         "notVerified": "No verificado",
+        "stats": "Estadísticas",
+        "aboutMe": "Sobre mí",
         "bio": "Biografía",
         "noBio": "Sin biografía. Añade una descripción para conectar mejor con tus clientes.",
         "phone": "Teléfono",
@@ -414,6 +417,7 @@
         "loadingStats": "Cargando estadísticas...",
         "loadingMessages": "Cargando mensajes...",
         "loadingProfile": "Cargando perfil...",
+        "loadingTeam": "Cargando equipo...",
         "sidebar": {
             "myProperties": "Mis Propiedades",
             "addProject": "Agregar Proyecto",
@@ -533,6 +537,20 @@
             "loadError": "Error al cargar el perfil",
             "loadErrorDesc": "No se pudieron cargar los datos del perfil",
             "saveError": "Error al guardar"
+        },
+        "team": {
+            "title": "Gestión de Equipo",
+            "subtitle": "Administra los miembros de tu organización.",
+            "invite": "Invitar",
+            "inviteMember": "Invitar Miembro",
+            "inviteDescription": "Agrega agentes a tu equipo para que puedan gestionar propiedades.",
+            "emailPlaceholder": "correo@ejemplo.com",
+            "sending": "Enviando...",
+            "members": "Miembros",
+            "noMembers": "No hay miembros en el equipo aún.",
+            "admin": "Administrador",
+            "agent": "Agente",
+            "userUnknown": "Usuario Desconocido"
         }
     },
     "errors": {
@@ -560,7 +578,7 @@
         "heroTitle": "Vende rápido. Compra feliz.",
         "heroSubtitle": "Descubre una cuidada selección de las mejores propiedades. Tu nuevo comienzo te espera.",
         "allZones": "Todas las zonas",
-        "anyType": "Cualquiera",
+        "anyType": "Todos",
         "noLimit": "Sin límite",
         "clearFilters": "Limpiar filtros",
         "loadingProperties": "Cargando propiedades...",
@@ -683,8 +701,7 @@
                 "features": [
                     "Búsqueda ilimitada de propiedades",
                     "Guardar favoritos y alertas",
-                    "Chat directo con vendedores",
-                    "Acceso a tours virtuales"
+                    "Chat directo con vendedores"
                 ]
             },
             "seller": {
@@ -728,10 +745,20 @@
         },
         "faq": {
             "title": "Preguntas Frecuentes",
-            "q1": "¿Puedo cambiar de plan después?",
-            "a1": "Sí, puedes mejorar o cambiar tu plan en cualquier momento desde tu configuración.",
-            "q2": "¿Hay contrato de permanencia?",
-            "a2": "No, nuestros planes son mensuales. Puedes cancelar cuando quieras sin penalidad."
+            "q1": "¿Qué ventajas tienen los planes Agente Pro y Empresas?",
+            "a1": "Estos planes están diseñados para profesionales. Agente Pro (Prioridad Nivel 2) incluye insignia de verificación y mayor capacidad de listados. Empresas (Prioridad Nivel 1) añade la funcionalidad 'Mi Equipo', permitiendo que la organización sea dueña de los datos, centralice activos y proteja el inventario ante la rotación de personal, además de tener la máxima visibilidad en búsquedas.",
+            "q2": "¿Cómo funciona el algoritmo de prioridad en las búsquedas?",
+            "a2": "Vendra prioriza los resultados para garantizar calidad y seguridad. El orden de aparición es: 1. Empresas Constructoras/Inmobiliarias (Prioridad 30 - Máxima), 2. Agentes Pro Verificados (Prioridad 20 - Alta), y 3. Vendedores Particulares (Prioridad 10 - Estándar).",
+            "q3": "¿Puedo cambiar de plan y qué pasa con mis datos?",
+            "a3": "Sí, puedes mejorar o cambiar tu plan en cualquier momento. Si eres una Empresa, tus datos y listados permanecen seguros y centralizados. Si invitas a un agente a tu equipo, sus nuevas propiedades pertenecerán a la organización, separando su portafolio personal del corporativo.",
+            "q4": "¿Qué significa la insignia de 'Verificado'?",
+            "a4": "Es un distintivo de confianza exclusivo para Agentes y Empresas que han validado su identidad y credenciales profesionales. Esto indica a los compradores que están tratando con un profesional serio y aumenta drásticamente la probabilidad de contacto.",
+            "q5": "¿Qué beneficios tienen los Compradores?",
+            "a5": "Los compradores disfrutan de la búsqueda más segura del mercado, con filtros avanzados, chat directo sin intermediarios ocultos, y la garantía de que las propiedades destacadas pertenecen a profesionales verificados.",
+            "q6": "¿Hay contrato de permanencia?",
+            "a6": "No, nuestros planes son mensuales. Puedes cancelar cuando quieras sin penalidad. Creemos en ganarnos tu confianza mes a mes.",
+            "q7": "¿Cómo funciona la funcionalidad 'Mi Equipo'?",
+            "a7": "Permite a una empresa invitar agentes a su organización. El administrador controla quién publica y edita. Lo más importante: si un agente deja el equipo, las propiedades se quedan con la empresa, protegiendo tus activos comerciales."
         }
     },
     "forms": {

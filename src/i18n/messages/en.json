@@ -61,6 +61,7 @@
         "recoveryInstructionsEmail": "We'll send instructions to your email",
         "accountType": "Account type",
         "buyer": "Buyer",
+        "seller": "Seller",
         "agent": "Agent",
         "company": "Company",
         "createAccount": "Create account",
@@ -317,7 +318,9 @@
         "settings": "Settings",
         "memberSince": "Member since",
         "verified": "Verified",
+        "stats": "Stats",
         "notVerified": "Not verified",
+        "aboutMe": "About Me",
         "bio": "Bio",
         "noBio": "No bio yet. Add a description to better connect with your clients.",
         "phone": "Phone",
@@ -414,6 +417,7 @@
         "loadingStats": "Loading statistics...",
         "loadingMessages": "Loading messages...",
         "loadingProfile": "Loading profile...",
+        "loadingTeam": "Loading team...",
         "sidebar": {
             "myProperties": "My Properties",
             "addProject": "Add Project",
@@ -533,6 +537,20 @@
             "loadError": "Error loading profile",
             "loadErrorDesc": "Could not load profile data",
             "saveError": "Error saving"
+        },
+        "team": {
+            "title": "Team Management",
+            "subtitle": "Manage your organization members.",
+            "invite": "Invite",
+            "inviteMember": "Invite Member",
+            "inviteDescription": "Add agents to your team to help manage properties.",
+            "emailPlaceholder": "email@example.com",
+            "sending": "Sending...",
+            "members": "Members",
+            "noMembers": "No members in the team yet.",
+            "admin": "Admin",
+            "agent": "Agent",
+            "userUnknown": "Unknown User"
         }
     },
     "errors": {
@@ -683,8 +701,7 @@
                 "features": [
                     "Unlimited property search",
                     "Save favorites & alerts",
-                    "Chat directly with sellers",
-                    "Access to virtual tours"
+                    "Chat directly with sellers"
                 ]
             },
             "seller": {
@@ -728,10 +745,20 @@
         },
         "faq": {
             "title": "Frequently Asked Questions",
-            "q1": "Can I upgrade my plan later?",
-            "a1": "Yes, you can upgrade or downgrade your plan at any time from your account settings.",
-            "q2": "Is there a long-term contract?",
-            "a2": "No, our plans are month-to-month. You can cancel at any time."
+            "q1": "What are the advantages of Pro Agent and Business plans?",
+            "a1": "These plans are designed for professionals. Pro Agent (Tier 2 Priority) includes a verification badge and higher listing capacity. Business (Tier 1 Priority) adds 'My Team' functionality, allowing the organization to own the data, centralize assets, and protect inventory against staff turnover, plus having maximum search visibility.",
+            "q2": "How does the search priority algorithm work?",
+            "a2": "Vendra prioritizes results to ensure quality and safety. The display order is: 1. Construction Companies/Real Estate Firms (Priority 30 - Maximum), 2. Verified Pro Agents (Priority 20 - High), and 3. Private Sellers (Priority 10 - Standard).",
+            "q3": "Can I switch plans and what happens to my data?",
+            "a3": "Yes, you can upgrade or change your plan anytime. If you are a Business, your data and listings remain secure and centralized. If you invite an agent to your team, their new properties will belong to the organization, separating their personal portfolio from the corporate one.",
+            "q4": "What does the 'Verified' badge mean?",
+            "a4": "It is an exclusive trust badge for Agents and Companies that have validated their identity and professional credentials. This indicates to buyers that they are dealing with a serious professional and drastically increases the likelihood of contact.",
+            "q5": "What benefits do Buyers get?",
+            "a5": "Buyers enjoy the safest search experience on the market, with advanced filters, direct chat with no hidden intermediaries, and the guarantee that featured properties belong to verified professionals.",
+            "q6": "Is there a long-term contract?",
+            "a6": "No, our plans are monthly. You can cancel anytime without penalty. We believe in earning your trust month by month.",
+            "q7": "How does the 'My Team' feature work?",
+            "a7": "It allows a company to invite agents to their organization. The admin controls who publishes and edits. Most importantly: if an agent leaves the team, the properties stay with the company, protecting your business assets."
         }
     },
     "forms": {
